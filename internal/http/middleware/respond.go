@@ -5,6 +5,8 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
 const (
@@ -18,7 +20,7 @@ func RequestIDFrom(c *gin.Context) string {
 			return s
 		}
 	}
-	return c.GetHeader("X-Request-Id")
+	return c.GetHeader(utils.HeaderRequestID)
 }
 
 func TraceIDFrom(c *gin.Context) string {
@@ -45,10 +47,10 @@ func InjectHeaders(c *gin.Context) {
 		}
 	}
 	if rid != "" {
-		c.Header("X-Request-Id", rid)
+		c.Header(utils.HeaderRequestID, rid)
 	}
 	if tid != "" {
-		c.Header("X-Trace-Id", tid)
+		c.Header(utils.HeaderTraceID, tid)
 	}
 	otel.GetTextMapPropagator().Inject(c.Request.Context(), propagation.HeaderCarrier(c.Writer.Header()))
 }
@@ -72,4 +74,13 @@ func WriteError(c *gin.Context, status int, code, message string, details map[st
 			"details":    details,
 		},
 	})
+}
+
+// Abort writes a catalogued *utils.Error (or Generic of a plain error).
+func Abort(c *gin.Context, err error) {
+	e := utils.From(err)
+	if e == nil {
+		e = utils.Generic(nil)
+	}
+	WriteError(c, e.HTTP, e.Code.String(), e.Message, e.Details)
 }
