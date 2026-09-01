@@ -1,13 +1,17 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Cabinet Studio MongoDB Schema v1",
+  "title": "Cabinet Studio PostgreSQL Schema v1",
+  "engine": "PostgreSQL 16+",
   "database": "cabinet_studio",
+  "schema": "public",
   "baseline": "2026-09-01",
-  "collection_count": 19,
-  "index_count_excluding_id": 71,
-  "unique_index_count": 37,
-  "ttl_index_count": 5,
+  "table_count": 19,
+  "fk_count": 28,
+  "index_count": 77,
+  "unique_index_count": 39,
   "api_routes": 64,
+  "enum_strategy": "TEXT + named CHECK constraints (not PostgreSQL ENUM types)",
+  "pk_strategy": "public_id TEXT PRIMARY KEY with opaque prefixed ids; no serial API ids",
+  "timestamps": "TIMESTAMPTZ NOT NULL DEFAULT now() UTC",
   "id_prefixes": {
     "usr_": "users",
     "oid_": "oauth_identities",
@@ -30,180 +34,182 @@
     "exp_": "data_exports"
   },
   "conventions": {
-    "internal_pk": "ObjectId _id never exposed",
-    "public_pk": "public_id prefixed opaque string",
-    "timestamps": "UTC BSON Date",
+    "public_pk": "public_id TEXT PRIMARY KEY prefixed opaque string",
+    "timestamps": "UTC TIMESTAMPTZ DEFAULT now()",
     "tenant_field": "organization_id = organizations.public_id",
-    "fk_enforcement": "application + existence checks + transactions",
+    "fk_enforcement": "real FOREIGN KEY constraints + transactions for multi-row invariants",
+    "enums": "TEXT + CHECK",
+    "soft_delete": "status/state columns; no physical DELETE of tenant rows",
+    "jsonb": [
+      "plans.capabilities",
+      "entitlements.capabilities",
+      "audit_events.metadata",
+      "outbox.payload",
+      "billing_events.summary",
+      "idempotency_keys.response_body"
+    ],
     "password": "argon2id PHC",
-    "token_hash": "SHA-256(pepper||raw) hex"
+    "token_hash": "SHA-256(pepper||raw) hex",
+    "scale": "managed Postgres (Neon/RDS) + read replica later; no Citus for v1"
   },
-  "collections": {
+  "tables": {
     "users": {
       "purpose": "Human identity, credentials, legal acceptance, account lifecycle. User-owned.",
-      "pk": {
-        "_id": "objectId",
-        "public_id": "usr_ unique"
-      },
+      "prefix": "usr_",
       "tenant": false,
-      "shard_key": {
-        "public_id": "hashed"
-      },
-      "fields": [
-        {
-          "name": "_id",
-          "bson": "objectId",
-          "required": true,
-          "notes": "internal"
-        },
+      "pk": "public_id",
+      "columns": [
         {
           "name": "public_id",
-          "bson": "string",
-          "required": true,
-          "notes": "usr_"
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "PK usr_; API user.id"
         },
         {
           "name": "email",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "lowercase display, max 254"
         },
         {
           "name": "email_normalized",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "unique lookup"
         },
         {
           "name": "email_verified_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "password_hash",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "argon2id PHC; null if oauth-only",
           "default": "null"
         },
         {
           "name": "password_updated_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "display_name",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "1-80"
         },
         {
           "name": "terms_version",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "privacy_version",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "terms_accepted_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         },
         {
           "name": "pending_email",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "status",
-          "bson": "string",
-          "required": true,
-          "notes": "active|disabled|pending_deletion",
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "CHECK active|disabled|pending_deletion",
           "default": "active"
         },
         {
           "name": "disabled_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "deletion_requested_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "last_login_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "created_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         },
         {
           "name": "updated_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         }
+      ],
+      "checks": [
+        "chk_users_public_id",
+        "chk_users_status",
+        "chk_users_email_len",
+        "chk_users_display_name_len"
       ],
       "foreign_keys": [],
       "indexes": [
         {
-          "keys": {
-            "public_id": 1
-          },
-          "options": {
-            "name": "uniq_public_id",
-            "unique": true
-          }
+          "name": "users_pkey",
+          "columns": [
+            "public_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "email_normalized": 1
-          },
-          "options": {
-            "name": "uniq_email_normalized",
-            "unique": true
-          }
+          "name": "uniq_users_email_normalized",
+          "columns": [
+            "email_normalized"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "status": 1,
-            "created_at": -1
-          },
-          "options": {
-            "name": "idx_status_created_at"
-          }
+          "name": "idx_users_status_created_at",
+          "columns": [
+            "status",
+            "created_at DESC"
+          ],
+          "unique": false
         },
         {
-          "keys": {
-            "pending_email": 1
-          },
-          "options": {
-            "name": "idx_pending_email",
-            "sparse": true
-          }
+          "name": "idx_users_pending_email",
+          "columns": [
+            "pending_email"
+          ],
+          "unique": false,
+          "where": "pending_email IS NOT NULL"
         }
       ],
       "routes": {
@@ -224,113 +230,101 @@
     },
     "oauth_identities": {
       "purpose": "Link a user to one social/SSO subject per provider. No provider tokens.",
-      "pk": {
-        "_id": "objectId",
-        "public_id": "oid_ unique"
-      },
+      "prefix": "oid_",
       "tenant": false,
-      "shard_key": {
-        "user_id": "hashed"
-      },
-      "fields": [
-        {
-          "name": "_id",
-          "bson": "objectId",
-          "required": true,
-          "notes": ""
-        },
+      "pk": "public_id",
+      "columns": [
         {
           "name": "public_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "oid_; not returned"
         },
         {
           "name": "user_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "users.public_id"
         },
         {
           "name": "provider",
-          "bson": "string",
-          "required": true,
-          "notes": "google|facebook|x"
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "CHECK google|facebook|x"
         },
         {
           "name": "provider_user_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "email",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "email_verified_by_provider",
-          "bson": "bool",
-          "required": true,
+          "type": "BOOLEAN",
+          "nullable": false,
           "notes": "",
           "default": false
         },
         {
           "name": "linked_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         },
         {
           "name": "created_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         },
         {
           "name": "updated_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         }
       ],
       "foreign_keys": [
         {
-          "field": "user_id",
-          "ref": "users.public_id"
+          "name": "fk_oauth_identities_user_id",
+          "column": "user_id",
+          "references": "users.public_id",
+          "on_delete": "CASCADE"
         }
       ],
       "indexes": [
         {
-          "keys": {
-            "public_id": 1
-          },
-          "options": {
-            "name": "uniq_public_id",
-            "unique": true
-          }
+          "name": "oauth_identities_pkey",
+          "columns": [
+            "public_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "provider": 1,
-            "provider_user_id": 1
-          },
-          "options": {
-            "name": "uniq_provider_subject",
-            "unique": true
-          }
+          "name": "uniq_oauth_identities_provider_subject",
+          "columns": [
+            "provider",
+            "provider_user_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "user_id": 1,
-            "provider": 1
-          },
-          "options": {
-            "name": "uniq_user_provider",
-            "unique": true
-          }
+          "name": "uniq_oauth_identities_user_provider",
+          "columns": [
+            "user_id",
+            "provider"
+          ],
+          "unique": true
         }
       ],
       "routes": {
@@ -345,129 +339,117 @@
       }
     },
     "organizations": {
-      "purpose": "Cabinet business, billing boundary, shared-data owner. Trial starts at create (14d).",
-      "pk": {
-        "_id": "objectId",
-        "public_id": "org_ unique"
-      },
+      "purpose": "Cabinet business, billing boundary, shared-data owner. Trial starts at create (14d). Soft-delete via status.",
+      "prefix": "org_",
       "tenant": true,
-      "shard_key": {
-        "public_id": "hashed"
-      },
-      "fields": [
-        {
-          "name": "_id",
-          "bson": "objectId",
-          "required": true,
-          "notes": ""
-        },
+      "pk": "public_id",
+      "columns": [
         {
           "name": "public_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "org_; tenant key"
         },
         {
           "name": "name",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "1-120"
         },
         {
           "name": "owner_user_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "users.public_id"
         },
         {
           "name": "status",
-          "bson": "string",
-          "required": true,
-          "notes": "active|pending_deletion|deleted",
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "CHECK active|pending_deletion|deleted",
           "default": "active"
         },
         {
           "name": "trial_ends_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "created_at+14d"
         },
         {
           "name": "provider",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "stripe|fake",
           "default": "null"
         },
         {
           "name": "provider_customer_id",
-          "bson": "string|null",
-          "required": false,
-          "notes": "not a card; unique sparse",
+          "type": "TEXT",
+          "nullable": true,
+          "notes": "not a card; partial unique",
           "default": "null"
         },
         {
           "name": "deleted_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "created_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         },
         {
           "name": "updated_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         }
       ],
       "foreign_keys": [
         {
-          "field": "owner_user_id",
-          "ref": "users.public_id"
+          "name": "fk_organizations_owner_user_id",
+          "column": "owner_user_id",
+          "references": "users.public_id",
+          "on_delete": "RESTRICT",
+          "deferrable": "INITIALLY DEFERRED"
         }
       ],
       "indexes": [
         {
-          "keys": {
-            "public_id": 1
-          },
-          "options": {
-            "name": "uniq_public_id",
-            "unique": true
-          }
+          "name": "organizations_pkey",
+          "columns": [
+            "public_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "provider_customer_id": 1
-          },
-          "options": {
-            "name": "uniq_provider_customer_id",
-            "unique": true,
-            "sparse": true
-          }
+          "name": "uniq_organizations_provider_customer_id",
+          "columns": [
+            "provider_customer_id"
+          ],
+          "unique": true,
+          "where": "provider_customer_id IS NOT NULL"
         },
         {
-          "keys": {
-            "owner_user_id": 1
-          },
-          "options": {
-            "name": "idx_owner_user_id"
-          }
+          "name": "idx_organizations_owner_user_id",
+          "columns": [
+            "owner_user_id"
+          ],
+          "unique": false
         },
         {
-          "keys": {
-            "status": 1,
-            "created_at": -1
-          },
-          "options": {
-            "name": "idx_status_created_at"
-          }
+          "name": "idx_organizations_status_created_at",
+          "columns": [
+            "status",
+            "created_at DESC"
+          ],
+          "unique": false
         }
       ],
       "routes": {
@@ -485,140 +467,130 @@
     },
     "memberships": {
       "purpose": "User-organization relationship with role and lifecycle state. Unique (organization_id, user_id).",
-      "pk": {
-        "_id": "objectId",
-        "public_id": "mbr_ unique"
-      },
+      "prefix": "mbr_",
       "tenant": true,
-      "shard_key": {
-        "organization_id": "hashed"
-      },
-      "fields": [
-        {
-          "name": "_id",
-          "bson": "objectId",
-          "required": true,
-          "notes": ""
-        },
+      "pk": "public_id",
+      "columns": [
         {
           "name": "public_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "mbr_"
         },
         {
           "name": "organization_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "user_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "role",
-          "bson": "string",
-          "required": true,
-          "notes": "owner|admin|billing_admin|sales_designer|engineer|production|viewer"
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "CHECK owner|admin|billing_admin|sales_designer|engineer|production|viewer"
         },
         {
           "name": "state",
-          "bson": "string",
-          "required": true,
-          "notes": "invited|active|suspended|removed; API projects as status",
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "CHECK invited|active|suspended|removed; API projects as status",
           "default": "active"
         },
         {
           "name": "invited_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "activated_at",
-          "bson": "date|null",
-          "required": false,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
+          "notes": "",
+          "default": "null"
         },
         {
           "name": "suspended_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "removed_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "created_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         },
         {
           "name": "updated_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         }
       ],
       "foreign_keys": [
         {
-          "field": "organization_id",
-          "ref": "organizations.public_id"
+          "name": "fk_memberships_organization_id",
+          "column": "organization_id",
+          "references": "organizations.public_id",
+          "on_delete": "CASCADE"
         },
         {
-          "field": "user_id",
-          "ref": "users.public_id"
+          "name": "fk_memberships_user_id",
+          "column": "user_id",
+          "references": "users.public_id",
+          "on_delete": "RESTRICT"
         }
       ],
       "indexes": [
         {
-          "keys": {
-            "public_id": 1
-          },
-          "options": {
-            "name": "uniq_public_id",
-            "unique": true
-          }
+          "name": "memberships_pkey",
+          "columns": [
+            "public_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "organization_id": 1,
-            "user_id": 1
-          },
-          "options": {
-            "name": "uniq_org_user",
-            "unique": true
-          }
+          "name": "uniq_memberships_org_user",
+          "columns": [
+            "organization_id",
+            "user_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "user_id": 1,
-            "state": 1
-          },
-          "options": {
-            "name": "idx_user_state"
-          }
+          "name": "idx_memberships_user_state",
+          "columns": [
+            "user_id",
+            "state"
+          ],
+          "unique": false
         },
         {
-          "keys": {
-            "organization_id": 1,
-            "state": 1,
-            "role": 1
-          },
-          "options": {
-            "name": "idx_org_state_role"
-          }
+          "name": "idx_memberships_org_state_role",
+          "columns": [
+            "organization_id",
+            "state",
+            "role"
+          ],
+          "unique": false
         }
       ],
       "app_rules": [
@@ -643,174 +615,183 @@
     },
     "invitations": {
       "purpose": "Time-limited single-use org join offer. token_hash only; never raw token.",
-      "pk": {
-        "_id": "objectId",
-        "public_id": "inv_ unique"
-      },
+      "prefix": "inv_",
       "tenant": true,
-      "shard_key": {
-        "organization_id": "hashed"
-      },
-      "fields": [
-        {
-          "name": "_id",
-          "bson": "objectId",
-          "required": true,
-          "notes": ""
-        },
+      "pk": "public_id",
+      "columns": [
         {
           "name": "public_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "inv_"
         },
         {
           "name": "organization_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "email",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "lowercase"
         },
         {
           "name": "role",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "any except owner"
         },
         {
           "name": "status",
-          "bson": "string",
-          "required": true,
-          "notes": "pending|accepted|revoked|expired",
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "CHECK pending|accepted|revoked|expired",
           "default": "pending"
         },
         {
           "name": "token_hash",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "unique SHA-256"
         },
         {
           "name": "invited_by_user_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "expires_at",
-          "bson": "date",
-          "required": true,
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
           "notes": "now+7d"
         },
         {
           "name": "accepted_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "accepted_by_user_id",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "revoked_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "revoked_by_user_id",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "resent_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "created_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         },
         {
           "name": "updated_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         }
       ],
       "foreign_keys": [
         {
-          "field": "organization_id",
-          "ref": "organizations.public_id"
+          "name": "fk_invitations_organization_id",
+          "column": "organization_id",
+          "references": "organizations.public_id",
+          "on_delete": "CASCADE"
         },
         {
-          "field": "invited_by_user_id",
-          "ref": "users.public_id"
+          "name": "fk_invitations_invited_by_user_id",
+          "column": "invited_by_user_id",
+          "references": "users.public_id",
+          "on_delete": "RESTRICT"
         },
         {
-          "field": "accepted_by_user_id",
-          "ref": "users.public_id"
+          "name": "fk_invitations_accepted_by_user_id",
+          "column": "accepted_by_user_id",
+          "references": "users.public_id",
+          "on_delete": "RESTRICT"
         },
         {
-          "field": "revoked_by_user_id",
-          "ref": "users.public_id"
+          "name": "fk_invitations_revoked_by_user_id",
+          "column": "revoked_by_user_id",
+          "references": "users.public_id",
+          "on_delete": "RESTRICT"
         }
       ],
       "indexes": [
         {
-          "keys": {
-            "public_id": 1
-          },
-          "options": {
-            "name": "uniq_public_id",
-            "unique": true
-          }
+          "name": "invitations_pkey",
+          "columns": [
+            "public_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "token_hash": 1
-          },
-          "options": {
-            "name": "uniq_token_hash",
-            "unique": true
-          }
+          "name": "uniq_invitations_token_hash",
+          "columns": [
+            "token_hash"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "organization_id": 1,
-            "email": 1,
-            "status": 1
-          },
-          "options": {
-            "name": "idx_org_email_status"
-          }
+          "name": "uniq_invitations_org_email_pending",
+          "columns": [
+            "organization_id",
+            "email"
+          ],
+          "unique": true,
+          "where": "status = 'pending'"
         },
         {
-          "keys": {
-            "organization_id": 1,
-            "status": 1,
-            "created_at": -1
-          },
-          "options": {
-            "name": "idx_org_status_created_at"
-          }
+          "name": "idx_invitations_org_email_status",
+          "columns": [
+            "organization_id",
+            "email",
+            "status"
+          ],
+          "unique": false
+        },
+        {
+          "name": "idx_invitations_org_status_created_at",
+          "columns": [
+            "organization_id",
+            "status",
+            "created_at DESC"
+          ],
+          "unique": false
+        },
+        {
+          "name": "idx_invitations_invited_by_user_id",
+          "columns": [
+            "invited_by_user_id"
+          ],
+          "unique": false
         }
       ],
       "routes": {
@@ -828,125 +809,115 @@
     },
     "devices": {
       "purpose": "Activated Cabinet Studio installation. Max 3 active per user. No fingerprints.",
-      "pk": {
-        "_id": "objectId",
-        "public_id": "dev_ unique"
-      },
+      "prefix": "dev_",
       "tenant": false,
-      "shard_key": {
-        "user_id": "hashed"
-      },
-      "fields": [
-        {
-          "name": "_id",
-          "bson": "objectId",
-          "required": true,
-          "notes": ""
-        },
+      "pk": "public_id",
+      "columns": [
         {
           "name": "public_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "dev_"
         },
         {
           "name": "user_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "name",
-          "bson": "string",
-          "required": true,
-          "notes": ""
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "1-80"
         },
         {
           "name": "platform",
-          "bson": "string",
-          "required": true,
-          "notes": "macos|windows|linux"
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "CHECK macos|windows|linux"
         },
         {
           "name": "status",
-          "bson": "string",
-          "required": true,
-          "notes": "active|deactivated",
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "CHECK active|deactivated",
           "default": "active"
         },
         {
           "name": "app_version",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "last_seen_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         },
         {
           "name": "deactivated_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "deactivated_reason",
-          "bson": "string|null",
-          "required": false,
-          "notes": "",
+          "type": "TEXT",
+          "nullable": true,
+          "notes": "user|replaced|admin|account_disabled",
           "default": "null"
         },
         {
           "name": "created_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         },
         {
           "name": "updated_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         }
       ],
       "foreign_keys": [
         {
-          "field": "user_id",
-          "ref": "users.public_id"
+          "name": "fk_devices_user_id",
+          "column": "user_id",
+          "references": "users.public_id",
+          "on_delete": "CASCADE"
         }
       ],
       "indexes": [
         {
-          "keys": {
-            "public_id": 1
-          },
-          "options": {
-            "name": "uniq_public_id",
-            "unique": true
-          }
+          "name": "devices_pkey",
+          "columns": [
+            "public_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "user_id": 1,
-            "status": 1
-          },
-          "options": {
-            "name": "idx_user_status"
-          }
+          "name": "idx_devices_user_status",
+          "columns": [
+            "user_id",
+            "status"
+          ],
+          "unique": false
         },
         {
-          "keys": {
-            "user_id": 1,
-            "last_seen_at": -1
-          },
-          "options": {
-            "name": "idx_user_last_seen"
-          }
+          "name": "idx_devices_user_last_seen",
+          "columns": [
+            "user_id",
+            "last_seen_at DESC"
+          ],
+          "unique": false
         }
       ],
       "routes": {
@@ -962,184 +933,183 @@
     },
     "sessions": {
       "purpose": "Rotating refresh-token family. Reuse sets reuse_detected_at and revokes the family. Access JWTs not stored.",
-      "pk": {
-        "_id": "objectId",
-        "public_id": "ses_ unique"
-      },
+      "prefix": "ses_",
       "tenant": false,
-      "shard_key": {
-        "user_id": "hashed"
-      },
-      "fields": [
-        {
-          "name": "_id",
-          "bson": "objectId",
-          "required": true,
-          "notes": ""
-        },
+      "pk": "public_id",
+      "columns": [
         {
           "name": "public_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "ses_"
         },
         {
           "name": "user_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "device_id",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "refresh_token_hash",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "unique; never raw rt_"
         },
         {
           "name": "family_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "expires_at",
-          "bson": "date",
-          "required": true,
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
           "notes": "now+30d"
         },
         {
           "name": "revoked_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "reuse_detected_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "replaced_by_session_id",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "device_name",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "user_agent_summary",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "ip_hash",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "ip_country",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "last_seen_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         },
         {
           "name": "created_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         },
         {
           "name": "updated_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         }
       ],
       "foreign_keys": [
         {
-          "field": "user_id",
-          "ref": "users.public_id"
+          "name": "fk_sessions_user_id",
+          "column": "user_id",
+          "references": "users.public_id",
+          "on_delete": "CASCADE"
         },
         {
-          "field": "device_id",
-          "ref": "devices.public_id"
+          "name": "fk_sessions_device_id",
+          "column": "device_id",
+          "references": "devices.public_id",
+          "on_delete": "SET NULL"
         },
         {
-          "field": "replaced_by_session_id",
-          "ref": "sessions.public_id"
+          "name": "fk_sessions_replaced_by_session_id",
+          "column": "replaced_by_session_id",
+          "references": "sessions.public_id",
+          "on_delete": "SET NULL"
         }
       ],
       "indexes": [
         {
-          "keys": {
-            "public_id": 1
-          },
-          "options": {
-            "name": "uniq_public_id",
-            "unique": true
-          }
+          "name": "sessions_pkey",
+          "columns": [
+            "public_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "refresh_token_hash": 1
-          },
-          "options": {
-            "name": "uniq_refresh_token_hash",
-            "unique": true
-          }
+          "name": "uniq_sessions_refresh_token_hash",
+          "columns": [
+            "refresh_token_hash"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "family_id": 1
-          },
-          "options": {
-            "name": "idx_family_id"
-          }
+          "name": "idx_sessions_family_id",
+          "columns": [
+            "family_id"
+          ],
+          "unique": false
         },
         {
-          "keys": {
-            "user_id": 1
-          },
-          "options": {
-            "name": "idx_user_id"
-          }
+          "name": "idx_sessions_user_id",
+          "columns": [
+            "user_id"
+          ],
+          "unique": false
         },
         {
-          "keys": {
-            "user_id": 1,
-            "revoked_at": 1,
-            "expires_at": 1
-          },
-          "options": {
-            "name": "idx_user_active_sessions"
-          }
+          "name": "idx_sessions_user_active",
+          "columns": [
+            "user_id",
+            "revoked_at",
+            "expires_at"
+          ],
+          "unique": false
+        },
+        {
+          "name": "idx_sessions_device_id",
+          "columns": [
+            "device_id"
+          ],
+          "unique": false,
+          "where": "device_id IS NOT NULL"
         }
       ],
       "routes": {
@@ -1156,125 +1126,111 @@
       }
     },
     "email_tokens": {
-      "purpose": "Single-use hashed tokens for email verify, password reset, email change. TTL on expires_at.",
-      "pk": {
-        "_id": "objectId",
-        "public_id": "tok_ unique"
-      },
+      "purpose": "Single-use hashed tokens for email verify, password reset, email change. Cleanup on expires_at.",
+      "prefix": "tok_",
       "tenant": false,
-      "shard_key": {
-        "user_id": "hashed"
-      },
-      "fields": [
-        {
-          "name": "_id",
-          "bson": "objectId",
-          "required": true,
-          "notes": ""
-        },
+      "pk": "public_id",
+      "columns": [
         {
           "name": "public_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "tok_"
         },
         {
           "name": "user_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "purpose",
-          "bson": "string",
-          "required": true,
-          "notes": "email_verify|password_reset|email_change"
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "CHECK email_verify|password_reset|email_change"
         },
         {
           "name": "token_hash",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "unique; raw ev_/pr_/ec_ never stored"
         },
         {
           "name": "new_email",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "expires_at",
-          "bson": "date",
-          "required": true,
-          "notes": "now+24h; TTL 0"
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "now+24h; cleanup job"
         },
         {
           "name": "consumed_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "created_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         },
         {
           "name": "request_ip_country",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         }
       ],
       "foreign_keys": [
         {
-          "field": "user_id",
-          "ref": "users.public_id"
+          "name": "fk_email_tokens_user_id",
+          "column": "user_id",
+          "references": "users.public_id",
+          "on_delete": "CASCADE"
         }
       ],
       "indexes": [
         {
-          "keys": {
-            "public_id": 1
-          },
-          "options": {
-            "name": "uniq_public_id",
-            "unique": true
-          }
+          "name": "email_tokens_pkey",
+          "columns": [
+            "public_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "token_hash": 1
-          },
-          "options": {
-            "name": "uniq_token_hash",
-            "unique": true
-          }
+          "name": "uniq_email_tokens_token_hash",
+          "columns": [
+            "token_hash"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "expires_at": 1
-          },
-          "options": {
-            "name": "ttl_expires_at",
-            "expireAfterSeconds": 0
-          }
+          "name": "idx_email_tokens_expires_at",
+          "columns": [
+            "expires_at"
+          ],
+          "unique": false
         },
         {
-          "keys": {
-            "user_id": 1,
-            "purpose": 1,
-            "created_at": -1
-          },
-          "options": {
-            "name": "idx_user_purpose_created_at"
-          }
+          "name": "idx_email_tokens_user_purpose_created_at",
+          "columns": [
+            "user_id",
+            "purpose",
+            "created_at DESC"
+          ],
+          "unique": false
         }
       ],
+      "cleanup": "DELETE WHERE expires_at < now()",
       "routes": {
         "write": [
           "POST /v1/auth/register",
@@ -1288,128 +1244,115 @@
       }
     },
     "oauth_states": {
-      "purpose": "Short-lived CSRF/PKCE state. TTL 10 minutes. unique state.",
-      "pk": {
-        "_id": "objectId",
-        "public_id": "st_ unique"
-      },
+      "purpose": "Short-lived CSRF/PKCE state. Cleanup 10 minutes. unique state.",
+      "prefix": "st_",
       "tenant": false,
-      "shard_key": {
-        "state": "hashed"
-      },
-      "fields": [
-        {
-          "name": "_id",
-          "bson": "objectId",
-          "required": true,
-          "notes": ""
-        },
+      "pk": "public_id",
+      "columns": [
         {
           "name": "public_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "st_"
         },
         {
           "name": "state",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "unique; v1 equals public_id"
         },
         {
           "name": "provider",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "intent",
-          "bson": "string",
-          "required": true,
-          "notes": "login|link"
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "CHECK login|link"
         },
         {
           "name": "redirect_uri",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "code_challenge",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "code_verifier_hash",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "user_id",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "consumed_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "expires_at",
-          "bson": "date",
-          "required": true,
-          "notes": "now+10m; TTL 0"
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "now+10m; cleanup job"
         },
         {
           "name": "created_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         }
       ],
       "foreign_keys": [
         {
-          "field": "user_id",
-          "ref": "users.public_id"
+          "name": "fk_oauth_states_user_id",
+          "column": "user_id",
+          "references": "users.public_id",
+          "on_delete": "CASCADE"
         }
       ],
       "indexes": [
         {
-          "keys": {
-            "public_id": 1
-          },
-          "options": {
-            "name": "uniq_public_id",
-            "unique": true
-          }
+          "name": "oauth_states_pkey",
+          "columns": [
+            "public_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "state": 1
-          },
-          "options": {
-            "name": "uniq_state",
-            "unique": true
-          }
+          "name": "uniq_oauth_states_state",
+          "columns": [
+            "state"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "expires_at": 1
-          },
-          "options": {
-            "name": "ttl_expires_at",
-            "expireAfterSeconds": 0
-          }
+          "name": "idx_oauth_states_expires_at",
+          "columns": [
+            "expires_at"
+          ],
+          "unique": false
         }
       ],
+      "cleanup": "DELETE WHERE expires_at < now()",
       "routes": {
         "write": [
           "POST /v1/auth/oauth/{provider}/start",
@@ -1419,158 +1362,144 @@
       }
     },
     "device_codes": {
-      "purpose": "RFC 8628 device authorization. unique device_code and user_code. TTL 600s.",
-      "pk": {
-        "_id": "objectId",
-        "public_id": "dc_ unique"
-      },
+      "purpose": "RFC 8628 device authorization. unique device_code and user_code. Cleanup 600s.",
+      "prefix": "dc_",
       "tenant": false,
-      "shard_key": {
-        "device_code": "hashed"
-      },
-      "fields": [
-        {
-          "name": "_id",
-          "bson": "objectId",
-          "required": true,
-          "notes": ""
-        },
+      "pk": "public_id",
+      "columns": [
         {
           "name": "public_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "dc_"
         },
         {
           "name": "device_code",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "unique; v1 equals public_id"
         },
         {
           "name": "user_code",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "unique uppercase XXXX-XXXX"
         },
         {
           "name": "client_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "",
           "default": "cabinet-studio-desktop"
         },
         {
           "name": "provider",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "status",
-          "bson": "string",
-          "required": true,
-          "notes": "pending|authorized|denied|consumed|expired",
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "CHECK pending|authorized|denied|consumed|expired",
           "default": "pending"
         },
         {
           "name": "user_id",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "interval_seconds",
-          "bson": "int",
-          "required": true,
+          "type": "INTEGER",
+          "nullable": false,
           "notes": "",
           "default": 5
         },
         {
           "name": "last_poll_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "authorized_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "consumed_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "expires_at",
-          "bson": "date",
-          "required": true,
-          "notes": "now+600s; TTL 0"
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "now+600s; cleanup job"
         },
         {
           "name": "created_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         },
         {
           "name": "updated_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         }
       ],
       "foreign_keys": [
         {
-          "field": "user_id",
-          "ref": "users.public_id"
+          "name": "fk_device_codes_user_id",
+          "column": "user_id",
+          "references": "users.public_id",
+          "on_delete": "SET NULL"
         }
       ],
       "indexes": [
         {
-          "keys": {
-            "public_id": 1
-          },
-          "options": {
-            "name": "uniq_public_id",
-            "unique": true
-          }
+          "name": "device_codes_pkey",
+          "columns": [
+            "public_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "device_code": 1
-          },
-          "options": {
-            "name": "uniq_device_code",
-            "unique": true
-          }
+          "name": "uniq_device_codes_device_code",
+          "columns": [
+            "device_code"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "user_code": 1
-          },
-          "options": {
-            "name": "uniq_user_code",
-            "unique": true
-          }
+          "name": "uniq_device_codes_user_code",
+          "columns": [
+            "user_code"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "expires_at": 1
-          },
-          "options": {
-            "name": "ttl_expires_at",
-            "expireAfterSeconds": 0
-          }
+          "name": "idx_device_codes_expires_at",
+          "columns": [
+            "expires_at"
+          ],
+          "unique": false
         }
       ],
+      "cleanup": "DELETE WHERE expires_at < now()",
       "routes": {
         "write": [
           "POST /v1/auth/device/code",
@@ -1580,161 +1509,149 @@
     },
     "plans": {
       "purpose": "Server-side commercial catalog. Seeded. Desktop never hard-codes prices.",
-      "pk": {
-        "_id": "objectId",
-        "public_id": "plan_ unique"
-      },
+      "prefix": "plan_",
       "tenant": false,
-      "shard_key": null,
-      "fields": [
-        {
-          "name": "_id",
-          "bson": "objectId",
-          "required": true,
-          "notes": ""
-        },
+      "pk": "public_id",
+      "columns": [
         {
           "name": "public_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "plan_"
         },
         {
           "name": "code",
-          "bson": "string",
-          "required": true,
-          "notes": "trial|studio|team|enterprise"
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "CHECK trial|studio|team|enterprise"
         },
         {
           "name": "name",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "interval",
-          "bson": "string",
-          "required": true,
-          "notes": "none|month|year"
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "CHECK none|month|year"
         },
         {
           "name": "currency",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "",
           "default": "usd"
         },
         {
           "name": "unit_amount_minor",
-          "bson": "int",
-          "required": true,
+          "type": "INTEGER",
+          "nullable": false,
           "notes": "",
           "default": 0
         },
         {
           "name": "seats_included",
-          "bson": "int",
-          "required": true,
+          "type": "INTEGER",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "max_devices_per_user",
-          "bson": "int",
-          "required": true,
+          "type": "INTEGER",
+          "nullable": false,
           "notes": "",
           "default": 3
         },
         {
           "name": "trial_days",
-          "bson": "int",
-          "required": true,
+          "type": "INTEGER",
+          "nullable": false,
           "notes": "",
           "default": 14
         },
         {
           "name": "sellable",
-          "bson": "bool",
-          "required": true,
+          "type": "BOOLEAN",
+          "nullable": false,
           "notes": "",
           "default": true
         },
         {
           "name": "active",
-          "bson": "bool",
-          "required": true,
+          "type": "BOOLEAN",
+          "nullable": false,
           "notes": "",
           "default": true
         },
         {
           "name": "capabilities",
-          "bson": "object",
-          "required": true,
+          "type": "JSONB",
+          "nullable": false,
           "notes": "cloud_projects, organization_assets, proposal_branding, engineering_handoff, max_seats, max_devices, max_cloud_projects"
         },
         {
           "name": "provider",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "provider_price_id",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "sort_order",
-          "bson": "int",
-          "required": true,
+          "type": "INTEGER",
+          "nullable": false,
           "notes": "",
           "default": 0
         },
         {
           "name": "created_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         },
         {
           "name": "updated_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         }
       ],
       "foreign_keys": [],
       "indexes": [
         {
-          "keys": {
-            "public_id": 1
-          },
-          "options": {
-            "name": "uniq_public_id",
-            "unique": true
-          }
+          "name": "plans_pkey",
+          "columns": [
+            "public_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "code": 1,
-            "interval": 1
-          },
-          "options": {
-            "name": "uniq_code_interval",
-            "unique": true
-          }
+          "name": "uniq_plans_code_interval",
+          "columns": [
+            "code",
+            "interval"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "sellable": 1,
-            "active": 1,
-            "sort_order": 1
-          },
-          "options": {
-            "name": "idx_catalog"
-          }
+          "name": "idx_plans_catalog",
+          "columns": [
+            "sellable",
+            "active",
+            "sort_order"
+          ],
+          "unique": false
         }
       ],
       "routes": {
@@ -1745,171 +1662,166 @@
     },
     "subscriptions": {
       "purpose": "One normalized commercial agreement per organization. No card data. Webhook-verified state is SoT (BIL-002).",
-      "pk": {
-        "_id": "objectId",
-        "public_id": "sub_ unique"
-      },
+      "prefix": "sub_",
       "tenant": true,
-      "shard_key": {
-        "organization_id": "hashed"
-      },
-      "fields": [
-        {
-          "name": "_id",
-          "bson": "objectId",
-          "required": true,
-          "notes": ""
-        },
+      "pk": "public_id",
+      "columns": [
         {
           "name": "public_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "sub_"
         },
         {
           "name": "organization_id",
-          "bson": "string",
-          "required": true,
-          "notes": "unique"
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "unique FK"
         },
         {
           "name": "plan_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "plan_code",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "status",
-          "bson": "string",
-          "required": true,
-          "notes": "trialing|active|past_due|grace|suspended|canceled",
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "CHECK trialing|active|past_due|grace|suspended|canceled",
           "default": "trialing"
         },
         {
           "name": "provider",
-          "bson": "string",
-          "required": true,
-          "notes": "stripe|fake",
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "CHECK stripe|fake",
           "default": "fake"
         },
         {
           "name": "provider_subscription_id",
-          "bson": "string|null",
-          "required": false,
-          "notes": "unique sparse",
+          "type": "TEXT",
+          "nullable": true,
+          "notes": "partial unique",
           "default": "null"
         },
         {
           "name": "seats_included",
-          "bson": "int",
-          "required": true,
+          "type": "INTEGER",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "trial_ends_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": ""
         },
         {
           "name": "current_period_start",
-          "bson": "date",
-          "required": true,
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "current_period_end",
-          "bson": "date",
-          "required": true,
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "cancel_at_period_end",
-          "bson": "bool",
-          "required": true,
+          "type": "BOOLEAN",
+          "nullable": false,
           "notes": "",
           "default": false
         },
         {
           "name": "canceled_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "grace_until",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "created_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         },
         {
           "name": "updated_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         }
       ],
       "foreign_keys": [
         {
-          "field": "organization_id",
-          "ref": "organizations.public_id"
+          "name": "fk_subscriptions_organization_id",
+          "column": "organization_id",
+          "references": "organizations.public_id",
+          "on_delete": "RESTRICT"
         },
         {
-          "field": "plan_id",
-          "ref": "plans.public_id"
+          "name": "fk_subscriptions_plan_id",
+          "column": "plan_id",
+          "references": "plans.public_id",
+          "on_delete": "RESTRICT"
         }
       ],
       "indexes": [
         {
-          "keys": {
-            "public_id": 1
-          },
-          "options": {
-            "name": "uniq_public_id",
-            "unique": true
-          }
+          "name": "subscriptions_pkey",
+          "columns": [
+            "public_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "organization_id": 1
-          },
-          "options": {
-            "name": "uniq_organization_id",
-            "unique": true
-          }
+          "name": "uniq_subscriptions_organization_id",
+          "columns": [
+            "organization_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "provider_subscription_id": 1
-          },
-          "options": {
-            "name": "uniq_provider_subscription_id",
-            "unique": true,
-            "sparse": true
-          }
+          "name": "uniq_subscriptions_provider_subscription_id",
+          "columns": [
+            "provider_subscription_id"
+          ],
+          "unique": true,
+          "where": "provider_subscription_id IS NOT NULL"
         },
         {
-          "keys": {
-            "status": 1,
-            "current_period_end": 1
-          },
-          "options": {
-            "name": "idx_status_period_end"
-          }
+          "name": "idx_subscriptions_status_period_end",
+          "columns": [
+            "status",
+            "current_period_end"
+          ],
+          "unique": false
+        },
+        {
+          "name": "idx_subscriptions_plan_id",
+          "columns": [
+            "plan_id"
+          ],
+          "unique": false
         }
       ],
       "routes": {
@@ -1926,171 +1838,169 @@
     },
     "invoices": {
       "purpose": "Local projection of provider invoices. No PAN/CVC. No raw Stripe objects.",
-      "pk": {
-        "_id": "objectId",
-        "public_id": "invc_ unique"
-      },
+      "prefix": "invc_",
       "tenant": true,
-      "shard_key": {
-        "organization_id": "hashed"
-      },
-      "fields": [
-        {
-          "name": "_id",
-          "bson": "objectId",
-          "required": true,
-          "notes": ""
-        },
+      "pk": "public_id",
+      "columns": [
         {
           "name": "public_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "invc_"
         },
         {
           "name": "organization_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "subscription_id",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "provider",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "provider_invoice_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "unique"
         },
         {
           "name": "number",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "status",
-          "bson": "string",
-          "required": true,
-          "notes": "draft|open|paid|void|uncollectible"
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "CHECK draft|open|paid|void|uncollectible"
         },
         {
           "name": "currency",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "",
           "default": "usd"
         },
         {
           "name": "total_minor",
-          "bson": "int",
-          "required": true,
+          "type": "INTEGER",
+          "nullable": false,
           "notes": "",
           "default": 0
         },
         {
           "name": "amount_due_minor",
-          "bson": "int",
-          "required": true,
+          "type": "INTEGER",
+          "nullable": false,
           "notes": "",
           "default": 0
         },
         {
           "name": "hosted_invoice_url",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "invoice_pdf_url",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "period_start",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "period_end",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "paid_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "created_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         },
         {
           "name": "updated_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         }
       ],
       "foreign_keys": [
         {
-          "field": "organization_id",
-          "ref": "organizations.public_id"
+          "name": "fk_invoices_organization_id",
+          "column": "organization_id",
+          "references": "organizations.public_id",
+          "on_delete": "RESTRICT"
         },
         {
-          "field": "subscription_id",
-          "ref": "subscriptions.public_id"
+          "name": "fk_invoices_subscription_id",
+          "column": "subscription_id",
+          "references": "subscriptions.public_id",
+          "on_delete": "SET NULL"
         }
       ],
       "indexes": [
         {
-          "keys": {
-            "public_id": 1
-          },
-          "options": {
-            "name": "uniq_public_id",
-            "unique": true
-          }
+          "name": "invoices_pkey",
+          "columns": [
+            "public_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "provider_invoice_id": 1
-          },
-          "options": {
-            "name": "uniq_provider_invoice_id",
-            "unique": true
-          }
+          "name": "uniq_invoices_provider_invoice_id",
+          "columns": [
+            "provider_invoice_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "organization_id": 1,
-            "created_at": -1
-          },
-          "options": {
-            "name": "idx_org_created_at"
-          }
+          "name": "idx_invoices_org_created_at",
+          "columns": [
+            "organization_id",
+            "created_at DESC"
+          ],
+          "unique": false
+        },
+        {
+          "name": "idx_invoices_subscription_id",
+          "columns": [
+            "subscription_id"
+          ],
+          "unique": false,
+          "where": "subscription_id IS NOT NULL"
         }
       ],
       "routes": {
@@ -2104,148 +2014,136 @@
       }
     },
     "billing_events": {
-      "purpose": "Webhook inbox and dedupe. unique (provider, provider_event_id). Redacted summary only.",
-      "pk": {
-        "_id": "objectId",
-        "public_id": "bev_ unique"
-      },
+      "purpose": "Webhook inbox and dedupe. unique (provider, provider_event_id). Redacted summary only. organization_id nullable.",
+      "prefix": "bev_",
       "tenant": true,
-      "shard_key": {
-        "organization_id": "hashed"
-      },
-      "fields": [
-        {
-          "name": "_id",
-          "bson": "objectId",
-          "required": true,
-          "notes": ""
-        },
+      "pk": "public_id",
+      "columns": [
         {
           "name": "public_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "bev_"
         },
         {
           "name": "provider",
-          "bson": "string",
-          "required": true,
-          "notes": "stripe|fake"
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "CHECK stripe|fake"
         },
         {
           "name": "provider_event_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "type",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "organization_id",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "subscription_id",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "status",
-          "bson": "string",
-          "required": true,
-          "notes": "received|processed|ignored|failed",
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "CHECK received|processed|ignored|failed",
           "default": "received"
         },
         {
           "name": "payload_digest",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "summary",
-          "bson": "object",
-          "required": true,
-          "notes": "",
-          "default": {}
+          "type": "JSONB",
+          "nullable": false,
+          "notes": "redacted ids/amounts",
+          "default": "{}"
         },
         {
           "name": "error",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "processed_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "created_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         }
       ],
       "foreign_keys": [
         {
-          "field": "organization_id",
-          "ref": "organizations.public_id"
+          "name": "fk_billing_events_organization_id",
+          "column": "organization_id",
+          "references": "organizations.public_id",
+          "on_delete": "SET NULL"
         },
         {
-          "field": "subscription_id",
-          "ref": "subscriptions.public_id"
+          "name": "fk_billing_events_subscription_id",
+          "column": "subscription_id",
+          "references": "subscriptions.public_id",
+          "on_delete": "SET NULL"
         }
       ],
       "indexes": [
         {
-          "keys": {
-            "public_id": 1
-          },
-          "options": {
-            "name": "uniq_public_id",
-            "unique": true
-          }
+          "name": "billing_events_pkey",
+          "columns": [
+            "public_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "provider": 1,
-            "provider_event_id": 1
-          },
-          "options": {
-            "name": "uniq_provider_event",
-            "unique": true
-          }
+          "name": "uniq_billing_events_provider_event",
+          "columns": [
+            "provider",
+            "provider_event_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "organization_id": 1,
-            "created_at": -1
-          },
-          "options": {
-            "name": "idx_org_created_at"
-          }
+          "name": "idx_billing_events_org_created_at",
+          "columns": [
+            "organization_id",
+            "created_at DESC"
+          ],
+          "unique": false
         },
         {
-          "keys": {
-            "status": 1,
-            "created_at": 1
-          },
-          "options": {
-            "name": "idx_status_created_at"
-          }
+          "name": "idx_billing_events_status_created_at",
+          "columns": [
+            "status",
+            "created_at"
+          ],
+          "unique": false
         }
       ],
       "routes": {
@@ -2256,181 +2154,175 @@
     },
     "entitlements": {
       "purpose": "Immutable signed capability snapshots. organization_id nullable if user has no org.",
-      "pk": {
-        "_id": "objectId",
-        "public_id": "ent_ unique"
-      },
+      "prefix": "ent_",
       "tenant": true,
-      "shard_key": {
-        "user_id": "hashed"
-      },
-      "fields": [
-        {
-          "name": "_id",
-          "bson": "objectId",
-          "required": true,
-          "notes": ""
-        },
+      "pk": "public_id",
+      "columns": [
         {
           "name": "public_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "ent_"
         },
         {
           "name": "user_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "organization_id",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "device_id",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "plan_id",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "plan",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "",
           "default": "none"
         },
         {
           "name": "subscription_status",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "",
           "default": "none"
         },
         {
           "name": "capabilities",
-          "bson": "object",
-          "required": true,
+          "type": "JSONB",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "issued_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         },
         {
           "name": "refresh_after",
-          "bson": "date",
-          "required": true,
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "expires_at",
-          "bson": "date",
-          "required": true,
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "grace_until",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "schema_version",
-          "bson": "int",
-          "required": true,
+          "type": "INTEGER",
+          "nullable": false,
           "notes": "",
           "default": 1
         },
         {
           "name": "key_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "signature",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "created_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         }
       ],
       "foreign_keys": [
         {
-          "field": "user_id",
-          "ref": "users.public_id"
+          "name": "fk_entitlements_user_id",
+          "column": "user_id",
+          "references": "users.public_id",
+          "on_delete": "CASCADE"
         },
         {
-          "field": "organization_id",
-          "ref": "organizations.public_id"
+          "name": "fk_entitlements_organization_id",
+          "column": "organization_id",
+          "references": "organizations.public_id",
+          "on_delete": "SET NULL"
         },
         {
-          "field": "device_id",
-          "ref": "devices.public_id"
+          "name": "fk_entitlements_device_id",
+          "column": "device_id",
+          "references": "devices.public_id",
+          "on_delete": "SET NULL"
         },
         {
-          "field": "plan_id",
-          "ref": "plans.public_id"
+          "name": "fk_entitlements_plan_id",
+          "column": "plan_id",
+          "references": "plans.public_id",
+          "on_delete": "SET NULL"
         }
       ],
       "indexes": [
         {
-          "keys": {
-            "public_id": 1
-          },
-          "options": {
-            "name": "uniq_public_id",
-            "unique": true
-          }
+          "name": "entitlements_pkey",
+          "columns": [
+            "public_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "organization_id": 1,
-            "user_id": 1,
-            "issued_at": -1
-          },
-          "options": {
-            "name": "idx_org_user_issued_at"
-          }
+          "name": "idx_entitlements_org_user_issued_at",
+          "columns": [
+            "organization_id",
+            "user_id",
+            "issued_at DESC"
+          ],
+          "unique": false
         },
         {
-          "keys": {
-            "user_id": 1,
-            "issued_at": -1
-          },
-          "options": {
-            "name": "idx_user_issued_at"
-          }
+          "name": "idx_entitlements_user_issued_at",
+          "columns": [
+            "user_id",
+            "issued_at DESC"
+          ],
+          "unique": false
         },
         {
-          "keys": {
-            "device_id": 1,
-            "issued_at": -1
-          },
-          "options": {
-            "name": "idx_device_issued_at",
-            "sparse": true
-          }
+          "name": "idx_entitlements_device_issued_at",
+          "columns": [
+            "device_id",
+            "issued_at DESC"
+          ],
+          "unique": false,
+          "where": "device_id IS NOT NULL"
         }
       ],
       "routes": {
@@ -2445,152 +2337,141 @@
       }
     },
     "audit_events": {
-      "purpose": "Append-only redacted audit trail. No updates.",
-      "pk": {
-        "_id": "objectId",
-        "public_id": "evt_ unique"
-      },
+      "purpose": "Append-only redacted audit trail. No updates. actor_user_id is API actor_id. organization_id nullable FK.",
+      "prefix": "evt_",
       "tenant": true,
       "append_only": true,
-      "shard_key": {
-        "organization_id": "hashed"
-      },
-      "fields": [
-        {
-          "name": "_id",
-          "bson": "objectId",
-          "required": true,
-          "notes": ""
-        },
+      "pk": "public_id",
+      "columns": [
         {
           "name": "public_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "evt_"
         },
         {
           "name": "organization_id",
-          "bson": "string",
-          "required": true,
-          "notes": ""
-        },
-        {
-          "name": "actor_id",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
+          "name": "actor_user_id",
+          "type": "TEXT",
+          "nullable": true,
+          "notes": "API actor_id",
+          "default": "null"
+        },
+        {
           "name": "actor_type",
-          "bson": "string",
-          "required": true,
-          "notes": "user|system|webhook",
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "CHECK user|system|webhook",
           "default": "user"
         },
         {
           "name": "action",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "resource_type",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "resource_id",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "ip_country",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "request_id",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "metadata",
-          "bson": "object",
-          "required": true,
-          "notes": "",
-          "default": {}
+          "type": "JSONB",
+          "nullable": false,
+          "notes": "redacted",
+          "default": "{}"
         },
         {
           "name": "created_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         }
       ],
       "foreign_keys": [
         {
-          "field": "organization_id",
-          "ref": "organizations.public_id"
+          "name": "fk_audit_events_organization_id",
+          "column": "organization_id",
+          "references": "organizations.public_id",
+          "on_delete": "SET NULL"
         },
         {
-          "field": "actor_id",
-          "ref": "users.public_id"
+          "name": "fk_audit_events_actor_user_id",
+          "column": "actor_user_id",
+          "references": "users.public_id",
+          "on_delete": "SET NULL"
         }
       ],
       "indexes": [
         {
-          "keys": {
-            "public_id": 1
-          },
-          "options": {
-            "name": "uniq_public_id",
-            "unique": true
-          }
+          "name": "audit_events_pkey",
+          "columns": [
+            "public_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "organization_id": 1,
-            "created_at": -1
-          },
-          "options": {
-            "name": "idx_org_created_at"
-          }
+          "name": "idx_audit_events_org_created_at",
+          "columns": [
+            "organization_id",
+            "created_at DESC"
+          ],
+          "unique": false
         },
         {
-          "keys": {
-            "action": 1
-          },
-          "options": {
-            "name": "idx_action"
-          }
+          "name": "idx_audit_events_action",
+          "columns": [
+            "action"
+          ],
+          "unique": false
         },
         {
-          "keys": {
-            "organization_id": 1,
-            "action": 1,
-            "created_at": -1
-          },
-          "options": {
-            "name": "idx_org_action_created_at"
-          }
+          "name": "idx_audit_events_org_action_created_at",
+          "columns": [
+            "organization_id",
+            "action",
+            "created_at DESC"
+          ],
+          "unique": false
         },
         {
-          "keys": {
-            "organization_id": 1,
-            "actor_id": 1,
-            "created_at": -1
-          },
-          "options": {
-            "name": "idx_org_actor_created_at"
-          }
+          "name": "idx_audit_events_org_actor_created_at",
+          "columns": [
+            "organization_id",
+            "actor_user_id",
+            "created_at DESC"
+          ],
+          "unique": false
         }
       ],
       "routes": {
@@ -2603,128 +2484,113 @@
       }
     },
     "outbox": {
-      "purpose": "Transactional outbox. published_at null until Kafka ack. Kafka is not SoT.",
-      "pk": {
-        "_id": "objectId",
-        "public_id": "obx_ unique"
-      },
+      "purpose": "Transactional outbox. published_at null until Kafka ack. Kafka is not SoT. No FK; partition_key is org id string.",
+      "prefix": "obx_",
       "tenant": true,
-      "shard_key": {
-        "partition_key": "hashed"
-      },
-      "fields": [
-        {
-          "name": "_id",
-          "bson": "objectId",
-          "required": true,
-          "notes": ""
-        },
+      "pk": "public_id",
+      "columns": [
         {
           "name": "public_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "obx_"
         },
         {
           "name": "event_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "unique; often equals public_id"
         },
         {
           "name": "topic",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "partition_key",
-          "bson": "string",
-          "required": true,
-          "notes": "usually organization_id"
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "usually organization_id string; no FK"
         },
         {
           "name": "payload",
-          "bson": "object",
-          "required": true,
+          "type": "JSONB",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "attempts",
-          "bson": "int",
-          "required": true,
+          "type": "INTEGER",
+          "nullable": false,
           "notes": "",
           "default": 0
         },
         {
           "name": "last_error",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "available_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         },
         {
           "name": "published_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "created_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         }
       ],
       "foreign_keys": [],
       "indexes": [
         {
-          "keys": {
-            "public_id": 1
-          },
-          "options": {
-            "name": "uniq_public_id",
-            "unique": true
-          }
+          "name": "outbox_pkey",
+          "columns": [
+            "public_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "event_id": 1
-          },
-          "options": {
-            "name": "uniq_event_id",
-            "unique": true
-          }
+          "name": "uniq_outbox_event_id",
+          "columns": [
+            "event_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "published_at": 1,
-            "created_at": 1
-          },
-          "options": {
-            "name": "idx_unpublished"
-          }
+          "name": "idx_outbox_unpublished",
+          "columns": [
+            "created_at"
+          ],
+          "unique": false,
+          "where": "published_at IS NULL"
         },
         {
-          "keys": {
-            "available_at": 1,
-            "published_at": 1
-          },
-          "options": {
-            "name": "idx_publisher_due"
-          }
+          "name": "idx_outbox_publisher_due",
+          "columns": [
+            "available_at",
+            "published_at"
+          ],
+          "unique": false
         }
       ],
       "routes": {
         "write": [
-          "all mutating handlers in same Mongo txn as domain write"
+          "all mutating handlers in same Postgres txn as domain write"
         ],
         "read": [
           "outbox publisher worker"
@@ -2732,129 +2598,108 @@
       }
     },
     "idempotency_keys": {
-      "purpose": "24h replay cache. unique (principal, key). TTL 24h on created_at. User-scoped when authenticated.",
-      "pk": {
-        "_id": "objectId",
-        "public_id": "idk_ unique"
-      },
+      "purpose": "24h replay cache. unique (principal, key). Cleanup 24h on created_at. No FK.",
+      "prefix": "idk_",
       "tenant": false,
-      "shard_key": {
-        "principal": "hashed"
-      },
-      "fields": [
-        {
-          "name": "_id",
-          "bson": "objectId",
-          "required": true,
-          "notes": ""
-        },
+      "pk": "public_id",
+      "columns": [
         {
           "name": "public_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "idk_"
         },
         {
           "name": "principal",
-          "bson": "string",
-          "required": true,
-          "notes": "usr_ or ip:<sha256>"
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "usr_ or ip:<sha256> or wh:stripe"
         },
         {
           "name": "key",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "method",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "path",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "request_hash",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "response_status",
-          "bson": "int",
-          "required": true,
+          "type": "INTEGER",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "response_body",
-          "bson": "object|null",
-          "required": false,
+          "type": "JSONB",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "in_progress",
-          "bson": "bool",
-          "required": true,
+          "type": "BOOLEAN",
+          "nullable": false,
           "notes": "",
           "default": true
         },
         {
           "name": "created_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         },
         {
           "name": "completed_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         }
       ],
-      "foreign_keys": [
-        {
-          "field": "principal",
-          "ref": "users.public_id",
-          "notes": "when usr_ prefixed"
-        }
-      ],
+      "foreign_keys": [],
       "indexes": [
         {
-          "keys": {
-            "public_id": 1
-          },
-          "options": {
-            "name": "uniq_public_id",
-            "unique": true
-          }
+          "name": "idempotency_keys_pkey",
+          "columns": [
+            "public_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "principal": 1,
-            "key": 1
-          },
-          "options": {
-            "name": "uniq_principal_key",
-            "unique": true
-          }
+          "name": "uniq_idempotency_keys_principal_key",
+          "columns": [
+            "principal",
+            "key"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "created_at": 1
-          },
-          "options": {
-            "name": "ttl_created_at",
-            "expireAfterSeconds": 86400
-          }
+          "name": "idx_idempotency_keys_created_at",
+          "columns": [
+            "created_at"
+          ],
+          "unique": false
         }
       ],
+      "cleanup": "DELETE WHERE created_at < now() - interval '24 hours'",
       "routes": {
         "write": [
           "Idempotency-Key middleware on retryable mutations"
@@ -2863,136 +2708,129 @@
     },
     "data_exports": {
       "purpose": "Async personal-data export jobs. Not org-owned projects. User-owned.",
-      "pk": {
-        "_id": "objectId",
-        "public_id": "exp_ unique"
-      },
+      "prefix": "exp_",
       "tenant": false,
-      "shard_key": {
-        "user_id": "hashed"
-      },
-      "fields": [
-        {
-          "name": "_id",
-          "bson": "objectId",
-          "required": true,
-          "notes": ""
-        },
+      "pk": "public_id",
+      "columns": [
         {
           "name": "public_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "exp_"
         },
         {
           "name": "user_id",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": ""
         },
         {
           "name": "status",
-          "bson": "string",
-          "required": true,
-          "notes": "queued|processing|ready|failed",
+          "type": "TEXT",
+          "nullable": false,
+          "notes": "CHECK queued|processing|ready|failed",
           "default": "queued"
         },
         {
           "name": "scope",
-          "bson": "string",
-          "required": true,
+          "type": "TEXT",
+          "nullable": false,
           "notes": "",
           "default": "personal"
         },
         {
           "name": "object_key",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "bytes",
-          "bson": "long|null",
-          "required": false,
+          "type": "BIGINT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "error_code",
-          "bson": "string|null",
-          "required": false,
+          "type": "TEXT",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "created_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         },
         {
           "name": "updated_at",
-          "bson": "date",
-          "required": true,
-          "notes": ""
+          "type": "TIMESTAMPTZ",
+          "nullable": false,
+          "notes": "",
+          "default": "now()"
         },
         {
           "name": "completed_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         },
         {
           "name": "expires_at",
-          "bson": "date|null",
-          "required": false,
+          "type": "TIMESTAMPTZ",
+          "nullable": true,
           "notes": "",
           "default": "null"
         }
       ],
       "foreign_keys": [
         {
-          "field": "user_id",
-          "ref": "users.public_id"
+          "name": "fk_data_exports_user_id",
+          "column": "user_id",
+          "references": "users.public_id",
+          "on_delete": "CASCADE"
         }
       ],
       "indexes": [
         {
-          "keys": {
-            "public_id": 1
-          },
-          "options": {
-            "name": "uniq_public_id",
-            "unique": true
-          }
+          "name": "data_exports_pkey",
+          "columns": [
+            "public_id"
+          ],
+          "unique": true
         },
         {
-          "keys": {
-            "user_id": 1,
-            "status": 1,
-            "created_at": -1
-          },
-          "options": {
-            "name": "idx_user_status_created_at"
-          }
+          "name": "uniq_data_exports_user_in_progress",
+          "columns": [
+            "user_id"
+          ],
+          "unique": true,
+          "where": "status IN ('queued','processing')"
         },
         {
-          "keys": {
-            "expires_at": 1
-          },
-          "options": {
-            "name": "ttl_expires_at",
-            "expireAfterSeconds": 0,
-            "partialFilterExpression": {
-              "expires_at": {
-                "$type": "date"
-              }
-            }
-          }
+          "name": "idx_data_exports_user_status_created_at",
+          "columns": [
+            "user_id",
+            "status",
+            "created_at DESC"
+          ],
+          "unique": false
+        },
+        {
+          "name": "idx_data_exports_expires_at",
+          "columns": [
+            "expires_at"
+          ],
+          "unique": false,
+          "where": "expires_at IS NOT NULL"
         }
       ],
+      "cleanup": "DELETE WHERE expires_at IS NOT NULL AND expires_at < now()",
       "routes": {
         "write": [
           "POST /v1/me/export"
@@ -3077,46 +2915,36 @@
       "sort_order": 20
     }
   ],
-  "ttl_indexes": [
+  "cleanup_jobs": [
     {
-      "collection": "email_tokens",
-      "keys": {
-        "expires_at": 1
-      },
-      "expireAfterSeconds": 0
+      "table": "email_tokens",
+      "sql": "DELETE FROM email_tokens WHERE expires_at < now()",
+      "effect": "drop after token expiry (24h)"
     },
     {
-      "collection": "oauth_states",
-      "keys": {
-        "expires_at": 1
-      },
-      "expireAfterSeconds": 0
+      "table": "oauth_states",
+      "sql": "DELETE FROM oauth_states WHERE expires_at < now()",
+      "effect": "drop after 10 minutes"
     },
     {
-      "collection": "device_codes",
-      "keys": {
-        "expires_at": 1
-      },
-      "expireAfterSeconds": 0
+      "table": "device_codes",
+      "sql": "DELETE FROM device_codes WHERE expires_at < now()",
+      "effect": "drop after 600s"
     },
     {
-      "collection": "idempotency_keys",
-      "keys": {
-        "created_at": 1
-      },
-      "expireAfterSeconds": 86400
+      "table": "idempotency_keys",
+      "sql": "DELETE FROM idempotency_keys WHERE created_at < now() - interval '24 hours'",
+      "effect": "24h replay window"
     },
     {
-      "collection": "data_exports",
-      "keys": {
-        "expires_at": 1
-      },
-      "expireAfterSeconds": 0,
-      "partialFilterExpression": {
-        "expires_at": {
-          "$type": "date"
-        }
-      }
+      "table": "data_exports",
+      "sql": "DELETE FROM data_exports WHERE expires_at IS NOT NULL AND expires_at < now()",
+      "effect": "drop ready archives job rows after retention"
+    },
+    {
+      "table": "sessions",
+      "sql": "DELETE FROM sessions WHERE expires_at < now() - interval '7 days' AND revoked_at IS NOT NULL",
+      "effect": "optional sweeper; reuse hashes must survive expires_at"
     }
   ],
   "not_stored": [
@@ -3130,9 +2958,10 @@
     "device hardware fingerprints",
     "raw client IP",
     "plaintext passwords",
-    "raw Stripe webhook bodies"
+    "raw Stripe webhook bodies",
+    "serial integer public API ids"
   ],
-  "rejected_collections": [
+  "rejected_tables": [
     "cloud_projects",
     "revisions",
     "assets",
@@ -3148,10 +2977,16 @@
   ],
   "transaction_boundaries": [
     "register: users + email_tokens + idempotency + outbox",
-    "register+org+trial / POST /v1/organizations: organizations + memberships + subscriptions + audit_events + outbox",
+    "POST /v1/organizations: organizations first then memberships + subscriptions + audit_events + outbox",
     "accept invite: invitations + memberships + audit_events + outbox",
     "transfer ownership: organizations + memberships + audit_events + outbox",
     "refresh rotation: sessions insert + presented revoke; reuse revokes family",
-    "webhook process+outbox: billing_events + subscriptions/invoices + audit_events + outbox"
-  ]
+    "webhook process+outbox: billing_events + subscriptions/invoices + audit_events + outbox",
+    "login: sessions + users.last_login_at + audit_events + outbox",
+    "device activate: devices + entitlements + audit_events + outbox",
+    "email change confirm: email_tokens + users + sessions revoke + audit_events + outbox",
+    "export request: data_exports + outbox + idempotency"
+  ],
+  "ddl": "schema-v1.sql",
+  "canonical_doc": "SCHEMA_V1.md"
 }

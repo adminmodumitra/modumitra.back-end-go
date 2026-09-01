@@ -160,6 +160,37 @@ Passwords are hashed with **argon2id** server-side. They are never logged, never
 
 Each route names a bucket. Limits are per principal when authenticated, else per IP. Exceeding a bucket returns `429 rate_limited` with `Retry-After`. Auth buckets are tighter than read buckets.
 
+### 1.9 Distributed tracing (one trace_id for the whole request)
+
+**Rule:** one W3C `trace_id` from the incoming HTTP request through every internal hop and every outbound call. Child **spans** are new. A new **trace** is forbidden.
+
+| Hop | How the same `trace_id` is kept |
+| --- | --- |
+| Incoming HTTP | If `traceparent` is present, **continue** that trace. If absent, generate a 16-byte trace_id and a root span. |
+| Gin handlers / other packages | `context.Context` carries the span. Never start a root tracer inside a handler. |
+| Postgres | `otelsql` / pgx tracing: query spans are children of the request span. |
+| Kafka outbox publisher + consumers | Inject W3C `traceparent` (and `tracestate` if any) on the message headers. Consumers **extract** and continue; they do not start a new trace. |
+| Stripe, OAuth, email HTTP | Inject `traceparent` on the outbound request. Wrapper always opens a child span even if the vendor SDK ignores the header. |
+| Logs (Loki) | Every log line includes `trace_id` and `request_id`. |
+
+**IDs:**
+
+- `trace_id` — 32 lowercase hex (W3C). This is the id that must not change.
+- `span_id` — 16 hex; new per hop (handler, SQL, Kafka produce, Stripe…).
+- `request_id` — public `req_…` for API bodies. If we generated the trace, `request_id` is `req_` + first 26 chars of a Crockford form **or** we set `X-Request-Id` independently but **always attach the same `trace_id` on the span**. Prefer: generate one trace_id, echo it as `X-Trace-Id`, and keep `X-Request-Id` as the client/server `req_…` correlation id. Grafana joins on `trace_id`.
+
+**Headers (in and out):**
+
+| Header | Required | Notes |
+| --- | --- | --- |
+| `traceparent` | no in, **yes out** | W3C format `00-<trace_id>-<span_id>-<flags>`. Outbound HTTP and Kafka must send it. |
+| `tracestate` | no | Propagate if received. |
+| `X-Trace-Id` | no | Convenience echo of the 32-hex `trace_id` (same value as in `traceparent`). Also on every JSON error/success as `trace_id` next to `request_id`. |
+
+Webhook (`POST /v1/webhooks/billing`): if Stripe sends no `traceparent`, start a root trace for that delivery, then the same id follows verify → Postgres → outbox → Kafka.
+
+Never log `traceparent` as a new id. Never call `tracer.Start` without the parent context.
+
 ---
 
 ## 2. Shared error envelope (all errors)
