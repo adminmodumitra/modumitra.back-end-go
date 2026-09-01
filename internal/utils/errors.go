@@ -11,26 +11,38 @@ type Code string
 func (c Code) String() string { return string(c) }
 
 const (
-	CodeInternal            Code = "internal_error"
-	CodeUnauthenticated     Code = "unauthenticated"
-	CodeForbidden           Code = "forbidden"
-	CodeNotFound            Code = "not_found"
-	CodeValidation          Code = "validation_error"
-	CodeConflict            Code = "conflict"
-	CodeRateLimited         Code = "rate_limited"
-	CodeIdempotencyConflict Code = "idempotency_conflict"
-	CodeServiceUnavailable  Code = "service_unavailable"
-	CodeTenantMismatch      Code = "tenant_mismatch"
-	CodeEmailTaken          Code = "email_taken"
-	CodeTokenReuse          Code = "token_reuse_detected"
-	CodeDeviceLimit         Code = "device_limit_reached"
-	CodeWeakPassword        Code = "weak_password"
-	CodeUnknownDriver       Code = "unknown_datastore_driver"
-	CodeInvalidCredentials  Code = "invalid_credentials"
-	CodeInvalidToken        Code = "invalid_token"
-	CodeTermsOutdated       Code = "terms_outdated"
-	CodeAccountSuspended    Code = "account_suspended"
-	CodeEmailUnverified     Code = "email_unverified"
+	CodeInternal                Code = "internal_error"
+	CodeUnauthenticated         Code = "unauthenticated"
+	CodeForbidden               Code = "forbidden"
+	CodeNotFound                Code = "not_found"
+	CodeValidation              Code = "validation_error"
+	CodeConflict                Code = "conflict"
+	CodeRateLimited             Code = "rate_limited"
+	CodeIdempotencyConflict     Code = "idempotency_conflict"
+	CodeServiceUnavailable      Code = "service_unavailable"
+	CodeTenantMismatch          Code = "tenant_mismatch"
+	CodeEmailTaken              Code = "email_taken"
+	CodeTokenReuse              Code = "token_reuse_detected"
+	CodeDeviceLimit             Code = "device_limit_reached"
+	CodeWeakPassword            Code = "weak_password"
+	CodeUnknownDriver           Code = "unknown_datastore_driver"
+	CodeInvalidCredentials      Code = "invalid_credentials"
+	CodeInvalidToken            Code = "invalid_token"
+	CodeTermsOutdated           Code = "terms_outdated"
+	CodeAccountSuspended        Code = "account_suspended"
+	CodeEmailUnverified         Code = "email_unverified"
+	CodeLastOwner               Code = "last_owner"
+	CodeAlreadyMember           Code = "already_member"
+	CodeInvitationPending       Code = "invitation_pending"
+	CodeInvitationNotPending    Code = "invitation_not_pending"
+	CodeInvitationEmailMismatch Code = "invitation_email_mismatch"
+	CodeInvitationExpired       Code = "invitation_expired"
+	CodeInvitationRevoked       Code = "invitation_revoked"
+	CodeInvitationAccepted      Code = "invitation_accepted"
+	CodeRoleNotAssignable       Code = "role_not_assignable"
+	CodeAlreadyOwner            Code = "already_owner"
+	CodeCannotSuspendSelf       Code = "cannot_suspend_self"
+	CodeCannotRemoveSelf        Code = "cannot_remove_self"
 )
 
 // Error is the non-generic application error. It always has a Code, a
@@ -116,26 +128,38 @@ type def struct {
 }
 
 var catalog = map[Code]def{
-	CodeInternal:            {StatusInternal, "Internal server error"},
-	CodeUnauthenticated:     {StatusUnauthorized, "Authentication required"},
-	CodeForbidden:           {StatusForbidden, "Forbidden"},
-	CodeNotFound:            {StatusNotFound, "Not found"},
-	CodeValidation:          {StatusUnprocessableEntity, "Invalid request"},
-	CodeConflict:            {StatusConflict, "Conflict"},
-	CodeRateLimited:         {StatusTooManyRequests, "Too many requests"},
-	CodeIdempotencyConflict: {StatusConflict, "Idempotency key reused with a different body"},
-	CodeServiceUnavailable:  {StatusServiceUnavailable, "Service is not ready"},
-	CodeTenantMismatch:      {StatusNotFound, "Not found"},
-	CodeEmailTaken:          {StatusConflict, "Email already registered"},
-	CodeTokenReuse:          {StatusUnauthorized, "Refresh token reuse detected"},
-	CodeDeviceLimit:         {StatusConflict, "Device limit reached"},
-	CodeWeakPassword:        {StatusUnprocessableEntity, "Password does not meet requirements"},
-	CodeUnknownDriver:       {StatusInternal, "Unknown datastore driver"},
-	CodeInvalidCredentials:  {StatusUnauthorized, "Invalid email or password"},
-	CodeInvalidToken:        {StatusBadRequest, "Invalid or expired token"},
-	CodeTermsOutdated:       {StatusUnprocessableEntity, "Terms or privacy version is not current"},
-	CodeAccountSuspended:    {StatusForbidden, "Account is suspended"},
-	CodeEmailUnverified:     {StatusForbidden, "Email is not verified"},
+	CodeInternal:                {StatusInternal, "Internal server error"},
+	CodeUnauthenticated:         {StatusUnauthorized, "Authentication required"},
+	CodeForbidden:               {StatusForbidden, "Forbidden"},
+	CodeNotFound:                {StatusNotFound, "Not found"},
+	CodeValidation:              {StatusUnprocessableEntity, "Invalid request"},
+	CodeConflict:                {StatusConflict, "Conflict"},
+	CodeRateLimited:             {StatusTooManyRequests, "Too many requests"},
+	CodeIdempotencyConflict:     {StatusConflict, "Idempotency key reused with a different body"},
+	CodeServiceUnavailable:      {StatusServiceUnavailable, "Service is not ready"},
+	CodeTenantMismatch:          {StatusNotFound, "Not found"},
+	CodeEmailTaken:              {StatusConflict, "Email already registered"},
+	CodeTokenReuse:              {StatusUnauthorized, "Refresh token reuse detected"},
+	CodeDeviceLimit:             {StatusConflict, "Device limit reached"},
+	CodeWeakPassword:            {StatusUnprocessableEntity, "Password does not meet requirements"},
+	CodeUnknownDriver:           {StatusInternal, "Unknown datastore driver"},
+	CodeInvalidCredentials:      {StatusUnauthorized, "Invalid email or password"},
+	CodeInvalidToken:            {StatusBadRequest, "Invalid or expired token"},
+	CodeTermsOutdated:           {StatusUnprocessableEntity, "Terms or privacy version is not current"},
+	CodeAccountSuspended:        {StatusForbidden, "Account is suspended"},
+	CodeEmailUnverified:         {StatusForbidden, "Email is not verified"},
+	CodeLastOwner:               {StatusConflict, "Last owner cannot leave or be removed"},
+	CodeAlreadyMember:           {StatusConflict, "Already a member of this organization"},
+	CodeInvitationPending:       {StatusConflict, "A pending invitation for this email already exists"},
+	CodeInvitationNotPending:    {StatusConflict, "Invitation is not pending"},
+	CodeInvitationEmailMismatch: {StatusForbidden, "Authenticated email does not match invitation"},
+	CodeInvitationExpired:       {StatusConflict, "Invitation has expired"},
+	CodeInvitationRevoked:       {StatusConflict, "Invitation has been revoked"},
+	CodeInvitationAccepted:      {StatusConflict, "Invitation has already been accepted"},
+	CodeRoleNotAssignable:       {StatusUnprocessableEntity, "Role is not assignable on this route"},
+	CodeAlreadyOwner:            {StatusConflict, "User is already the owner"},
+	CodeCannotSuspendSelf:       {StatusConflict, "Cannot suspend yourself"},
+	CodeCannotRemoveSelf:        {StatusConflict, "Use leave to remove yourself"},
 }
 
 // E returns a coded error from the catalog. Unknown codes become Generic.

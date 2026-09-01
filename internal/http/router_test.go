@@ -15,6 +15,7 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
 )
 
 func TestMain(m *testing.M) {
@@ -49,8 +50,9 @@ func testRouter(t *testing.T, p fakePinger) http.Handler {
 	t.Helper()
 	cfg := config.Load()
 	cfg.ServiceName = "cabinet-studio-api-test"
-	svc, _, _ := identity.NewMemoryService(testSettings(cfg))
-	return NewRouter(cfg, p, svc)
+	svc, _, mem := identity.NewMemoryService(testSettings(cfg))
+	orgs, _, _ := org.NewMemoryService(mem.Users(), cfg.TrialDays)
+	return NewRouter(cfg, p, svc, orgs)
 }
 
 func TestHealthzOK(t *testing.T) {
@@ -234,8 +236,9 @@ func TestTraceparentEcho(t *testing.T) {
 func TestReadyzReportsActiveDriver(t *testing.T) {
 	cfg := config.Load()
 	cfg.ServiceName = "cabinet-studio-api-test"
-	svc, _, _ := identity.NewMemoryService(testSettings(cfg))
-	r := NewRouter(cfg, fakePinger{}, svc)
+	svc, _, mem := identity.NewMemoryService(testSettings(cfg))
+	orgs, _, _ := org.NewMemoryService(mem.Users(), cfg.TrialDays)
+	r := NewRouter(cfg, fakePinger{}, svc, orgs)
 	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)

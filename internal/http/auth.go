@@ -146,7 +146,7 @@ func (h *handlers) login(c *gin.Context) {
 			TokenType:    pair.TokenType,
 		},
 		User:         userView(u),
-		Organization: nil,
+		Organization: h.primaryOrgView(c, u.ID),
 	})
 }
 
@@ -301,6 +301,6 @@ func (h *handlers) otpVerify(c *gin.Context) {
 			TokenType:    pair.TokenType,
 		},
 		User:         userView(u),
-		Organization: nil,
+		Organization: h.primaryOrgView(c, u.ID),
 	})
 }

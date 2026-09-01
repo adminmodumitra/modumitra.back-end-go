@@ -15,6 +15,8 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 	identpg "github.com/Danish-13-Khan/backend-cabinet/internal/identity/postgres"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
+	orgpg "github.com/Danish-13-Khan/backend-cabinet/internal/org/postgres"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/store"
 )
 
@@ -97,7 +99,20 @@ func main() {
 		},
 	)
 
-	engine := httpapi.NewRouter(cfg, st, ident)
+	orgs := org.NewService(
+		orgpg.NewOrgRepo(db),
+		orgpg.NewMemberRepo(db),
+		orgpg.NewInvitationRepo(db),
+		identpg.NewUserRepo(db),
+		orgpg.NewTx(db),
+		org.NewLogMailer(cfg.LogLevel),
+		org.SystemClock{},
+		org.NewIDGen(),
+		org.NewTokens(),
+		org.Settings{TrialDays: cfg.TrialDays},
+	)
+
+	engine := httpapi.NewRouter(cfg, st, ident, orgs)
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
 		Handler:           engine,

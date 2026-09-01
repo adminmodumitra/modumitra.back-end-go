@@ -12,12 +12,14 @@ const (
 	HeaderIdempotency   = "Idempotency-Key"
 	HeaderRetryAfter    = "Retry-After"
 	HeaderWWWAuth       = "WWW-Authenticate"
+	HeaderOrganization  = "X-Organization-Id"
 
 	CtxRequestID = "request_id"
 	CtxTraceID   = "trace_id"
 	CtxUserID    = "user_id"
 	CtxSessionID = "session_id"
 	CtxOrgID     = "organization_id"
+	CtxRole      = "role"
 
 	DriverPostgres = "postgres"
 	DriverSQL      = "sql"
