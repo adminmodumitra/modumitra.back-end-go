@@ -103,6 +103,7 @@ func (p Pool) Normalized() NormalizedPool {
 }
 
 type SQLConfig struct {
+	Enabled         bool   `json:"Enabled"`
 	Driver          string `json:"Driver"` // "postgres" (required for sql)
 	DSN             string `json:"DSN"`    // postgres://... local or remote
 	MaxOpenConns    int    `json:"MaxOpenConns"`
@@ -119,6 +120,7 @@ func (c SQLConfig) Pool() Pool {
 }
 
 type RedisConfig struct {
+	Enabled         bool   `json:"Enabled"`
 	Addr            string `json:"Addr"` // host:port
 	Password        string `json:"Password"`
 	DB              int    `json:"DB"`
@@ -137,6 +139,7 @@ func (c RedisConfig) Pool() Pool {
 }
 
 type NoSQLConfig struct {
+	Enabled         bool   `json:"Enabled"`
 	URI             string `json:"URI"` // mongodb:// or mongodb+srv://
 	Database        string `json:"Database"`
 	MaxOpenConns    int    `json:"MaxOpenConns"`    // MaxPoolSize
@@ -153,10 +156,69 @@ func (c NoSQLConfig) Pool() Pool {
 }
 
 type Datastore struct {
-	Driver string      `json:"Driver"` // "postgres" | "sql" | "redis" | "mongodb" | "nosql"
-	SQL    SQLConfig   `json:"SQL"`
-	Redis  RedisConfig `json:"Redis"`
-	NoSQL  NoSQLConfig `json:"NoSQL"`
+	Driver  string      `json:"Driver"`  // single-driver fallback: "postgres" | "sql" | "redis" | "mongodb" | "nosql"
+	Drivers []string    `json:"Drivers"` // concurrent adapters, e.g. ["postgres","redis","mongodb"]
+	SQL     SQLConfig   `json:"SQL"`
+	Redis   RedisConfig `json:"Redis"`
+	NoSQL   NoSQLConfig `json:"NoSQL"`
+}
+
+
+// EnabledDrivers is the set of adapters to open at once.
+// Priority: Drivers list (or DATASTORE_DRIVERS) → per-block Enabled → single Driver fallback.
+func (d Datastore) EnabledDrivers() []string {
+	seen := map[string]struct{}{}
+	var out []string
+	add := func(raw string) {
+		n := normalizeDriverName(raw)
+		if n == "" {
+			return
+		}
+		if n != "postgres" && n != "redis" && n != "mongodb" {
+			n = strings.ToLower(strings.TrimSpace(raw))
+		}
+		if _, ok := seen[n]; ok {
+			return
+		}
+		seen[n] = struct{}{}
+		out = append(out, n)
+	}
+	for _, raw := range d.Drivers {
+		add(raw)
+	}
+	if len(out) > 0 {
+		return out
+	}
+	if d.SQL.Enabled {
+		add("postgres")
+	}
+	if d.Redis.Enabled {
+		add("redis")
+	}
+	if d.NoSQL.Enabled {
+		add("mongodb")
+	}
+	if len(out) > 0 {
+		return out
+	}
+	add(d.NormalizedDriver())
+	return out
+}
+
+func normalizeDriverName(s string) string {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "", "postgres", "postgresql", "sql", "pgx":
+		if strings.TrimSpace(s) == "" {
+			return ""
+		}
+		return "postgres"
+	case "redis":
+		return "redis"
+	case "mongodb", "mongo", "nosql":
+		return "mongodb"
+	default:
+		return strings.ToLower(strings.TrimSpace(s))
+	}
 }
 
 // NormalizedDriver returns the adapter key: postgres, redis, or mongodb.
@@ -222,6 +284,7 @@ func defaultDatastore() Datastore {
 	return Datastore{
 		Driver: "postgres",
 		SQL: SQLConfig{
+			Enabled:         true,
 			Driver:          "postgres",
 			DSN:             "postgres://cabinet:cabinet@localhost:5432/cabinet_studio?sslmode=disable",
 			MaxOpenConns:    defaultMaxOpenConns,
@@ -272,6 +335,18 @@ func resolveDatastorePath() string {
 func applyDatastoreEnv(ds *Datastore) {
 	if v := strings.TrimSpace(os.Getenv("DATASTORE_DRIVER")); v != "" {
 		ds.Driver = v
+	}
+	if v := strings.TrimSpace(os.Getenv("DATASTORE_DRIVERS")); v != "" {
+		var parts []string
+		for _, p := range strings.Split(v, ",") {
+			p = strings.TrimSpace(p)
+			if p != "" {
+				parts = append(parts, p)
+			}
+		}
+		if len(parts) > 0 {
+			ds.Drivers = parts
+		}
 	}
 	if v := strings.TrimSpace(os.Getenv("DATABASE_URL")); v != "" {
 		ds.SQL.DSN = v

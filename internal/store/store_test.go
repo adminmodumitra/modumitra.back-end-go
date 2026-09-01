@@ -155,3 +155,45 @@ func TestOpenSQLPoolDefaults(t *testing.T) {
 		t.Fatalf("MaxOpenConnections=%d want 25", ss.db.Stats().MaxOpenConnections)
 	}
 }
+
+func TestEnabledDriversMultiple(t *testing.T) {
+	ds := config.Datastore{Drivers: []string{"postgres", "redis", "mongodb"}}
+	got := ds.EnabledDrivers()
+	if len(got) != 3 {
+		t.Fatalf("%v", got)
+	}
+	if got[0] != "postgres" || got[1] != "redis" || got[2] != "mongodb" {
+		t.Fatalf("%v", got)
+	}
+}
+
+func TestOpenAllPostgresAndRedis(t *testing.T) {
+	set, err := OpenAll(context.Background(), config.Datastore{
+		Drivers: []string{"postgres", "redis"},
+		SQL: config.SQLConfig{
+			Driver: "postgres",
+			DSN:    "postgres://cabinet:cabinet@localhost:5432/cabinet_studio?sslmode=disable",
+		},
+		Redis: config.RedisConfig{Addr: "127.0.0.1:6379"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer set.Close()
+	if set.Len() != 2 {
+		t.Fatalf("len=%d", set.Len())
+	}
+	if set.SQL() == nil || set.Redis() == nil || set.Mongo() != nil {
+		t.Fatalf("sql=%v redis=%v mongo=%v", set.SQL(), set.Redis(), set.Mongo())
+	}
+	if set.Driver() != "postgres,redis" {
+		t.Fatalf("driver=%q", set.Driver())
+	}
+}
+
+func TestOpenAllUnknownStops(t *testing.T) {
+	_, err := OpenAll(context.Background(), config.Datastore{Drivers: []string{"postgres", "cassandra"}})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}

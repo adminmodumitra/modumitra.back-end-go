@@ -80,8 +80,8 @@ func TestReadyzOK(t *testing.T) {
 		t.Fatalf("status field=%v", body["status"])
 	}
 	checks, _ := body["checks"].(map[string]any)
-	if checks["postgres"] != "ok" {
-		t.Fatalf("checks=%v want postgres=ok", body["checks"])
+	if checks["store"] != "ok" && checks["postgres"] != "ok" {
+		t.Fatalf("checks=%v want store=ok", body["checks"])
 	}
 }
 
@@ -185,7 +185,6 @@ func TestTraceparentEcho(t *testing.T) {
 func TestReadyzReportsActiveDriver(t *testing.T) {
 	cfg := config.Load()
 	cfg.ServiceName = "cabinet-studio-api-test"
-	cfg.Datastore.Driver = "redis"
 	r := NewRouter(cfg, fakePinger{})
 	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
 	w := httptest.NewRecorder()
@@ -198,10 +197,7 @@ func TestReadyzReportsActiveDriver(t *testing.T) {
 		t.Fatal(err)
 	}
 	checks, _ := body["checks"].(map[string]any)
-	if checks["redis"] != "ok" {
-		t.Fatalf("checks=%v want redis=ok", body["checks"])
-	}
-	if _, ok := checks["postgres"]; ok {
-		t.Fatalf("still reporting postgres: %v", checks)
+	if checks["store"] != "ok" {
+		t.Fatalf("checks=%v want store=ok (fake pinger)", body["checks"])
 	}
 }

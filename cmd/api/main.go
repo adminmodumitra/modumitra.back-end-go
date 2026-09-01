@@ -35,9 +35,9 @@ func main() {
 		}
 	}()
 
-	st, err := store.Open(ctx, cfg.Datastore)
+	st, err := store.OpenAll(ctx, cfg.Datastore)
 	if err != nil {
-		slog.Error("datastore open", "driver", cfg.Datastore.NormalizedDriver(), "error", err)
+		slog.Error("datastore open", "drivers", cfg.Datastore.EnabledDrivers(), "error", err)
 		os.Exit(1)
 	}
 	defer func() {
@@ -46,7 +46,7 @@ func main() {
 		}
 	}()
 
-	driver := cfg.Datastore.NormalizedDriver()
+	drivers := cfg.Datastore.EnabledDrivers()
 	wait := time.NewTimer(0)
 	defer wait.Stop()
 	for i := 0; i < 20; i++ {
@@ -59,10 +59,10 @@ func main() {
 			}
 		}
 		if err := st.Ping(ctx); err == nil {
-			slog.Info("datastore ping ok", "driver", driver)
+			slog.Info("datastore ping ok", "drivers", drivers)
 			break
 		} else {
-			slog.Warn("datastore ping failed; retrying", "driver", driver, "error", err, "attempt", i+1)
+			slog.Warn("datastore ping failed; retrying", "drivers", drivers, "error", err, "attempt", i+1)
 		}
 	}
 
@@ -78,7 +78,7 @@ func main() {
 
 	errCh := make(chan error, 1)
 	go func() {
-		slog.Info("listening", "addr", cfg.HTTPAddr, "driver", driver)
+		slog.Info("listening", "addr", cfg.HTTPAddr, "drivers", drivers)
 		errCh <- srv.ListenAndServe()
 	}()
 
