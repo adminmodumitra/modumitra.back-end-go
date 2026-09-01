@@ -35,13 +35,18 @@ func main() {
 		}
 	}()
 
-	st, err := store.Connect(ctx, cfg.DatabaseURL)
+	st, err := store.Open(ctx, cfg.Datastore)
 	if err != nil {
-		slog.Error("postgres pool", "error", err)
+		slog.Error("datastore open", "driver", cfg.Datastore.NormalizedDriver(), "error", err)
 		os.Exit(1)
 	}
-	defer st.Close()
+	defer func() {
+		if err := st.Close(); err != nil {
+			slog.Error("datastore close", "error", err)
+		}
+	}()
 
+	driver := cfg.Datastore.NormalizedDriver()
 	wait := time.NewTimer(0)
 	defer wait.Stop()
 	for i := 0; i < 20; i++ {
@@ -54,10 +59,10 @@ func main() {
 			}
 		}
 		if err := st.Ping(ctx); err == nil {
-			slog.Info("postgres ping ok")
+			slog.Info("datastore ping ok", "driver", driver)
 			break
 		} else {
-			slog.Warn("postgres ping failed; retrying", "error", err, "attempt", i+1)
+			slog.Warn("datastore ping failed; retrying", "driver", driver, "error", err, "attempt", i+1)
 		}
 	}
 
@@ -73,7 +78,7 @@ func main() {
 
 	errCh := make(chan error, 1)
 	go func() {
-		slog.Info("listening", "addr", cfg.HTTPAddr)
+		slog.Info("listening", "addr", cfg.HTTPAddr, "driver", driver)
 		errCh <- srv.ListenAndServe()
 	}()
 

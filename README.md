@@ -1,8 +1,8 @@
 # Cabinet Studio API — slice 0
 
-Go + Gin + pgx v5 skeleton for the Cabinet Studio commercial backend.
+Go + Gin skeleton for the Cabinet Studio commercial backend. The live datastore is selected from JSON + env (Postgres, Redis, or Mongo) with real connection pools.
 
-This is **slice 0**: process health, Postgres readiness, public bootstrap config, twelve middlewares, and one W3C `trace_id` through Gin and the Postgres ping. **Identity (register/login/JWT issuance) is slice 1.** Kafka, Stripe, and SSO are not in this slice.
+This is **slice 0**: process health, datastore readiness, public bootstrap config, twelve middlewares, and one W3C `trace_id` through Gin and `store.ping`. v1 product default remains Postgres. **Identity (register/login/JWT issuance) is slice 1.** Kafka, Stripe, and SSO are not in this slice.
 
 Module: `github.com/Danish-13-Khan/backend-cabinet`
 
@@ -11,7 +11,7 @@ Module: `github.com/Danish-13-Khan/backend-cabinet`
 | Piece | Notes |
 | --- | --- |
 | HTTP | Gin on `:8080` |
-| Postgres 16 | Database `cabinet_studio`, user/password `cabinet` / `cabinet` |
+| Datastore | Config-driven. v1 default **Postgres 16** (`cabinet_studio` / `cabinet`). Redis and Mongo adapters are live (not stubs) when `Driver` is switched. |
 | Schema | **19 tables** applied from [`schema-v1.sql`](./schema-v1.sql) on first Postgres boot |
 | Tracing | W3C `traceparent`. OTLP → collector → Tempo. Grafana at `:3000` |
 
@@ -20,7 +20,7 @@ Module: `github.com/Danish-13-Khan/backend-cabinet`
 | Method | Path | Auth |
 | --- | --- | --- |
 | `GET` | `/healthz` | none — liveness |
-| `GET` | `/readyz` | none — Postgres ping |
+| `GET` | `/readyz` | none — ping of the active store (`postgres` / `redis` / `mongodb`) |
 | `GET` | `/v1/public/config` | public |
 | any | other `/v1/*` | **401** `unauthenticated` (JWT middleware; no tokens in slice 0) |
 
@@ -38,7 +38,7 @@ Every JSON body includes `request_id` and `trace_id`. Errors use:
 }
 ```
 
-Response headers always: `X-Request-Id`, `X-Trace-Id` (32 hex), `traceparent`. If the client sends `traceparent`, that `trace_id` is continued. Child spans (for example the readyz Postgres ping) stay on the same trace.
+Response headers always: `X-Request-Id`, `X-Trace-Id` (32 hex), `traceparent`. If the client sends `traceparent`, that `trace_id` is continued. Child spans (for example the readyz `store.ping`) stay on the same trace (`db.system` set on the span).
 
 ## Run with Docker Compose
 
@@ -83,17 +83,22 @@ Postgres must already be up (`docker compose up -d postgres` is enough).
 
 ```bash
 cp .env.example .env   # optional; the process reads the environment
+export DATASTORE_CONFIG=configs/datastore.dummy.json
 export DATABASE_URL=postgres://cabinet:cabinet@localhost:5432/cabinet_studio?sslmode=disable
 export OTEL_EXPORTER_OTLP_ENDPOINT=localhost:4317
 go run ./cmd/api
 ```
+
+To point at a remote server, copy [`configs/datastore.remote.example.json`](./configs/datastore.remote.example.json), fill in host/user/password, and set `DATASTORE_CONFIG` — or keep the dummy file and override `DATABASE_URL` / `REDIS_ADDR` / `MONGO_URI`. Switch engines with `DATASTORE_DRIVER=redis` or `mongodb`. Logs never print raw DSN, password, or URI.
+
+Pool settings in the dummy file (`MaxOpenConns` 25, `MaxIdleConns` 10, `ConnMaxLifetime` `1h`) map onto `sql.DB`, go-redis, and the Mongo driver. `MaxOpenConns` of 0 is treated as 25.
 
 ```bash
 make test    # go test ./...
 make build   # bin/api
 ```
 
-Unit tests use a fake Postgres pinger (no Docker, no testcontainers) plus httptest for `traceparent` echo.
+Unit tests use a fake pinger (no Docker, no live Redis/Mongo) plus httptest for `traceparent` echo. Config load, DSN redaction, pool defaulting, and unknown-driver errors are covered in-process.
 
 ## Environment
 
@@ -102,7 +107,13 @@ See [`.env.example`](./.env.example). Do not commit `.env`.
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `HTTP_ADDR` | `:8080` | Listen address |
-| `DATABASE_URL` | `postgres://cabinet:cabinet@localhost:5432/cabinet_studio?sslmode=disable` | pgx pool |
+| `DATASTORE_CONFIG` | `configs/datastore.dummy.json` | JSON for driver + pools. See [`configs/`](./configs/) |
+| `DATASTORE_DRIVER` | (file) | `postgres` / `sql` / `redis` / `mongodb` / `nosql`. Unknown driver refuses boot |
+| `DATABASE_URL` | (file SQL.DSN) | Overrides `SQL.DSN` (local or remote Postgres) |
+| `REDIS_ADDR` | (file) | Overrides `Redis.Addr` (`host:port`) |
+| `REDIS_PASSWORD` | (file) | Overrides `Redis.Password` |
+| `MONGO_URI` | (file) | Overrides `NoSQL.URI` |
+| `MONGO_DATABASE` | (file) | Overrides `NoSQL.Database` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | `localhost:4317` | Collector gRPC. If unreachable, traces are still generated locally |
 | `OTEL_SERVICE_NAME` | `cabinet-studio-api` | Resource service.name |
 | `TERMS_VERSION` | `2026-06-01` | `GET /v1/public/config` |
@@ -134,10 +145,12 @@ See [`.env.example`](./.env.example). Do not commit `.env`.
 
 ```
 cmd/api/main.go
+configs/datastore.dummy.json
+configs/datastore.remote.example.json
 internal/config
 internal/http
 internal/http/middleware
 internal/obs
-internal/store
-schema-v1.sql          # 19 tables; applied on first compose Postgres boot
+internal/store          # Postgres (database/sql + pgx stdlib), Redis, Mongo adapters
+schema-v1.sql           # 19 tables; applied on first compose Postgres boot
 ```

@@ -1,0 +1,26 @@
+{
+  "Driver": "postgres",
+  "SQL": {
+    "Driver": "postgres",
+    "DSN": "postgres://cabinet:cabinet@localhost:5432/cabinet_studio?sslmode=disable",
+    "MaxOpenConns": 25,
+    "MaxIdleConns": 10,
+    "ConnMaxLifetime": "1h"
+  },
+  "Redis": {
+    "Addr": "localhost:6379",
+    "Password": "",
+    "DB": 0,
+    "TLS": false,
+    "MaxOpenConns": 25,
+    "MaxIdleConns": 10,
+    "ConnMaxLifetime": "1h"
+  },
+  "NoSQL": {
+    "URI": "mongodb://localhost:27017",
+    "Database": "cabinet_studio",
+    "MaxOpenConns": 25,
+    "MaxIdleConns": 10,
+    "ConnMaxLifetime": "1h"
+  }
+}

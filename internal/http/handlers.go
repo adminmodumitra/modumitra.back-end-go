@@ -33,18 +33,19 @@ func (h *handlers) readyz(c *gin.Context) {
 		middleware.WriteError(c, http.StatusServiceUnavailable, "service_unavailable", "Service is not ready", nil)
 		return
 	}
+	check := h.cfg.Datastore.ReadyCheckName()
 	if err := h.pinger.Ping(c.Request.Context()); err != nil {
-		slog.Error("readyz postgres ping failed", "request_id", rid, "trace_id", tid)
+		slog.Error("readyz ping failed", "driver", check, "request_id", rid, "trace_id", tid)
 		middleware.WriteError(c, http.StatusServiceUnavailable, "service_unavailable", "Service is not ready", nil)
 		return
 	}
-	slog.Info("readyz", "request_id", rid, "trace_id", tid)
+	slog.Info("readyz", "driver", check, "request_id", rid, "trace_id", tid)
 	middleware.WriteJSON(c, http.StatusOK, gin.H{
 		"request_id": rid,
 		"trace_id":   tid,
 		"status":     "ready",
 		"checks": gin.H{
-			"postgres": "ok",
+			check: "ok",
 		},
 	})
 }

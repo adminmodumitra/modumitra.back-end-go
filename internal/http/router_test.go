@@ -26,7 +26,7 @@ type fakePinger struct {
 }
 
 func (f fakePinger) Ping(ctx context.Context) error {
-	_, span := otel.Tracer("cabinet.store").Start(ctx, "postgres.ping")
+	_, span := otel.Tracer("cabinet.store").Start(ctx, "store.ping")
 	defer span.End()
 	return f.err
 }
@@ -78,6 +78,10 @@ func TestReadyzOK(t *testing.T) {
 	}
 	if body["status"] != "ready" {
 		t.Fatalf("status field=%v", body["status"])
+	}
+	checks, _ := body["checks"].(map[string]any)
+	if checks["postgres"] != "ok" {
+		t.Fatalf("checks=%v want postgres=ok", body["checks"])
 	}
 }
 
@@ -175,5 +179,29 @@ func TestTraceparentEcho(t *testing.T) {
 	}
 	if body["trace_id"] != wantTrace {
 		t.Fatalf("body.trace_id=%v", body["trace_id"])
+	}
+}
+
+func TestReadyzReportsActiveDriver(t *testing.T) {
+	cfg := config.Load()
+	cfg.ServiceName = "cabinet-studio-api-test"
+	cfg.Datastore.Driver = "redis"
+	r := NewRouter(cfg, fakePinger{})
+	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	var body map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	checks, _ := body["checks"].(map[string]any)
+	if checks["redis"] != "ok" {
+		t.Fatalf("checks=%v want redis=ok", body["checks"])
+	}
+	if _, ok := checks["postgres"]; ok {
+		t.Fatalf("still reporting postgres: %v", checks)
 	}
 }

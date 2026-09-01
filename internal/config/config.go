@@ -3,9 +3,16 @@ package config
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+)
+
+const (
+	defaultDatastorePath = "configs/datastore.dummy.json"
+	defaultMaxOpenConns  = 25
+	defaultConnLifetime  = time.Hour
 )
 
 type Config struct {
@@ -22,6 +29,8 @@ type Config struct {
 	BodyLimitBytes int64
 	OAuthProviders []string
 	BBR            BBR
+	Datastore      Datastore
+	DatastorePath  string
 }
 
 // DurationAsString unmarshals JSON durations like "10s".
@@ -54,10 +63,144 @@ type BBR struct {
 	CpuThreshold int64            `json:"CpuThreshold"`
 }
 
+// Pool is the shared connection-pool shape. SQL, Redis, and NoSQL repeat these fields.
+type Pool struct {
+	MaxOpenConns    int    `json:"MaxOpenConns"`
+	MaxIdleConns    int    `json:"MaxIdleConns"`
+	ConnMaxLifetime string `json:"ConnMaxLifetime"` // Go duration, e.g. "1h"
+}
+
+// NormalizedPool is Pool after defaults (never pass 0 as sql MaxOpenConns).
+type NormalizedPool struct {
+	MaxOpenConns    int
+	MaxIdleConns    int
+	ConnMaxLifetime time.Duration
+}
+
+func (p Pool) Normalized() NormalizedPool {
+	maxOpen := p.MaxOpenConns
+	if maxOpen <= 0 {
+		maxOpen = defaultMaxOpenConns
+	}
+	maxIdle := p.MaxIdleConns
+	if maxIdle < 0 {
+		maxIdle = 0
+	}
+	if maxIdle > maxOpen {
+		maxIdle = maxOpen
+	}
+	life := defaultConnLifetime
+	if s := strings.TrimSpace(p.ConnMaxLifetime); s != "" {
+		if d, err := time.ParseDuration(s); err == nil && d > 0 {
+			life = d
+		}
+	}
+	return NormalizedPool{
+		MaxOpenConns:    maxOpen,
+		MaxIdleConns:    maxIdle,
+		ConnMaxLifetime: life,
+	}
+}
+
+type SQLConfig struct {
+	Driver          string `json:"Driver"` // "postgres" (required for sql)
+	DSN             string `json:"DSN"`    // postgres://... local or remote
+	MaxOpenConns    int    `json:"MaxOpenConns"`
+	MaxIdleConns    int    `json:"MaxIdleConns"`
+	ConnMaxLifetime string `json:"ConnMaxLifetime"`
+}
+
+func (c SQLConfig) Pool() Pool {
+	return Pool{
+		MaxOpenConns:    c.MaxOpenConns,
+		MaxIdleConns:    c.MaxIdleConns,
+		ConnMaxLifetime: c.ConnMaxLifetime,
+	}
+}
+
+type RedisConfig struct {
+	Addr            string `json:"Addr"` // host:port
+	Password        string `json:"Password"`
+	DB              int    `json:"DB"`
+	TLS             bool   `json:"TLS"`
+	MaxOpenConns    int    `json:"MaxOpenConns"`    // maps to go-redis PoolSize
+	MaxIdleConns    int    `json:"MaxIdleConns"`    // MinIdleConns
+	ConnMaxLifetime string `json:"ConnMaxLifetime"` // ConnMaxLifetime
+}
+
+func (c RedisConfig) Pool() Pool {
+	return Pool{
+		MaxOpenConns:    c.MaxOpenConns,
+		MaxIdleConns:    c.MaxIdleConns,
+		ConnMaxLifetime: c.ConnMaxLifetime,
+	}
+}
+
+type NoSQLConfig struct {
+	URI             string `json:"URI"` // mongodb:// or mongodb+srv://
+	Database        string `json:"Database"`
+	MaxOpenConns    int    `json:"MaxOpenConns"`    // MaxPoolSize
+	MaxIdleConns    int    `json:"MaxIdleConns"`    // MinPoolSize
+	ConnMaxLifetime string `json:"ConnMaxLifetime"` // MaxConnIdleTime
+}
+
+func (c NoSQLConfig) Pool() Pool {
+	return Pool{
+		MaxOpenConns:    c.MaxOpenConns,
+		MaxIdleConns:    c.MaxIdleConns,
+		ConnMaxLifetime: c.ConnMaxLifetime,
+	}
+}
+
+type Datastore struct {
+	Driver string      `json:"Driver"` // "postgres" | "sql" | "redis" | "mongodb" | "nosql"
+	SQL    SQLConfig   `json:"SQL"`
+	Redis  RedisConfig `json:"Redis"`
+	NoSQL  NoSQLConfig `json:"NoSQL"`
+}
+
+// NormalizedDriver returns the adapter key: postgres, redis, or mongodb.
+// Empty driver is Postgres (v1 product default). Unknown values are returned lowercased
+// so Open can reject them.
+func (d Datastore) NormalizedDriver() string {
+	switch strings.ToLower(strings.TrimSpace(d.Driver)) {
+	case "", "postgres", "postgresql", "sql", "pgx":
+		return "postgres"
+	case "redis":
+		return "redis"
+	case "mongodb", "mongo", "nosql":
+		return "mongodb"
+	default:
+		return strings.ToLower(strings.TrimSpace(d.Driver))
+	}
+}
+
+// ReadyCheckName is the /readyz checks key for the active driver.
+func (d Datastore) ReadyCheckName() string {
+	switch d.NormalizedDriver() {
+	case "redis":
+		return "redis"
+	case "mongodb":
+		return "mongodb"
+	default:
+		return "postgres"
+	}
+}
+
 func Load() Config {
+	path := resolveDatastorePath()
+	ds := defaultDatastore()
+	if raw, err := os.ReadFile(path); err == nil {
+		var loaded Datastore
+		if err := json.Unmarshal(raw, &loaded); err == nil {
+			ds = loaded
+		}
+	}
+	applyDatastoreEnv(&ds)
+
 	return Config{
 		HTTPAddr:       getenv("HTTP_ADDR", ":8080"),
-		DatabaseURL:    getenv("DATABASE_URL", "postgres://cabinet:cabinet@localhost:5432/cabinet_studio?sslmode=disable"),
+		DatabaseURL:    ds.SQL.DSN,
 		OTLPEndpoint:   getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:4317"),
 		ServiceName:    getenv("OTEL_SERVICE_NAME", "cabinet-studio-api"),
 		TermsVersion:   getenv("TERMS_VERSION", "2026-06-01"),
@@ -69,6 +212,89 @@ func Load() Config {
 		BodyLimitBytes: 1 << 20,
 		OAuthProviders: []string{"google", "facebook", "x"},
 		BBR:            loadBBR(),
+		Datastore:      ds,
+		DatastorePath:  path,
+	}
+}
+
+func defaultDatastore() Datastore {
+	const poolLife = "1h"
+	return Datastore{
+		Driver: "postgres",
+		SQL: SQLConfig{
+			Driver:          "postgres",
+			DSN:             "postgres://cabinet:cabinet@localhost:5432/cabinet_studio?sslmode=disable",
+			MaxOpenConns:    defaultMaxOpenConns,
+			MaxIdleConns:    10,
+			ConnMaxLifetime: poolLife,
+		},
+		Redis: RedisConfig{
+			Addr:            "localhost:6379",
+			Password:        "",
+			DB:              0,
+			TLS:             false,
+			MaxOpenConns:    defaultMaxOpenConns,
+			MaxIdleConns:    10,
+			ConnMaxLifetime: poolLife,
+		},
+		NoSQL: NoSQLConfig{
+			URI:             "mongodb://localhost:27017",
+			Database:        "cabinet_studio",
+			MaxOpenConns:    defaultMaxOpenConns,
+			MaxIdleConns:    10,
+			ConnMaxLifetime: poolLife,
+		},
+	}
+}
+
+func resolveDatastorePath() string {
+	if p := strings.TrimSpace(os.Getenv("DATASTORE_CONFIG")); p != "" {
+		return p
+	}
+	dir, err := os.Getwd()
+	if err != nil {
+		return defaultDatastorePath
+	}
+	for i := 0; i < 8; i++ {
+		cand := filepath.Join(dir, defaultDatastorePath)
+		if _, err := os.Stat(cand); err == nil {
+			return cand
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return defaultDatastorePath
+}
+
+func applyDatastoreEnv(ds *Datastore) {
+	if v := strings.TrimSpace(os.Getenv("DATASTORE_DRIVER")); v != "" {
+		ds.Driver = v
+	}
+	if v := strings.TrimSpace(os.Getenv("DATABASE_URL")); v != "" {
+		ds.SQL.DSN = v
+	}
+	if v := strings.TrimSpace(os.Getenv("REDIS_ADDR")); v != "" {
+		ds.Redis.Addr = v
+	}
+	if v := strings.TrimSpace(os.Getenv("REDIS_PASSWORD")); v != "" {
+		ds.Redis.Password = v
+	}
+	if v := strings.TrimSpace(os.Getenv("REDIS_DB")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			ds.Redis.DB = n
+		}
+	}
+	if v := strings.TrimSpace(os.Getenv("REDIS_TLS")); v != "" {
+		ds.Redis.TLS = getenvBool("REDIS_TLS", ds.Redis.TLS)
+	}
+	if v := strings.TrimSpace(os.Getenv("MONGO_URI")); v != "" {
+		ds.NoSQL.URI = v
+	}
+	if v := strings.TrimSpace(os.Getenv("MONGO_DATABASE")); v != "" {
+		ds.NoSQL.Database = v
 	}
 }
 

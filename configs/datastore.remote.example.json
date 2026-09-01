@@ -1,0 +1,26 @@
+{
+  "Driver": "postgres",
+  "SQL": {
+    "Driver": "postgres",
+    "DSN": "postgres://USER:PASSWORD@db.example.com:5432/cabinet_studio?sslmode=require",
+    "MaxOpenConns": 25,
+    "MaxIdleConns": 10,
+    "ConnMaxLifetime": "1h"
+  },
+  "Redis": {
+    "Addr": "redis.example.com:6379",
+    "Password": "CHANGE_ME",
+    "DB": 0,
+    "TLS": true,
+    "MaxOpenConns": 25,
+    "MaxIdleConns": 10,
+    "ConnMaxLifetime": "1h"
+  },
+  "NoSQL": {
+    "URI": "mongodb+srv://USER:PASSWORD@cluster.example.com/?retryWrites=true&w=majority",
+    "Database": "cabinet_studio",
+    "MaxOpenConns": 25,
+    "MaxIdleConns": 10,
+    "ConnMaxLifetime": "1h"
+  }
+}
