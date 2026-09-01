@@ -32,6 +32,10 @@ services:
       MIN_APP_VERSION: "1.0.0"
       TRIAL_DAYS: "14"
       LOG_LEVEL: info
+      BBR_ENABLED: "true"
+      BBR_WINDOW_SIZE: 10s
+      BBR_BUCKETS: "100"
+      BBR_CPU_THRESHOLD: "800"
     depends_on:
       postgres:
         condition: service_healthy

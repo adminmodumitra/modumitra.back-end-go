@@ -19,6 +19,7 @@ func NewRouter(cfg config.Config, pinger store.Pinger) *gin.Engine {
 	}
 	chain = append(chain, middleware.OTEL(cfg.ServiceName)...)
 	chain = append(chain,
+		middleware.BBR(cfg.BBR),
 		middleware.Timeout(cfg.RequestTimeout),
 		middleware.BodyLimit(cfg.BodyLimitBytes),
 		middleware.IPRateLimit(rate.Limit(30), 60),

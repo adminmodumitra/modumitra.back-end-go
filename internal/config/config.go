@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
 	"strconv"
 	"strings"
@@ -20,6 +21,37 @@ type Config struct {
 	RequestTimeout time.Duration
 	BodyLimitBytes int64
 	OAuthProviders []string
+	BBR            BBR
+}
+
+// DurationAsString unmarshals JSON durations like "10s".
+type DurationAsString time.Duration
+
+func (d DurationAsString) Duration() time.Duration { return time.Duration(d) }
+
+func (d DurationAsString) MarshalJSON() ([]byte, error) {
+	return json.Marshal(time.Duration(d).String())
+}
+
+func (d *DurationAsString) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	parsed, err := time.ParseDuration(s)
+	if err != nil {
+		return err
+	}
+	*d = DurationAsString(parsed)
+	return nil
+}
+
+// BBR is Kratos aegis BBR load-shedding config (JSON tags match the product shape).
+type BBR struct {
+	Enabled      bool             `json:"Enabled"`
+	WindowSize   DurationAsString `json:"WindowSize"`
+	Buckets      int              `json:"Buckets"`
+	CpuThreshold int64            `json:"CpuThreshold"`
 }
 
 func Load() Config {
@@ -36,6 +68,22 @@ func Load() Config {
 		RequestTimeout: 3 * time.Second,
 		BodyLimitBytes: 1 << 20,
 		OAuthProviders: []string{"google", "facebook", "x"},
+		BBR:            loadBBR(),
+	}
+}
+
+func loadBBR() BBR {
+	window := 10 * time.Second
+	if v := strings.TrimSpace(os.Getenv("BBR_WINDOW_SIZE")); v != "" {
+		if parsed, err := time.ParseDuration(v); err == nil {
+			window = parsed
+		}
+	}
+	return BBR{
+		Enabled:      getenvBool("BBR_ENABLED", true),
+		WindowSize:   DurationAsString(window),
+		Buckets:      getenvInt("BBR_BUCKETS", 100),
+		CpuThreshold: getenvInt64("BBR_CPU_THRESHOLD", 800),
 	}
 }
 
@@ -56,4 +104,31 @@ func getenvInt(key string, fallback int) int {
 		return fallback
 	}
 	return n
+}
+
+func getenvInt64(key string, fallback int64) int64 {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v == "" {
+		return fallback
+	}
+	n, err := strconv.ParseInt(v, 10, 64)
+	if err != nil {
+		return fallback
+	}
+	return n
+}
+
+func getenvBool(key string, fallback bool) bool {
+	v := strings.TrimSpace(strings.ToLower(os.Getenv(key)))
+	if v == "" {
+		return fallback
+	}
+	switch v {
+	case "1", "true", "yes", "on":
+		return true
+	case "0", "false", "no", "off":
+		return false
+	default:
+		return fallback
+	}
 }
