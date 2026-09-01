@@ -349,7 +349,7 @@ CREATE TABLE email_tokens (
     created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
     request_ip_country   TEXT,
     CONSTRAINT chk_email_tokens_public_id CHECK (public_id ~ '^tok_'),
-    CONSTRAINT chk_email_tokens_purpose CHECK (purpose IN ('email_verify', 'password_reset', 'email_change')),
+    CONSTRAINT chk_email_tokens_purpose CHECK (purpose IN ('email_verify', 'password_reset', 'email_change', 'otp_login')),
     CONSTRAINT chk_email_tokens_new_email CHECK (purpose <> 'email_change' OR new_email IS NOT NULL),
     CONSTRAINT chk_email_tokens_ip_country CHECK (request_ip_country IS NULL OR char_length(request_ip_country) = 2),
     CONSTRAINT uniq_email_tokens_token_hash UNIQUE (token_hash),
@@ -361,7 +361,7 @@ CREATE TABLE email_tokens (
 CREATE INDEX idx_email_tokens_expires_at ON email_tokens (expires_at);
 CREATE INDEX idx_email_tokens_user_purpose_created_at ON email_tokens (user_id, purpose, created_at DESC);
 
-COMMENT ON TABLE email_tokens IS 'Single-use hashed tokens for email verify, password reset, email change. Raw prefixes ev_/pr_/ec_ never stored. Cleanup job deletes expired rows.';
+COMMENT ON TABLE email_tokens IS 'Single-use hashed tokens for email verify, password reset, email change, otp login. Raw prefixes ev_/pr_/ec_ never stored; otp_login hashes include user id. Cleanup job deletes expired rows.';
 
 -- -----------------------------------------------------------------------------
 -- 10. oauth_states

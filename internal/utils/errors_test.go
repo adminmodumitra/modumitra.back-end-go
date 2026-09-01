@@ -2,13 +2,12 @@ package utils
 
 import (
 	"errors"
-	"net/http"
 	"testing"
 )
 
 func TestECatalog(t *testing.T) {
 	e := E(CodeUnauthenticated)
-	if e.Code != CodeUnauthenticated || e.HTTP != http.StatusUnauthorized {
+	if e.Code != CodeUnauthenticated || e.HTTP != StatusUnauthorized {
 		t.Fatalf("%+v", e)
 	}
 	if e.Name != "unauthenticated" {

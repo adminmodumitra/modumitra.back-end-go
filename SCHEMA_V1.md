@@ -808,7 +808,7 @@ Do **not** TTL-drop sessions at `expires_at`: reuse detection needs the spent ha
 
 ### 3.8 `email_tokens`
 
-**Purpose.** Single-use hashed tokens for email verify, password reset, and email change. Cleanup job deletes after `expires_at` (typical 24h).
+**Purpose.** Single-use hashed tokens for email verify, password reset, email change, and otp login. Cleanup job deletes after `expires_at` (typical 24h; otp_login TTL is 10 minutes).
 
 **PK.** `public_id TEXT PRIMARY KEY` (`tok_`). User-owned. Not returned.
 
@@ -818,8 +818,8 @@ Do **not** TTL-drop sessions at `expires_at`: reuse detection needs the spent ha
 | --- | --- | --- | --- | --- |
 | `public_id` | `TEXT` | NO | `tok_` | Not returned |
 | `user_id` | `TEXT` | NO | — | → `users.public_id` |
-| `purpose` | `TEXT` | NO | — | CHECK `email_verify` \| `password_reset` \| `email_change` |
-| `token_hash` | `TEXT` | NO | — | Unique. Raw prefixes `ev_` / `pr_` / `ec_` never stored |
+| `purpose` | `TEXT` | NO | — | CHECK `email_verify` \| `password_reset` \| `email_change` \| `otp_login` |
+| `token_hash` | `TEXT` | NO | — | Unique. Raw prefixes `ev_` / `pr_` / `ec_` never stored. `otp_login` is SHA-256(`otp_login:` + user id + `:` + 6-digit code) |
 | `new_email` | `TEXT` | YES | `NULL` | Required when `purpose=email_change` (CHECK) |
 | `expires_at` | `TIMESTAMPTZ` | NO | now+24h | Cleanup job |
 | `consumed_at` | `TIMESTAMPTZ` | YES | `NULL` | Single-use |
@@ -863,7 +863,7 @@ Issuing a new token of the same purpose invalidates prior unconsumed rows (`cons
 
 | Op | Routes |
 | --- | --- |
-| W | `POST /v1/auth/register`, `POST /v1/auth/resend-verification`, `POST /v1/auth/password-reset`, `POST /v1/auth/password-reset/confirm`, `POST /v1/auth/verify-email`, `POST /v1/me/email/change`, `POST /v1/me/email/change/confirm` |
+| W | `POST /v1/auth/register`, `POST /v1/auth/resend-verification`, `POST /v1/auth/password-reset`, `POST /v1/auth/password-reset/confirm`, `POST /v1/auth/verify-email`, `POST /v1/auth/otp/request`, `POST /v1/auth/otp/resend`, `POST /v1/auth/otp/verify`, `POST /v1/me/email/change`, `POST /v1/me/email/change/confirm` |
 | R | consume paths above (by `token_hash`) |
 
 ---

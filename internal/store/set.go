@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 
@@ -67,7 +68,21 @@ func (s *Set) Close() error {
 	return first
 }
 
-func (s *Set) SQL() Store   { return s.find("postgres") }
+func (s *Set) SQL() Store { return s.find("postgres") }
+
+// SQLDB returns the live Postgres *sql.DB, or nil if Postgres is not enabled.
+func (s *Set) SQLDB() *sql.DB {
+	st := s.SQL()
+	if st == nil {
+		return nil
+	}
+	type dber interface{ DB() *sql.DB }
+	d, ok := st.(dber)
+	if !ok {
+		return nil
+	}
+	return d.DB()
+}
 func (s *Set) Redis() Store { return s.find("redis") }
 func (s *Set) Mongo() Store { return s.find("mongodb") }
 

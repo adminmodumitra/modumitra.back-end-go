@@ -3,12 +3,12 @@ package httpapi
 import (
 	"context"
 	"log/slog"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/http/middleware"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/store"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
@@ -16,15 +16,15 @@ import (
 type handlers struct {
 	cfg    config.Config
 	pinger store.Pinger
+	ident  *identity.Service
 }
 
 func (h *handlers) healthz(c *gin.Context) {
 	rid, tid := middleware.RequestIDFrom(c), middleware.TraceIDFrom(c)
 	slog.Info("healthz", "request_id", rid, "trace_id", tid)
-	middleware.WriteJSON(c, http.StatusOK, gin.H{
-		"request_id": rid,
-		"trace_id":   tid,
-		"status":     "ok",
+	middleware.WriteJSON(c, utils.StatusOK, HealthOK{
+		Meta:   metaFrom(c),
+		Status: "ok",
 	})
 }
 
@@ -35,7 +35,7 @@ func (h *handlers) readyz(c *gin.Context) {
 		middleware.Abort(c, utils.E(utils.CodeServiceUnavailable))
 		return
 	}
-	checks := gin.H{}
+	checks := map[string]string{}
 	if checker, ok := h.pinger.(interface {
 		Checks(context.Context) (map[string]string, error)
 	}); ok {
@@ -45,7 +45,7 @@ func (h *handlers) readyz(c *gin.Context) {
 		}
 		if err != nil {
 			slog.Error("readyz datastore ping failed", "request_id", rid, "trace_id", tid, "error", err)
-			middleware.Abort(c, utils.E(utils.CodeServiceUnavailable).WithDetails(gin.H{"checks": checks}))
+			middleware.Abort(c, utils.E(utils.CodeServiceUnavailable).WithDetails(map[string]any{"checks": checks}))
 			return
 		}
 	} else if err := h.pinger.Ping(c.Request.Context()); err != nil {
@@ -56,25 +56,23 @@ func (h *handlers) readyz(c *gin.Context) {
 		checks["store"] = "ok"
 	}
 	slog.Info("readyz", "request_id", rid, "trace_id", tid, "checks", checks)
-	middleware.WriteJSON(c, http.StatusOK, gin.H{
-		"request_id": rid,
-		"trace_id":   tid,
-		"status":     "ready",
-		"checks":     checks,
+	middleware.WriteJSON(c, utils.StatusOK, ReadyOK{
+		Meta:   metaFrom(c),
+		Status: "ready",
+		Checks: checks,
 	})
 }
 
 func (h *handlers) publicConfig(c *gin.Context) {
 	rid, tid := middleware.RequestIDFrom(c), middleware.TraceIDFrom(c)
 	slog.Info("public_config", "request_id", rid, "trace_id", tid)
-	middleware.WriteJSON(c, http.StatusOK, gin.H{
-		"request_id":      rid,
-		"trace_id":        tid,
-		"terms_version":   h.cfg.TermsVersion,
-		"privacy_version": h.cfg.PrivacyVersion,
-		"oauth_providers": h.cfg.OAuthProviders,
-		"min_app_version": h.cfg.MinAppVersion,
-		"trial_days":      h.cfg.TrialDays,
+	middleware.WriteJSON(c, utils.StatusOK, PublicConfigOK{
+		Meta:           metaFrom(c),
+		TermsVersion:   h.cfg.TermsVersion,
+		PrivacyVersion: h.cfg.PrivacyVersion,
+		OAuthProviders: h.cfg.OAuthProviders,
+		MinAppVersion:  h.cfg.MinAppVersion,
+		TrialDays:      h.cfg.TrialDays,
 	})
 }
 

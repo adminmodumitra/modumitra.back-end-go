@@ -7,11 +7,13 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 )
 
@@ -31,11 +33,24 @@ func (f fakePinger) Ping(ctx context.Context) error {
 	return f.err
 }
 
+func testSettings(cfg config.Config) identity.Settings {
+	return identity.Settings{
+		TermsVersion:   cfg.TermsVersion,
+		PrivacyVersion: cfg.PrivacyVersion,
+		AccessTTL:      cfg.AccessTTL,
+		RefreshTTL:     cfg.RefreshTTL,
+		EmailTokenTTL:  24 * time.Hour,
+		JWTSecret:      cfg.JWTSecret,
+		Issuer:         identity.Issuer,
+	}
+}
+
 func testRouter(t *testing.T, p fakePinger) http.Handler {
 	t.Helper()
 	cfg := config.Load()
 	cfg.ServiceName = "cabinet-studio-api-test"
-	return NewRouter(cfg, p)
+	svc, _, _ := identity.NewMemoryService(testSettings(cfg))
+	return NewRouter(cfg, p, svc)
 }
 
 func TestHealthzOK(t *testing.T) {
@@ -129,7 +144,7 @@ func TestPublicConfig(t *testing.T) {
 
 func TestJWTUnauthenticated(t *testing.T) {
 	r := testRouter(t, fakePinger{})
-	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/me", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	if w.Code != http.StatusUnauthorized {
@@ -185,7 +200,8 @@ func TestTraceparentEcho(t *testing.T) {
 func TestReadyzReportsActiveDriver(t *testing.T) {
 	cfg := config.Load()
 	cfg.ServiceName = "cabinet-studio-api-test"
-	r := NewRouter(cfg, fakePinger{})
+	svc, _, _ := identity.NewMemoryService(testSettings(cfg))
+	r := NewRouter(cfg, fakePinger{}, svc)
 	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
