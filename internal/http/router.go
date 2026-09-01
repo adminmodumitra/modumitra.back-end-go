@@ -7,13 +7,14 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/http/middleware"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/store"
 )
 
-func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service) *gin.Engine {
+func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, orgs *org.Service) *gin.Engine {
 	r := gin.New()
 	_ = r.SetTrustedProxies(nil)
-	h := &handlers{cfg: cfg, pinger: pinger, ident: ident}
+	h := &handlers{cfg: cfg, pinger: pinger, ident: ident, orgs: orgs}
 
 	// Process-wide only: not limiters. Needed so healthz still has request_id/trace_id.
 	r.Use(middleware.RequestID())
@@ -37,6 +38,7 @@ func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service) 
 		public.POST("/v1/auth/otp/request", h.otpRequest)
 		public.POST("/v1/auth/otp/verify", h.otpVerify)
 		public.POST("/v1/auth/otp/resend", h.otpRequest)
+		public.GET("/v1/invitations/:token", h.previewInvitation)
 	}
 
 	authed := r.Group("/")
@@ -50,13 +52,30 @@ func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service) 
 	authed.Use(middleware.IPRateLimit(rate.Limit(30), 60))
 	authed.Use(middleware.UserRateLimit())
 	authed.Use(middleware.JWTAuth(verifier)) // no skip list; this group is auth-only
-	authed.Use(middleware.Tenant())
+	authed.Use(middleware.Tenant(orgs))
 	authed.Use(middleware.RBAC())
 	authed.Use(middleware.Idempotency())
 	{
 		authed.POST("/v1/auth/logout-all", h.logoutAll)
 		authed.GET("/v1/me", h.me)
 		authed.POST("/v1/me/password", h.changePassword)
+		authed.POST("/v1/organizations", h.createOrg)
+		authed.GET("/v1/organizations", h.listOrgs)
+		authed.GET("/v1/organizations/:id", h.getOrg)
+		authed.PATCH("/v1/organizations/:id", h.patchOrg)
+		authed.DELETE("/v1/organizations/:id", h.deleteOrg)
+		authed.POST("/v1/organizations/:id/leave", h.leaveOrg)
+		authed.POST("/v1/organizations/:id/transfer-ownership", h.transferOwnership)
+		authed.GET("/v1/organizations/:id/roles", h.orgRoles)
+		authed.GET("/v1/organizations/:id/members", h.listMembers)
+		authed.PATCH("/v1/organizations/:id/members/:userId", h.patchMember)
+		authed.POST("/v1/organizations/:id/members/:userId/suspend", h.suspendMember)
+		authed.DELETE("/v1/organizations/:id/members/:userId", h.removeMember)
+		authed.POST("/v1/organizations/:id/invitations", h.createInvitation)
+		authed.GET("/v1/organizations/:id/invitations", h.listInvitations)
+		authed.DELETE("/v1/organizations/:id/invitations/:invitationId", h.revokeInvitation)
+		authed.POST("/v1/organizations/:id/invitations/:invitationId/resend", h.resendInvitation)
+		authed.POST("/v1/invitations/:token/accept", h.acceptInvitation)
 	}
 
 	r.NoRoute(h.noRoute)

@@ -9,6 +9,7 @@ import (
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
 )
 
 func identRouter(t *testing.T) http.Handler {
@@ -21,8 +22,9 @@ func identRouterWithMailer(t *testing.T) (http.Handler, *identity.RecordingMaile
 	t.Helper()
 	cfg := config.Load()
 	cfg.ServiceName = "cabinet-studio-api-test"
-	svc, mail, _ := identity.NewMemoryService(testSettings(cfg))
-	return NewRouter(cfg, fakePinger{}, svc), mail
+	svc, mail, mem := identity.NewMemoryService(testSettings(cfg))
+	orgs, _, _ := org.NewMemoryService(mem.Users(), cfg.TrialDays)
+	return NewRouter(cfg, fakePinger{}, svc, orgs), mail
 }
 
 func doJSON(t *testing.T, h http.Handler, method, path string, body any, headers map[string]string) *httptest.ResponseRecorder {

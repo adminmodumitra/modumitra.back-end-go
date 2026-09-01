@@ -7,6 +7,7 @@ import (
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/http/middleware"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
@@ -71,11 +72,149 @@ type TokenOK struct {
 	TokenType    string `json:"token_type"`
 }
 
-// OrganizationView is filled in a later slice. Slice 1 always sends null.
 type OrganizationView struct {
-	ID   string `json:"id,omitempty"`
-	Name string `json:"name,omitempty"`
-	Slug string `json:"slug,omitempty"`
+	ID          string  `json:"id"`
+	Name        string  `json:"name"`
+	OwnerUserID string  `json:"owner_user_id"`
+	CreatedAt   string  `json:"created_at"`
+	UpdatedAt   string  `json:"updated_at"`
+	TrialEndsAt *string `json:"trial_ends_at"`
+}
+
+type MembershipView struct {
+	UserID         string          `json:"user_id"`
+	OrganizationID string          `json:"organization_id"`
+	Role           string          `json:"role"`
+	Status         string          `json:"status"`
+	CreatedAt      string          `json:"created_at"`
+	UpdatedAt      string          `json:"updated_at"`
+	User           *MemberUserView `json:"user,omitempty"`
+}
+
+type MemberUserView struct {
+	ID            string `json:"id"`
+	Email         string `json:"email"`
+	DisplayName   string `json:"display_name"`
+	EmailVerified bool   `json:"email_verified"`
+}
+
+type OrgCreatedOK struct {
+	utils.Meta
+	Organization OrganizationView `json:"organization"`
+	Membership   MembershipView   `json:"membership"`
+	TrialEndsAt  string           `json:"trial_ends_at"`
+}
+
+type OrgListItem struct {
+	Organization     OrganizationView `json:"organization"`
+	Role             string           `json:"role"`
+	MembershipStatus string           `json:"membership_status"`
+}
+
+type OrgListOK struct {
+	utils.Meta
+	Items      []OrgListItem `json:"items"`
+	NextCursor *string       `json:"next_cursor"`
+}
+
+type OrgOK struct {
+	utils.Meta
+	Organization OrganizationView `json:"organization"`
+}
+
+type OrgDeletedOK struct {
+	utils.Meta
+	Status string `json:"status"`
+	ID     string `json:"id"`
+}
+
+type LeaveOK struct {
+	utils.Meta
+	Status         string `json:"status"`
+	OrganizationID string `json:"organization_id"`
+}
+
+type TransferOK struct {
+	utils.Meta
+	Organization        OrganizationView `json:"organization"`
+	PreviousOwnerUserID string           `json:"previous_owner_user_id"`
+	NewOwnerUserID      string           `json:"new_owner_user_id"`
+}
+
+type RoleCatalogOK struct {
+	utils.Meta
+	SchemaVersion int                        `json:"schema_version"`
+	Roles         map[string]map[string]bool `json:"roles"`
+}
+
+type MemberListOK struct {
+	utils.Meta
+	Items      []MembershipView `json:"items"`
+	NextCursor *string          `json:"next_cursor"`
+}
+
+type MemberOK struct {
+	utils.Meta
+	Membership MembershipView `json:"membership"`
+}
+
+type MemberRemovedOK struct {
+	utils.Meta
+	Status         string `json:"status"`
+	UserID         string `json:"user_id"`
+	OrganizationID string `json:"organization_id"`
+}
+
+type InvitationView struct {
+	ID              string  `json:"id"`
+	OrganizationID  string  `json:"organization_id"`
+	Email           string  `json:"email"`
+	Role            string  `json:"role"`
+	Status          string  `json:"status"`
+	InvitedByUserID string  `json:"invited_by_user_id"`
+	CreatedAt       string  `json:"created_at"`
+	ExpiresAt       string  `json:"expires_at"`
+	AcceptedAt      *string `json:"accepted_at"`
+}
+
+type InvitationOK struct {
+	utils.Meta
+	Invitation InvitationView `json:"invitation"`
+}
+
+type InvitationListOK struct {
+	utils.Meta
+	Items      []InvitationView `json:"items"`
+	NextCursor *string          `json:"next_cursor"`
+}
+
+type InvitationRevokedOK struct {
+	utils.Meta
+	Status string `json:"status"`
+	ID     string `json:"id"`
+}
+
+type InvitationResentOK struct {
+	utils.Meta
+	Status    string `json:"status"`
+	ID        string `json:"id"`
+	ExpiresAt string `json:"expires_at"`
+}
+
+type InvitePreviewOK struct {
+	utils.Meta
+	OrganizationName   string `json:"organization_name"`
+	Role               string `json:"role"`
+	InviterDisplayName string `json:"inviter_display_name"`
+	Email              string `json:"email"`
+	ExpiresAt          string `json:"expires_at"`
+	Status             string `json:"status"`
+}
+
+type InviteAcceptOK struct {
+	utils.Meta
+	Membership   MembershipView   `json:"membership"`
+	Organization OrganizationView `json:"organization"`
 }
 
 type LoginOK struct {
@@ -96,4 +235,70 @@ func userView(u *identity.User) UserView {
 		CreatedAt:     u.CreatedAt.UTC().Format(time.RFC3339),
 		UpdatedAt:     u.UpdatedAt.UTC().Format(time.RFC3339),
 	}
+}
+
+func rfcTime(t time.Time) string { return t.UTC().Format(time.RFC3339) }
+
+func rfcTimePtr(t *time.Time) *string {
+	if t == nil {
+		return nil
+	}
+	s := t.UTC().Format(time.RFC3339)
+	return &s
+}
+
+func organizationView(o *org.Organization) OrganizationView {
+	if o == nil {
+		return OrganizationView{}
+	}
+	return OrganizationView{
+		ID:          o.ID,
+		Name:        o.Name,
+		OwnerUserID: o.OwnerUserID,
+		CreatedAt:   rfcTime(o.CreatedAt),
+		UpdatedAt:   rfcTime(o.UpdatedAt),
+		TrialEndsAt: rfcTimePtr(o.TrialEndsAt),
+	}
+}
+
+func membershipView(m *org.Membership, u *MemberUserView) MembershipView {
+	if m == nil {
+		return MembershipView{}
+	}
+	v := MembershipView{
+		UserID:         m.UserID,
+		OrganizationID: m.OrganizationID,
+		Role:           m.Role,
+		Status:         m.Status,
+		CreatedAt:      rfcTime(m.CreatedAt),
+		UpdatedAt:      rfcTime(m.UpdatedAt),
+	}
+	if u != nil {
+		v.User = u
+	}
+	return v
+}
+
+func invitationView(inv *org.Invitation) InvitationView {
+	if inv == nil {
+		return InvitationView{}
+	}
+	return InvitationView{
+		ID:              inv.ID,
+		OrganizationID:  inv.OrganizationID,
+		Email:           inv.Email,
+		Role:            inv.Role,
+		Status:          inv.Status,
+		InvitedByUserID: inv.InvitedByUserID,
+		CreatedAt:       rfcTime(inv.CreatedAt),
+		ExpiresAt:       rfcTime(inv.ExpiresAt),
+		AcceptedAt:      rfcTimePtr(inv.AcceptedAt),
+	}
+}
+
+func cursorPtr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }

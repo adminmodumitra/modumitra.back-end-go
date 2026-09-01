@@ -9,6 +9,7 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/http/middleware"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/store"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
@@ -17,6 +18,7 @@ type handlers struct {
 	cfg    config.Config
 	pinger store.Pinger
 	ident  *identity.Service
+	orgs   *org.Service
 }
 
 func (h *handlers) healthz(c *gin.Context) {
