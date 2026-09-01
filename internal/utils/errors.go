@@ -3,7 +3,6 @@ package utils
 import (
 	"errors"
 	"fmt"
-	"net/http"
 )
 
 // Code is a stable, machine-readable API error code (snake_case).
@@ -12,21 +11,26 @@ type Code string
 func (c Code) String() string { return string(c) }
 
 const (
-	CodeInternal             Code = "internal_error"
-	CodeUnauthenticated      Code = "unauthenticated"
-	CodeForbidden            Code = "forbidden"
-	CodeNotFound             Code = "not_found"
-	CodeValidation           Code = "validation_error"
-	CodeConflict             Code = "conflict"
-	CodeRateLimited          Code = "rate_limited"
-	CodeIdempotencyConflict  Code = "idempotency_conflict"
-	CodeServiceUnavailable   Code = "service_unavailable"
-	CodeTenantMismatch       Code = "tenant_mismatch"
-	CodeEmailTaken           Code = "email_taken"
-	CodeTokenReuse           Code = "token_reuse_detected"
-	CodeDeviceLimit          Code = "device_limit_reached"
-	CodeWeakPassword         Code = "weak_password"
-	CodeUnknownDriver        Code = "unknown_datastore_driver"
+	CodeInternal            Code = "internal_error"
+	CodeUnauthenticated     Code = "unauthenticated"
+	CodeForbidden           Code = "forbidden"
+	CodeNotFound            Code = "not_found"
+	CodeValidation          Code = "validation_error"
+	CodeConflict            Code = "conflict"
+	CodeRateLimited         Code = "rate_limited"
+	CodeIdempotencyConflict Code = "idempotency_conflict"
+	CodeServiceUnavailable  Code = "service_unavailable"
+	CodeTenantMismatch      Code = "tenant_mismatch"
+	CodeEmailTaken          Code = "email_taken"
+	CodeTokenReuse          Code = "token_reuse_detected"
+	CodeDeviceLimit         Code = "device_limit_reached"
+	CodeWeakPassword        Code = "weak_password"
+	CodeUnknownDriver       Code = "unknown_datastore_driver"
+	CodeInvalidCredentials  Code = "invalid_credentials"
+	CodeInvalidToken        Code = "invalid_token"
+	CodeTermsOutdated       Code = "terms_outdated"
+	CodeAccountSuspended    Code = "account_suspended"
+	CodeEmailUnverified     Code = "email_unverified"
 )
 
 // Error is the non-generic application error. It always has a Code, a
@@ -112,21 +116,26 @@ type def struct {
 }
 
 var catalog = map[Code]def{
-	CodeInternal:            {http.StatusInternalServerError, "Internal server error"},
-	CodeUnauthenticated:     {http.StatusUnauthorized, "Authentication required"},
-	CodeForbidden:           {http.StatusForbidden, "Forbidden"},
-	CodeNotFound:            {http.StatusNotFound, "Not found"},
-	CodeValidation:          {http.StatusBadRequest, "Invalid request"},
-	CodeConflict:            {http.StatusConflict, "Conflict"},
-	CodeRateLimited:         {http.StatusTooManyRequests, "Too many requests"},
-	CodeIdempotencyConflict: {http.StatusConflict, "Idempotency key reused with a different body"},
-	CodeServiceUnavailable:  {http.StatusServiceUnavailable, "Service is not ready"},
-	CodeTenantMismatch:      {http.StatusNotFound, "Not found"},
-	CodeEmailTaken:          {http.StatusConflict, "Email already registered"},
-	CodeTokenReuse:          {http.StatusUnauthorized, "Refresh token reuse detected"},
-	CodeDeviceLimit:         {http.StatusConflict, "Device limit reached"},
-	CodeWeakPassword:        {http.StatusBadRequest, "Password does not meet requirements"},
-	CodeUnknownDriver:       {http.StatusInternalServerError, "Unknown datastore driver"},
+	CodeInternal:            {StatusInternal, "Internal server error"},
+	CodeUnauthenticated:     {StatusUnauthorized, "Authentication required"},
+	CodeForbidden:           {StatusForbidden, "Forbidden"},
+	CodeNotFound:            {StatusNotFound, "Not found"},
+	CodeValidation:          {StatusUnprocessableEntity, "Invalid request"},
+	CodeConflict:            {StatusConflict, "Conflict"},
+	CodeRateLimited:         {StatusTooManyRequests, "Too many requests"},
+	CodeIdempotencyConflict: {StatusConflict, "Idempotency key reused with a different body"},
+	CodeServiceUnavailable:  {StatusServiceUnavailable, "Service is not ready"},
+	CodeTenantMismatch:      {StatusNotFound, "Not found"},
+	CodeEmailTaken:          {StatusConflict, "Email already registered"},
+	CodeTokenReuse:          {StatusUnauthorized, "Refresh token reuse detected"},
+	CodeDeviceLimit:         {StatusConflict, "Device limit reached"},
+	CodeWeakPassword:        {StatusUnprocessableEntity, "Password does not meet requirements"},
+	CodeUnknownDriver:       {StatusInternal, "Unknown datastore driver"},
+	CodeInvalidCredentials:  {StatusUnauthorized, "Invalid email or password"},
+	CodeInvalidToken:        {StatusBadRequest, "Invalid or expired token"},
+	CodeTermsOutdated:       {StatusUnprocessableEntity, "Terms or privacy version is not current"},
+	CodeAccountSuspended:    {StatusForbidden, "Account is suspended"},
+	CodeEmailUnverified:     {StatusForbidden, "Email is not verified"},
 }
 
 // E returns a coded error from the catalog. Unknown codes become Generic.

@@ -1,29 +1,64 @@
 package middleware
 
 import (
+	"context"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
-func skipJWT(path string) bool {
-	switch path {
-	case "/healthz", "/readyz", "/v1/public/config":
-		return true
-	default:
-		return false
+// AccessVerifier validates a Bearer access JWT and returns user and session public ids.
+type AccessVerifier interface {
+	ValidateAccess(ctx context.Context, token string) (userID, sessionID string, err error)
+}
+
+// JWTAuth always requires a valid Bearer JWT whose session is not revoked or expired.
+// Mount only on auth-required groups; public routes never see it.
+func JWTAuth(v AccessVerifier) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Header(utils.HeaderWWWAuth, "Bearer")
+		if v == nil {
+			Abort(c, utils.E(utils.CodeUnauthenticated))
+			return
+		}
+		hdr := c.GetHeader(utils.HeaderAuthorization)
+		const prefix = "Bearer "
+		if hdr == "" || !strings.HasPrefix(hdr, prefix) {
+			Abort(c, utils.E(utils.CodeUnauthenticated))
+			return
+		}
+		raw := strings.TrimSpace(strings.TrimPrefix(hdr, prefix))
+		if raw == "" {
+			Abort(c, utils.E(utils.CodeUnauthenticated))
+			return
+		}
+		uid, sid, err := v.ValidateAccess(c.Request.Context(), raw)
+		if err != nil {
+			Abort(c, err)
+			return
+		}
+		c.Set(utils.CtxUserID, uid)
+		c.Set(utils.CtxSessionID, sid)
+		c.Next()
 	}
 }
 
-// JWTAuth skips ops/public config. Slice 0 does not issue or validate JWTs:
-// every other route is 401 unauthenticated.
-func JWTAuth() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if skipJWT(c.Request.URL.Path) {
-			c.Next()
-			return
+func UserIDFrom(c *gin.Context) string {
+	if v, ok := c.Get(utils.CtxUserID); ok {
+		if s, ok := v.(string); ok {
+			return s
 		}
-		c.Header(utils.HeaderWWWAuth, "Bearer")
-		Abort(c, utils.E(utils.CodeUnauthenticated))
 	}
+	return ""
+}
+
+func SessionIDFrom(c *gin.Context) string {
+	if v, ok := c.Get(utils.CtxSessionID); ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
 }

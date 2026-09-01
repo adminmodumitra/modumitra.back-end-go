@@ -6,36 +6,59 @@ import (
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/http/middleware"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/store"
 )
 
-func NewRouter(cfg config.Config, pinger store.Pinger) *gin.Engine {
+func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service) *gin.Engine {
 	r := gin.New()
 	_ = r.SetTrustedProxies(nil)
+	h := &handlers{cfg: cfg, pinger: pinger, ident: ident}
 
-	chain := []gin.HandlerFunc{
-		middleware.RequestID(),
-		middleware.Recover(),
+	// Process-wide only: not limiters. Needed so healthz still has request_id/trace_id.
+	r.Use(middleware.RequestID())
+	r.Use(middleware.Recover())
+	r.Use(middleware.OTEL(cfg.ServiceName)...)
+
+	public := r.Group("/")
+	public.Use(middleware.BBR(cfg.BBR)) // ONLY limiter on free/non-auth APIs
+	{
+		public.GET("/healthz", h.healthz)
+		public.GET("/readyz", h.readyz)
+		public.GET("/v1/public/config", h.publicConfig)
+		public.POST("/v1/auth/register", h.register)
+		public.POST("/v1/auth/verify-email", h.verifyEmail)
+		public.POST("/v1/auth/resend-verification", h.resendVerification)
+		public.POST("/v1/auth/login", h.login)
+		public.POST("/v1/auth/refresh", h.refresh)
+		public.POST("/v1/auth/logout", h.logout)
+		public.POST("/v1/auth/password-reset", h.passwordReset)
+		public.POST("/v1/auth/password-reset/confirm", h.passwordResetConfirm)
+		public.POST("/v1/auth/otp/request", h.otpRequest)
+		public.POST("/v1/auth/otp/verify", h.otpVerify)
+		public.POST("/v1/auth/otp/resend", h.otpRequest)
 	}
-	chain = append(chain, middleware.OTEL(cfg.ServiceName)...)
-	chain = append(chain,
-		middleware.BBR(cfg.BBR),
-		middleware.Timeout(cfg.RequestTimeout),
-		middleware.BodyLimit(cfg.BodyLimitBytes),
-		middleware.IPRateLimit(rate.Limit(30), 60),
-		middleware.UserRateLimit(),
-		middleware.JWTAuth(),
-		middleware.Tenant(),
-		middleware.RBAC(),
-		middleware.Idempotency(),
-	)
-	r.Use(chain...)
 
-	h := &handlers{cfg: cfg, pinger: pinger}
-	r.GET("/healthz", h.healthz)
-	r.GET("/readyz", h.readyz)
-	r.GET("/v1/public/config", h.publicConfig)
+	authed := r.Group("/")
+	var verifier middleware.AccessVerifier
+	if ident != nil {
+		verifier = ident
+	}
+	authed.Use(middleware.BBR(cfg.BBR))
+	authed.Use(middleware.Timeout(cfg.RequestTimeout))
+	authed.Use(middleware.BodyLimit(cfg.BodyLimitBytes))
+	authed.Use(middleware.IPRateLimit(rate.Limit(30), 60))
+	authed.Use(middleware.UserRateLimit())
+	authed.Use(middleware.JWTAuth(verifier)) // no skip list; this group is auth-only
+	authed.Use(middleware.Tenant())
+	authed.Use(middleware.RBAC())
+	authed.Use(middleware.Idempotency())
+	{
+		authed.POST("/v1/auth/logout-all", h.logoutAll)
+		authed.GET("/v1/me", h.me)
+		authed.POST("/v1/me/password", h.changePassword)
+	}
+
 	r.NoRoute(h.noRoute)
-
 	return r
 }

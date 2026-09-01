@@ -65,13 +65,13 @@ func WriteError(c *gin.Context, status int, code, message string, details map[st
 		details = map[string]any{}
 	}
 	InjectHeaders(c)
-	c.AbortWithStatusJSON(status, gin.H{
-		"error": gin.H{
-			"code":       code,
-			"message":    message,
-			"request_id": RequestIDFrom(c),
-			"trace_id":   TraceIDFrom(c),
-			"details":    details,
+	c.AbortWithStatusJSON(status, utils.ErrorResponse{
+		Error: utils.ErrorBody{
+			Code:      code,
+			Message:   message,
+			RequestID: RequestIDFrom(c),
+			TraceID:   TraceIDFrom(c),
+			Details:   details,
 		},
 	})
 }

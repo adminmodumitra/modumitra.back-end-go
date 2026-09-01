@@ -30,7 +30,7 @@ func BBR(cfg config.BBR) gin.HandlerFunc {
 		}
 		done, err := limiter.Allow()
 		if err != nil {
-			Abort(c, utils.E(utils.CodeRateLimited).WithMessage("Service is overloaded").WithDetails(gin.H{
+			Abort(c, utils.E(utils.CodeRateLimited).WithMessage("Service is overloaded").WithDetails(map[string]any{
 				"limiter": "bbr",
 			}))
 			return

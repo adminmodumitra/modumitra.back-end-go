@@ -28,6 +28,9 @@ type Config struct {
 	RequestTimeout time.Duration
 	BodyLimitBytes int64
 	OAuthProviders []string
+	JWTSecret      string
+	AccessTTL      time.Duration
+	RefreshTTL     time.Duration
 	BBR            BBR
 	Datastore      Datastore
 	DatastorePath  string
@@ -163,7 +166,6 @@ type Datastore struct {
 	NoSQL   NoSQLConfig `json:"NoSQL"`
 }
 
-
 // EnabledDrivers is the set of adapters to open at once.
 // Priority: Drivers list (or DATASTORE_DRIVERS) → per-block Enabled → single Driver fallback.
 func (d Datastore) EnabledDrivers() []string {
@@ -273,6 +275,9 @@ func Load() Config {
 		RequestTimeout: 3 * time.Second,
 		BodyLimitBytes: 1 << 20,
 		OAuthProviders: []string{"google", "facebook", "x"},
+		JWTSecret:      getenv("JWT_SECRET", "cabinet-studio-local-dev-only-change-me"),
+		AccessTTL:      getenvDuration("JWT_ACCESS_TTL", 15*time.Minute),
+		RefreshTTL:     getenvDuration("JWT_REFRESH_TTL", 30*24*time.Hour),
 		BBR:            loadBBR(),
 		Datastore:      ds,
 		DatastorePath:  path,
@@ -432,4 +437,16 @@ func getenvBool(key string, fallback bool) bool {
 	default:
 		return fallback
 	}
+}
+
+func getenvDuration(key string, fallback time.Duration) time.Duration {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v == "" {
+		return fallback
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil || d <= 0 {
+		return fallback
+	}
+	return d
 }

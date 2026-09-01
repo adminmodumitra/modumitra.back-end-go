@@ -1224,6 +1224,165 @@ Does not auto-login. Client must call login afterwards.
 | 503 | `service_unavailable` | Dependency or process unavailable; safe to retry with backoff |
 | 409 | `idempotency_conflict` | Idempotency-Key reused with a different request body |
 
+### Slice 1. `POST /v1/auth/otp/request`
+
+**Group:** Auth  
+**Summary:** Start passwordless one-time login. Always 202. Does not reveal whether the email exists.  
+**Auth:** public  
+**Required roles:** none  
+**Idempotent?** yes (latest unused OTP wins)  
+**Idempotency-Key:** n/a  
+**Rate-limit bucket:** `auth_otp_request`
+
+6-digit OTP, hashed at rest as SHA-256(`otp_login:` + user id + `:` + code), TTL 10 minutes, single-use. Prior unused `otp_login` tokens for the user are invalidated. Mail is sent only if the account exists.
+
+#### Request JSON body
+
+```json
+{
+  "email": "ada@example.com"
+}
+```
+
+| Name | Type | Required | Notes |
+| --- | --- | --- | --- |
+| email | string | yes | Looked up case-insensitively; no existence leak |
+
+#### Success — HTTP 202
+
+```json
+{
+  "request_id": "req_01j6n8x4k2m9p7q3r5t8",
+  "status": "accepted"
+}
+```
+
+| Name | Type | Required | Notes |
+| --- | --- | --- | --- |
+| request_id | string | yes | Echoed/generated req_ correlation id |
+| status | string | yes | Always accepted |
+
+#### Error codes
+
+| HTTP | Code | When |
+| --- | --- | --- |
+| 422 | `validation_error` | Empty or invalid email |
+| 429 | `rate_limited` | Bucket exhausted; Retry-After present |
+| 503 | `service_unavailable` | Dependency or process unavailable; safe to retry with backoff |
+
+### Slice 1. `POST /v1/auth/otp/verify`
+
+**Group:** Auth  
+**Summary:** Consume a one-time login OTP and issue the same token pair as password login.  
+**Auth:** public  
+**Required roles:** none  
+**Idempotent?** no (new session each success)  
+**Idempotency-Key:** n/a  
+**Rate-limit bucket:** `auth_otp_verify`
+
+Unverified users may still receive tokens (same as password login). Wrong, unknown, expired, or already-used OTPs share 401 `invalid_credentials`.
+
+#### Request JSON body
+
+```json
+{
+  "email": "ada@example.com",
+  "otp": "123456",
+  "device_name": "Ada’s Studio Mac"
+}
+```
+
+| Name | Type | Required | Notes |
+| --- | --- | --- | --- |
+| email | string | yes | Normalized lowercase |
+| otp | string | yes | Exactly 6 digits |
+| device_name | string | no | Human label for the session; 1–80 chars |
+
+#### Success — HTTP 200
+
+```json
+{
+  "request_id": "req_01j6n8x4k2m9p7q3r5t8",
+  "user": {
+    "id": "usr_ada01f3e8c2b4a90",
+    "email": "ada@example.com",
+    "email_verified": false,
+    "display_name": "Ada Lovelace",
+    "created_at": "2026-08-01T10:00:00Z",
+    "updated_at": "2026-09-01T00:00:00Z"
+  },
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.access.example",
+  "refresh_token": "rt_rotating_01j6n8x4k2m9p7q3r5t8",
+  "expires_in": 900,
+  "token_type": "Bearer",
+  "organization": null
+}
+```
+
+| Name | Type | Required | Notes |
+| --- | --- | --- | --- |
+| request_id | string | yes | Echoed/generated req_ correlation id |
+| user | object | yes | Authenticated user |
+| access_token | string | yes | JWT; 15 minutes |
+| refresh_token | string | yes | Opaque; 30 days; rotating |
+| expires_in | integer | yes | 900 |
+| token_type | string | yes | Bearer |
+| organization | object \| null | yes | Slice 1 always null |
+
+#### Error codes
+
+| HTTP | Code | When |
+| --- | --- | --- |
+| 401 | `invalid_credentials` | Email unknown or OTP wrong/expired/used — identical response |
+| 403 | `account_suspended` | User record is suspended |
+| 422 | `validation_error` | Empty email or OTP not exactly 6 digits |
+| 429 | `rate_limited` | Bucket exhausted; Retry-After present |
+| 503 | `service_unavailable` | Dependency or process unavailable; safe to retry with backoff |
+
+### Slice 1. `POST /v1/auth/otp/resend`
+
+**Group:** Auth  
+**Summary:** Resend a one-time login OTP. Always 202. Same behavior as `/v1/auth/otp/request` (invalidates previous unused OTPs).  
+**Auth:** public  
+**Required roles:** none  
+**Idempotent?** yes (latest unused OTP wins)  
+**Idempotency-Key:** n/a  
+**Rate-limit bucket:** `auth_otp_resend`
+
+#### Request JSON body
+
+```json
+{
+  "email": "ada@example.com"
+}
+```
+
+| Name | Type | Required | Notes |
+| --- | --- | --- | --- |
+| email | string | yes | No existence leak |
+
+#### Success — HTTP 202
+
+```json
+{
+  "request_id": "req_01j6n8x4k2m9p7q3r5t8",
+  "status": "accepted"
+}
+```
+
+| Name | Type | Required | Notes |
+| --- | --- | --- | --- |
+| request_id | string | yes | Echoed/generated req_ correlation id |
+| status | string | yes | Always accepted |
+
+#### Error codes
+
+| HTTP | Code | When |
+| --- | --- | --- |
+| 422 | `validation_error` | Empty or invalid email |
+| 429 | `rate_limited` | Bucket exhausted; Retry-After present |
+| 503 | `service_unavailable` | Dependency or process unavailable; safe to retry with backoff |
+
 ## 8.4 OAuth / SSO
 
 ### 13. `GET /v1/auth/oauth/providers`

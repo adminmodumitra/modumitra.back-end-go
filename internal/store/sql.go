@@ -56,6 +56,8 @@ func openSQL(ctx context.Context, cfg config.SQLConfig) (Store, error) {
 
 func (s *sqlStore) Driver() string { return "postgres" }
 
+func (s *sqlStore) DB() *sql.DB { return s.db }
+
 func (s *sqlStore) Ping(ctx context.Context) error {
 	return withPingSpan(ctx, "postgresql", func(ctx context.Context) error {
 		return s.db.PingContext(ctx)

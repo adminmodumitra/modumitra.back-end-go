@@ -12,6 +12,8 @@ import (
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
 	httpapi "github.com/Danish-13-Khan/backend-cabinet/internal/http"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
+	identpg "github.com/Danish-13-Khan/backend-cabinet/internal/identity/postgres"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/store"
 )
@@ -66,7 +68,36 @@ func main() {
 		}
 	}
 
-	engine := httpapi.NewRouter(cfg, st)
+	db := st.SQLDB()
+	if db == nil {
+		slog.Error("identity requires postgres; enable SQL in datastore config")
+		os.Exit(1)
+	}
+
+	clk := identity.SystemClock{}
+	ids := identity.NewIDGen()
+	ident := identity.NewService(
+		identpg.NewUserRepo(db),
+		identpg.NewSessionRepo(db),
+		identpg.NewEmailTokenRepo(db),
+		identpg.NewTx(db),
+		identity.NewArgon2idHasher(),
+		identity.NewJWTTokens(cfg.JWTSecret, identity.Issuer, cfg.AccessTTL, clk),
+		identity.NewLogMailer(cfg.LogLevel),
+		clk,
+		ids,
+		identity.Settings{
+			TermsVersion:   cfg.TermsVersion,
+			PrivacyVersion: cfg.PrivacyVersion,
+			AccessTTL:      cfg.AccessTTL,
+			RefreshTTL:     cfg.RefreshTTL,
+			EmailTokenTTL:  24 * time.Hour,
+			JWTSecret:      cfg.JWTSecret,
+			Issuer:         identity.Issuer,
+		},
+	)
+
+	engine := httpapi.NewRouter(cfg, st, ident)
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
 		Handler:           engine,
