@@ -1,0 +1,25 @@
+# Binaries
+bin/
+dist/
+tmp/
+*.exe
+*.test
+*.out
+/api
+cmd/api/api
+
+# Env and secrets
+.env
+.env.local
+*.pem
+*.key
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Go
+vendor/
+coverage.out
