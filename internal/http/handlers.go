@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 
@@ -33,19 +34,32 @@ func (h *handlers) readyz(c *gin.Context) {
 		middleware.WriteError(c, http.StatusServiceUnavailable, "service_unavailable", "Service is not ready", nil)
 		return
 	}
-	if err := h.pinger.Ping(c.Request.Context()); err != nil {
-		slog.Error("readyz postgres ping failed", "request_id", rid, "trace_id", tid)
+	checks := gin.H{}
+	if checker, ok := h.pinger.(interface {
+		Checks(context.Context) (map[string]string, error)
+	}); ok {
+		m, err := checker.Checks(c.Request.Context())
+		for k, v := range m {
+			checks[k] = v
+		}
+		if err != nil {
+			slog.Error("readyz datastore ping failed", "request_id", rid, "trace_id", tid, "error", err)
+			middleware.WriteError(c, http.StatusServiceUnavailable, "service_unavailable", "Service is not ready", gin.H{"checks": checks})
+			return
+		}
+	} else if err := h.pinger.Ping(c.Request.Context()); err != nil {
+		slog.Error("readyz datastore ping failed", "request_id", rid, "trace_id", tid)
 		middleware.WriteError(c, http.StatusServiceUnavailable, "service_unavailable", "Service is not ready", nil)
 		return
+	} else {
+		checks["store"] = "ok"
 	}
-	slog.Info("readyz", "request_id", rid, "trace_id", tid)
+	slog.Info("readyz", "request_id", rid, "trace_id", tid, "checks", checks)
 	middleware.WriteJSON(c, http.StatusOK, gin.H{
 		"request_id": rid,
 		"trace_id":   tid,
 		"status":     "ready",
-		"checks": gin.H{
-			"postgres": "ok",
-		},
+		"checks":     checks,
 	})
 }
 
