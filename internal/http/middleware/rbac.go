@@ -30,6 +30,24 @@ func actionFor(method, fullPath string) (string, bool) {
 		return org.ActionOrgRoles, true
 	case rest == "/entitlements" && method == http.MethodGet:
 		return org.ActionOrgRead, true
+	case rest == "/subscription" && method == http.MethodGet:
+		return org.ActionBillingRead, true
+	case rest == "/checkout-session" && method == http.MethodPost:
+		return org.ActionBillingWrite, true
+	case rest == "/portal-session" && method == http.MethodPost:
+		return org.ActionBillingWrite, true
+	case rest == "/subscription/cancel" && method == http.MethodPost:
+		return org.ActionBillingWrite, true
+	case rest == "/subscription/resume" && method == http.MethodPost:
+		return org.ActionBillingWrite, true
+	case rest == "/invoices" && method == http.MethodGet:
+		return org.ActionBillingRead, true
+	case rest == "/invoices/:invoiceId" && method == http.MethodGet:
+		return org.ActionBillingRead, true
+	case rest == "/seats" && method == http.MethodGet:
+		return org.ActionBillingRead, true
+	case rest == "/seats/preview-downgrade" && method == http.MethodPost:
+		return org.ActionBillingWrite, true
 	case rest == "/members" && method == http.MethodGet:
 		return org.ActionMembersList, true
 	case rest == "/members/:userId" && method == http.MethodPatch:

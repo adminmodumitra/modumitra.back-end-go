@@ -14,6 +14,7 @@ type OrgRepo interface {
 	Insert(ctx context.Context, o *Organization) error
 	GetByID(ctx context.Context, id string) (*Organization, error)
 	UpdateName(ctx context.Context, id, name string, at time.Time) error
+	SetProviderCustomer(ctx context.Context, id, provider, customerID string, at time.Time) error
 	SoftDelete(ctx context.Context, id string, at time.Time) error
 	SetOwner(ctx context.Context, id, ownerUserID string, at time.Time) error
 }

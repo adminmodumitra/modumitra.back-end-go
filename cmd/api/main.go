@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/billing"
+	billingpg "github.com/Danish-13-Khan/backend-cabinet/internal/billing/postgres"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/device"
 	devicepg "github.com/Danish-13-Khan/backend-cabinet/internal/device/postgres"
@@ -124,7 +126,29 @@ func main() {
 		device.NewIDGen(),
 	)
 
-	engine := httpapi.NewRouter(cfg, st, ident, orgs, devices)
+	var provider billing.Provider
+	if cfg.BillingProvider == billing.ProviderStripe {
+		provider = billing.NewStripeProvider()
+	} else {
+		provider = billing.NewFakeProvider()
+	}
+	bills := billing.NewService(
+		billingpg.NewPlanRepo(gdb),
+		billingpg.NewSubscriptionRepo(gdb),
+		billingpg.NewInvoiceRepo(gdb),
+		billingpg.NewEventRepo(gdb),
+		provider,
+		orgpg.NewOrgRepo(gdb),
+		orgpg.NewMemberRepo(gdb),
+		orgpg.NewInvitationRepo(gdb),
+		identpg.NewUserRepo(gdb),
+		billingpg.NewTx(gdb),
+		billing.SystemClock{},
+		billing.NewIDGen(),
+		billing.Settings{Provider: provider.Name(), WebhookSecret: cfg.BillingWebhookSecret},
+	)
+
+	engine := httpapi.NewRouter(cfg, st, ident, orgs, devices, bills)
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
 		Handler:           engine,

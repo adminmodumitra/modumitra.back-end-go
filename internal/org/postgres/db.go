@@ -71,3 +71,17 @@ func utcPtr(t *time.Time) *time.Time {
 }
 
 var _ org.TxRunner = (*Tx)(nil)
+
+func emptyToNil(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+func deref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}

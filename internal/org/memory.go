@@ -165,6 +165,19 @@ func (m *MemOrgs) SetOwner(_ context.Context, id, ownerUserID string, at time.Ti
 	return nil
 }
 
+func (m *MemOrgs) SetProviderCustomer(_ context.Context, id, provider, customerID string, at time.Time) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	o, ok := m.orgs[id]
+	if !ok {
+		return ErrNotFound
+	}
+	o.Provider = provider
+	o.ProviderCustomerID = customerID
+	o.UpdatedAt = at
+	return nil
+}
+
 func (m *MemMembers) Insert(_ context.Context, mem *Membership) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()

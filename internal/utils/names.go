@@ -4,15 +4,17 @@ package utils
 // Import this package instead of scattering magic strings.
 
 const (
-	HeaderRequestID     = "X-Request-Id"
-	HeaderTraceID       = "X-Trace-Id"
-	HeaderTraceparent   = "traceparent"
-	HeaderTracestate    = "tracestate"
-	HeaderAuthorization = "Authorization"
-	HeaderIdempotency   = "Idempotency-Key"
-	HeaderRetryAfter    = "Retry-After"
-	HeaderWWWAuth       = "WWW-Authenticate"
-	HeaderOrganization  = "X-Organization-Id"
+	HeaderRequestID        = "X-Request-Id"
+	HeaderTraceID          = "X-Trace-Id"
+	HeaderTraceparent      = "traceparent"
+	HeaderTracestate       = "tracestate"
+	HeaderAuthorization    = "Authorization"
+	HeaderIdempotency      = "Idempotency-Key"
+	HeaderRetryAfter       = "Retry-After"
+	HeaderWWWAuth          = "WWW-Authenticate"
+	HeaderOrganization     = "X-Organization-Id"
+	HeaderStripeSignature  = "Stripe-Signature"
+	HeaderBillingSignature = "X-Billing-Signature"
 
 	CtxRequestID = "request_id"
 	CtxTraceID   = "trace_id"

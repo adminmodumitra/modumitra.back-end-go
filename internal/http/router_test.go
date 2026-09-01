@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/billing"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/device"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
@@ -52,9 +53,10 @@ func testRouter(t *testing.T, p fakePinger) http.Handler {
 	cfg := config.Load()
 	cfg.ServiceName = "cabinet-studio-api-test"
 	svc, _, mem := identity.NewMemoryService(testSettings(cfg))
-	orgs, _, _ := org.NewMemoryService(mem.Users(), cfg.TrialDays)
+	orgs, _, orgMem := org.NewMemoryService(mem.Users(), cfg.TrialDays)
 	devs, _ := device.NewMemoryService(orgs, cfg.EntitlementSigningKey)
-	return NewRouter(cfg, p, svc, orgs, devs)
+	bills, _, _ := billing.NewMemoryService(orgMem.Orgs(), orgMem.Members(), orgMem.Invites(), mem.Users(), billing.Settings{Provider: billing.ProviderFake, WebhookSecret: cfg.BillingWebhookSecret})
+	return NewRouter(cfg, p, svc, orgs, devs, bills)
 }
 
 func TestHealthzOK(t *testing.T) {
@@ -239,9 +241,10 @@ func TestReadyzReportsActiveDriver(t *testing.T) {
 	cfg := config.Load()
 	cfg.ServiceName = "cabinet-studio-api-test"
 	svc, _, mem := identity.NewMemoryService(testSettings(cfg))
-	orgs, _, _ := org.NewMemoryService(mem.Users(), cfg.TrialDays)
+	orgs, _, orgMem := org.NewMemoryService(mem.Users(), cfg.TrialDays)
 	devs, _ := device.NewMemoryService(orgs, cfg.EntitlementSigningKey)
-	r := NewRouter(cfg, fakePinger{}, svc, orgs, devs)
+	bills, _, _ := billing.NewMemoryService(orgMem.Orgs(), orgMem.Members(), orgMem.Invites(), mem.Users(), billing.Settings{Provider: billing.ProviderFake, WebhookSecret: cfg.BillingWebhookSecret})
+	r := NewRouter(cfg, fakePinger{}, svc, orgs, devs, bills)
 	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)

@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/billing"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/device"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/http/middleware"
@@ -12,10 +13,10 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/store"
 )
 
-func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, orgs *org.Service, devices *device.Service) *gin.Engine {
+func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, orgs *org.Service, devices *device.Service, bills *billing.Service) *gin.Engine {
 	r := gin.New()
 	_ = r.SetTrustedProxies(nil)
-	h := &handlers{cfg: cfg, pinger: pinger, ident: ident, orgs: orgs, devices: devices}
+	h := &handlers{cfg: cfg, pinger: pinger, ident: ident, orgs: orgs, devices: devices, billing: bills}
 
 	// Process-wide only: not limiters. Needed so healthz still has request_id/trace_id.
 	r.Use(middleware.RequestID())
@@ -83,6 +84,25 @@ func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, 
 		authed.PATCH("/v1/devices/:id", h.patchDevice)
 		authed.DELETE("/v1/devices/:id", h.deleteDevice)
 		authed.GET("/v1/organizations/:id/entitlements", h.orgEntitlements)
+		authed.GET("/v1/billing/plans", h.listPlans)
+		authed.GET("/v1/organizations/:id/subscription", h.getSubscription)
+		authed.POST("/v1/organizations/:id/checkout-session", h.checkoutSession)
+		authed.POST("/v1/organizations/:id/portal-session", h.portalSession)
+		authed.POST("/v1/organizations/:id/subscription/cancel", h.cancelSubscription)
+		authed.POST("/v1/organizations/:id/subscription/resume", h.resumeSubscription)
+		authed.GET("/v1/organizations/:id/invoices", h.listInvoices)
+		authed.GET("/v1/organizations/:id/invoices/:invoiceId", h.getInvoice)
+		authed.GET("/v1/organizations/:id/seats", h.getSeats)
+		authed.POST("/v1/organizations/:id/seats/preview-downgrade", h.previewDowngrade)
+	}
+
+	// Webhook HMAC, not JWT. Process-wide RequestID/Recover/OTEL already applied.
+	webhooks := r.Group("/")
+	webhooks.Use(middleware.BBR(cfg.BBR))
+	webhooks.Use(middleware.Timeout(cfg.RequestTimeout))
+	webhooks.Use(middleware.BodyLimit(cfg.BodyLimitBytes))
+	{
+		webhooks.POST("/v1/webhooks/billing", h.billingWebhook)
 	}
 
 	r.NoRoute(h.noRoute)

@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/billing"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/device"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
@@ -24,9 +25,10 @@ func identRouterWithMailer(t *testing.T) (http.Handler, *identity.RecordingMaile
 	cfg := config.Load()
 	cfg.ServiceName = "cabinet-studio-api-test"
 	svc, mail, mem := identity.NewMemoryService(testSettings(cfg))
-	orgs, _, _ := org.NewMemoryService(mem.Users(), cfg.TrialDays)
+	orgs, _, orgMem := org.NewMemoryService(mem.Users(), cfg.TrialDays)
 	devs, _ := device.NewMemoryService(orgs, cfg.EntitlementSigningKey)
-	return NewRouter(cfg, fakePinger{}, svc, orgs, devs), mail
+	bills, _, _ := billing.NewMemoryService(orgMem.Orgs(), orgMem.Members(), orgMem.Invites(), mem.Users(), billing.Settings{Provider: billing.ProviderFake, WebhookSecret: cfg.BillingWebhookSecret})
+	return NewRouter(cfg, fakePinger{}, svc, orgs, devs, bills), mail
 }
 
 func doJSON(t *testing.T, h http.Handler, method, path string, body any, headers map[string]string) *httptest.ResponseRecorder {

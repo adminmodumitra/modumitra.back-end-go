@@ -80,4 +80,21 @@ func (r *OrgRepo) SetOwner(ctx context.Context, id, ownerUserID string, at time.
 	return nil
 }
 
+func (r *OrgRepo) SetProviderCustomer(ctx context.Context, id, provider, customerID string, at time.Time) error {
+	res := use(ctx, r.db).Model(&OrganizationModel{}).
+		Where("public_id = ? AND status <> ?", id, org.OrgDeleted).
+		Updates(map[string]any{
+			"provider":             emptyToNil(provider),
+			"provider_customer_id": emptyToNil(customerID),
+			"updated_at":           at,
+		})
+	if res.Error != nil {
+		return mapGorm(res.Error)
+	}
+	if res.RowsAffected == 0 {
+		return org.ErrNotFound
+	}
+	return nil
+}
+
 var _ org.OrgRepo = (*OrgRepo)(nil)

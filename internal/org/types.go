@@ -36,14 +36,16 @@ const (
 )
 
 type Organization struct {
-	ID          string
-	Name        string
-	OwnerUserID string
-	Status      string
-	TrialEndsAt *time.Time
-	DeletedAt   *time.Time
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID                 string
+	Name               string
+	OwnerUserID        string
+	Status             string
+	TrialEndsAt        *time.Time
+	Provider           string
+	ProviderCustomerID string
+	DeletedAt          *time.Time
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 func (o *Organization) Deleted() bool {

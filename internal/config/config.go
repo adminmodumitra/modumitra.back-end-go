@@ -35,6 +35,8 @@ type Config struct {
 	Datastore             Datastore
 	DatastorePath         string
 	EntitlementSigningKey string
+	BillingProvider       string
+	BillingWebhookSecret  string
 }
 
 // DurationAsString unmarshals JSON durations like "10s".
@@ -283,6 +285,8 @@ func Load() Config {
 		Datastore:             ds,
 		DatastorePath:         path,
 		EntitlementSigningKey: getenv("ENTITLEMENT_SIGNING_KEY", "cabinet-studio-entitlement-local-dev-only-change-me"),
+		BillingProvider:       getenv("BILLING_PROVIDER", "fake"),
+		BillingWebhookSecret:  getenv("BILLING_WEBHOOK_SECRET", "cabinet-studio-billing-webhook-local-dev-only"),
 	}
 }
 

@@ -8,41 +8,47 @@ import (
 
 // OrganizationModel maps schema-v1 organizations.
 type OrganizationModel struct {
-	PublicID    string     `gorm:"column:public_id;primaryKey"`
-	Name        string     `gorm:"column:name"`
-	OwnerUserID string     `gorm:"column:owner_user_id"`
-	Status      string     `gorm:"column:status"`
-	TrialEndsAt *time.Time `gorm:"column:trial_ends_at"`
-	DeletedAt   *time.Time `gorm:"column:deleted_at"`
-	CreatedAt   time.Time  `gorm:"column:created_at;autoCreateTime:false"`
-	UpdatedAt   time.Time  `gorm:"column:updated_at;autoUpdateTime:false"`
+	PublicID           string     `gorm:"column:public_id;primaryKey"`
+	Name               string     `gorm:"column:name"`
+	OwnerUserID        string     `gorm:"column:owner_user_id"`
+	Status             string     `gorm:"column:status"`
+	TrialEndsAt        *time.Time `gorm:"column:trial_ends_at"`
+	Provider           *string    `gorm:"column:provider"`
+	ProviderCustomerID *string    `gorm:"column:provider_customer_id"`
+	DeletedAt          *time.Time `gorm:"column:deleted_at"`
+	CreatedAt          time.Time  `gorm:"column:created_at;autoCreateTime:false"`
+	UpdatedAt          time.Time  `gorm:"column:updated_at;autoUpdateTime:false"`
 }
 
 func (OrganizationModel) TableName() string { return "organizations" }
 
 func orgToModel(o *org.Organization) OrganizationModel {
 	return OrganizationModel{
-		PublicID:    o.ID,
-		Name:        o.Name,
-		OwnerUserID: o.OwnerUserID,
-		Status:      o.Status,
-		TrialEndsAt: utcPtr(o.TrialEndsAt),
-		DeletedAt:   utcPtr(o.DeletedAt),
-		CreatedAt:   o.CreatedAt.UTC(),
-		UpdatedAt:   o.UpdatedAt.UTC(),
+		PublicID:           o.ID,
+		Name:               o.Name,
+		OwnerUserID:        o.OwnerUserID,
+		Status:             o.Status,
+		Provider:           emptyToNil(o.Provider),
+		ProviderCustomerID: emptyToNil(o.ProviderCustomerID),
+		TrialEndsAt:        utcPtr(o.TrialEndsAt),
+		DeletedAt:          utcPtr(o.DeletedAt),
+		CreatedAt:          o.CreatedAt.UTC(),
+		UpdatedAt:          o.UpdatedAt.UTC(),
 	}
 }
 
 func orgFromModel(m *OrganizationModel) *org.Organization {
 	return &org.Organization{
-		ID:          m.PublicID,
-		Name:        m.Name,
-		OwnerUserID: m.OwnerUserID,
-		Status:      m.Status,
-		TrialEndsAt: utcPtr(m.TrialEndsAt),
-		DeletedAt:   utcPtr(m.DeletedAt),
-		CreatedAt:   m.CreatedAt.UTC(),
-		UpdatedAt:   m.UpdatedAt.UTC(),
+		ID:                 m.PublicID,
+		Name:               m.Name,
+		OwnerUserID:        m.OwnerUserID,
+		Status:             m.Status,
+		Provider:           deref(m.Provider),
+		ProviderCustomerID: deref(m.ProviderCustomerID),
+		TrialEndsAt:        utcPtr(m.TrialEndsAt),
+		DeletedAt:          utcPtr(m.DeletedAt),
+		CreatedAt:          m.CreatedAt.UTC(),
+		UpdatedAt:          m.UpdatedAt.UTC(),
 	}
 }
 

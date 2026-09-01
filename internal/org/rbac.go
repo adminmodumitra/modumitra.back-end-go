@@ -15,6 +15,8 @@ const (
 	ActionInvitesList    = "invites.list"
 	ActionInvitesRevoke  = "invites.revoke"
 	ActionInvitesResend  = "invites.resend"
+	ActionBillingRead    = "billing.read"
+	ActionBillingWrite   = "billing.write"
 )
 
 // RolePermits reports whether an active membership role may perform action.
@@ -25,6 +27,10 @@ func RolePermits(role, action string) bool {
 	case ActionOrgWrite, ActionMembersWrite, ActionMembersSuspend, ActionMembersRemove,
 		ActionInvitesCreate, ActionInvitesList, ActionInvitesRevoke, ActionInvitesResend:
 		return role == RoleOwner || role == RoleAdmin
+	case ActionBillingRead:
+		return role == RoleOwner || role == RoleAdmin || role == RoleBillingAdmin
+	case ActionBillingWrite:
+		return role == RoleOwner || role == RoleBillingAdmin
 	case ActionOrgDelete, ActionOrgTransfer:
 		return role == RoleOwner
 	default:
