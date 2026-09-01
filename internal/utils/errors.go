@@ -43,6 +43,7 @@ const (
 	CodeAlreadyOwner            Code = "already_owner"
 	CodeCannotSuspendSelf       Code = "cannot_suspend_self"
 	CodeCannotRemoveSelf        Code = "cannot_remove_self"
+	CodeDeviceNotOwned          Code = "device_not_owned"
 )
 
 // Error is the non-generic application error. It always has a Code, a
@@ -160,6 +161,7 @@ var catalog = map[Code]def{
 	CodeAlreadyOwner:            {StatusConflict, "User is already the owner"},
 	CodeCannotSuspendSelf:       {StatusConflict, "Cannot suspend yourself"},
 	CodeCannotRemoveSelf:        {StatusConflict, "Use leave to remove yourself"},
+	CodeDeviceNotOwned:          {StatusBadRequest, "Device is not an active device of the caller"},
 }
 
 // E returns a coded error from the catalog. Unknown codes become Generic.

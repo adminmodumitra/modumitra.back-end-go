@@ -5,16 +5,17 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/device"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/http/middleware"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/store"
 )
 
-func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, orgs *org.Service) *gin.Engine {
+func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, orgs *org.Service, devices *device.Service) *gin.Engine {
 	r := gin.New()
 	_ = r.SetTrustedProxies(nil)
-	h := &handlers{cfg: cfg, pinger: pinger, ident: ident, orgs: orgs}
+	h := &handlers{cfg: cfg, pinger: pinger, ident: ident, orgs: orgs, devices: devices}
 
 	// Process-wide only: not limiters. Needed so healthz still has request_id/trace_id.
 	r.Use(middleware.RequestID())
@@ -58,6 +59,7 @@ func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, 
 	{
 		authed.POST("/v1/auth/logout-all", h.logoutAll)
 		authed.GET("/v1/me", h.me)
+		authed.GET("/v1/me/capabilities", h.meCapabilities)
 		authed.POST("/v1/me/password", h.changePassword)
 		authed.POST("/v1/organizations", h.createOrg)
 		authed.GET("/v1/organizations", h.listOrgs)
@@ -76,6 +78,11 @@ func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, 
 		authed.DELETE("/v1/organizations/:id/invitations/:invitationId", h.revokeInvitation)
 		authed.POST("/v1/organizations/:id/invitations/:invitationId/resend", h.resendInvitation)
 		authed.POST("/v1/invitations/:token/accept", h.acceptInvitation)
+		authed.GET("/v1/devices", h.listDevices)
+		authed.POST("/v1/devices/activate", h.activateDevice)
+		authed.PATCH("/v1/devices/:id", h.patchDevice)
+		authed.DELETE("/v1/devices/:id", h.deleteDevice)
+		authed.GET("/v1/organizations/:id/entitlements", h.orgEntitlements)
 	}
 
 	r.NoRoute(h.noRoute)

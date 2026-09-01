@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/device"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
 )
@@ -16,7 +17,8 @@ func orgRouter(t *testing.T) (http.Handler, *identity.RecordingMailer, *org.Reco
 	cfg.ServiceName = "cabinet-studio-api-test"
 	svc, imail, mem := identity.NewMemoryService(testSettings(cfg))
 	orgs, omail, _ := org.NewMemoryService(mem.Users(), cfg.TrialDays)
-	return NewRouter(cfg, fakePinger{}, svc, orgs), imail, omail
+	devs, _ := device.NewMemoryService(orgs, cfg.EntitlementSigningKey)
+	return NewRouter(cfg, fakePinger{}, svc, orgs, devs), imail, omail
 }
 
 func registerVerifyLogin(t *testing.T, h http.Handler, mail *identity.RecordingMailer, email, key string) (access, userID string) {

@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/device"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
@@ -52,7 +53,8 @@ func testRouter(t *testing.T, p fakePinger) http.Handler {
 	cfg.ServiceName = "cabinet-studio-api-test"
 	svc, _, mem := identity.NewMemoryService(testSettings(cfg))
 	orgs, _, _ := org.NewMemoryService(mem.Users(), cfg.TrialDays)
-	return NewRouter(cfg, p, svc, orgs)
+	devs, _ := device.NewMemoryService(orgs, cfg.EntitlementSigningKey)
+	return NewRouter(cfg, p, svc, orgs, devs)
 }
 
 func TestHealthzOK(t *testing.T) {
@@ -238,7 +240,8 @@ func TestReadyzReportsActiveDriver(t *testing.T) {
 	cfg.ServiceName = "cabinet-studio-api-test"
 	svc, _, mem := identity.NewMemoryService(testSettings(cfg))
 	orgs, _, _ := org.NewMemoryService(mem.Users(), cfg.TrialDays)
-	r := NewRouter(cfg, fakePinger{}, svc, orgs)
+	devs, _ := device.NewMemoryService(orgs, cfg.EntitlementSigningKey)
+	r := NewRouter(cfg, fakePinger{}, svc, orgs, devs)
 	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)

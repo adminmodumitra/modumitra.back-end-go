@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/device"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/http/middleware"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
@@ -301,4 +302,104 @@ func cursorPtr(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+type DeviceView struct {
+	ID            string  `json:"id"`
+	Name          string  `json:"name"`
+	Platform      string  `json:"platform"`
+	CreatedAt     string  `json:"created_at"`
+	LastSeenAt    string  `json:"last_seen_at"`
+	DeactivatedAt *string `json:"deactivated_at"`
+}
+
+type DeviceListOK struct {
+	utils.Meta
+	Items       []DeviceView `json:"items"`
+	NextCursor  *string      `json:"next_cursor"`
+	ActiveCount int          `json:"active_count"`
+	DeviceLimit int          `json:"device_limit"`
+}
+
+type DeviceOK struct {
+	utils.Meta
+	Device DeviceView `json:"device"`
+}
+
+type DeviceDeactivatedOK struct {
+	utils.Meta
+	Status string `json:"status"`
+	ID     string `json:"id"`
+}
+
+type EntitlementSnapshotView struct {
+	UserID             string              `json:"user_id"`
+	OrganizationID     *string             `json:"organization_id"`
+	Plan               string              `json:"plan"`
+	SubscriptionStatus string              `json:"subscription_status"`
+	Capabilities       device.Capabilities `json:"capabilities"`
+	IssuedAt           string              `json:"issued_at"`
+	RefreshAfter       string              `json:"refresh_after"`
+	ExpiresAt          string              `json:"expires_at"`
+	GraceUntil         *string             `json:"grace_until"`
+	DeviceID           *string             `json:"device_id"`
+	SchemaVersion      int                 `json:"schema_version"`
+	Signature          string              `json:"signature"`
+}
+
+type ActivateOK struct {
+	utils.Meta
+	Device              DeviceView              `json:"device"`
+	EntitlementSnapshot EntitlementSnapshotView `json:"entitlement_snapshot"`
+}
+
+type EntitlementsOK struct {
+	utils.Meta
+	EntitlementSnapshot EntitlementSnapshotView `json:"entitlement_snapshot"`
+}
+
+type CapabilitiesOK struct {
+	utils.Meta
+	UserID             string              `json:"user_id"`
+	OrganizationID     string              `json:"organization_id"`
+	Role               string              `json:"role"`
+	MembershipStatus   string              `json:"membership_status"`
+	Plan               string              `json:"plan"`
+	SubscriptionStatus string              `json:"subscription_status"`
+	Capabilities       device.Capabilities `json:"capabilities"`
+	IssuedAt           string              `json:"issued_at"`
+}
+
+func deviceView(d *device.Device) DeviceView {
+	if d == nil {
+		return DeviceView{}
+	}
+	return DeviceView{
+		ID:            d.ID,
+		Name:          d.Name,
+		Platform:      d.Platform,
+		CreatedAt:     rfcTime(d.CreatedAt),
+		LastSeenAt:    rfcTime(d.LastSeenAt),
+		DeactivatedAt: rfcTimePtr(d.DeactivatedAt),
+	}
+}
+
+func snapshotView(s *device.Snapshot) EntitlementSnapshotView {
+	if s == nil {
+		return EntitlementSnapshotView{}
+	}
+	return EntitlementSnapshotView{
+		UserID:             s.UserID,
+		OrganizationID:     s.OrganizationID,
+		Plan:               s.Plan,
+		SubscriptionStatus: s.SubscriptionStatus,
+		Capabilities:       s.Capabilities,
+		IssuedAt:           rfcTime(s.IssuedAt),
+		RefreshAfter:       rfcTime(s.RefreshAfter),
+		ExpiresAt:          rfcTime(s.ExpiresAt),
+		GraceUntil:         rfcTimePtr(s.GraceUntil),
+		DeviceID:           s.DeviceID,
+		SchemaVersion:      s.SchemaVersion,
+		Signature:          s.Signature,
+	}
 }

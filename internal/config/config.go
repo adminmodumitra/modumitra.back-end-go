@@ -16,24 +16,25 @@ const (
 )
 
 type Config struct {
-	HTTPAddr       string
-	DatabaseURL    string
-	OTLPEndpoint   string
-	ServiceName    string
-	TermsVersion   string
-	PrivacyVersion string
-	MinAppVersion  string
-	TrialDays      int
-	LogLevel       string
-	RequestTimeout time.Duration
-	BodyLimitBytes int64
-	OAuthProviders []string
-	JWTSecret      string
-	AccessTTL      time.Duration
-	RefreshTTL     time.Duration
-	BBR            BBR
-	Datastore      Datastore
-	DatastorePath  string
+	HTTPAddr              string
+	DatabaseURL           string
+	OTLPEndpoint          string
+	ServiceName           string
+	TermsVersion          string
+	PrivacyVersion        string
+	MinAppVersion         string
+	TrialDays             int
+	LogLevel              string
+	RequestTimeout        time.Duration
+	BodyLimitBytes        int64
+	OAuthProviders        []string
+	JWTSecret             string
+	AccessTTL             time.Duration
+	RefreshTTL            time.Duration
+	BBR                   BBR
+	Datastore             Datastore
+	DatastorePath         string
+	EntitlementSigningKey string
 }
 
 // DurationAsString unmarshals JSON durations like "10s".
@@ -263,24 +264,25 @@ func Load() Config {
 	applyDatastoreEnv(&ds)
 
 	return Config{
-		HTTPAddr:       getenv("HTTP_ADDR", ":8080"),
-		DatabaseURL:    ds.SQL.DSN,
-		OTLPEndpoint:   getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:4317"),
-		ServiceName:    getenv("OTEL_SERVICE_NAME", "cabinet-studio-api"),
-		TermsVersion:   getenv("TERMS_VERSION", "2026-06-01"),
-		PrivacyVersion: getenv("PRIVACY_VERSION", "2026-06-01"),
-		MinAppVersion:  getenv("MIN_APP_VERSION", "1.0.0"),
-		TrialDays:      getenvInt("TRIAL_DAYS", 14),
-		LogLevel:       getenv("LOG_LEVEL", "info"),
-		RequestTimeout: 3 * time.Second,
-		BodyLimitBytes: 1 << 20,
-		OAuthProviders: []string{"google", "facebook", "x"},
-		JWTSecret:      getenv("JWT_SECRET", "cabinet-studio-local-dev-only-change-me"),
-		AccessTTL:      getenvDuration("JWT_ACCESS_TTL", 15*time.Minute),
-		RefreshTTL:     getenvDuration("JWT_REFRESH_TTL", 30*24*time.Hour),
-		BBR:            loadBBR(),
-		Datastore:      ds,
-		DatastorePath:  path,
+		HTTPAddr:              getenv("HTTP_ADDR", ":8080"),
+		DatabaseURL:           ds.SQL.DSN,
+		OTLPEndpoint:          getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:4317"),
+		ServiceName:           getenv("OTEL_SERVICE_NAME", "cabinet-studio-api"),
+		TermsVersion:          getenv("TERMS_VERSION", "2026-06-01"),
+		PrivacyVersion:        getenv("PRIVACY_VERSION", "2026-06-01"),
+		MinAppVersion:         getenv("MIN_APP_VERSION", "1.0.0"),
+		TrialDays:             getenvInt("TRIAL_DAYS", 14),
+		LogLevel:              getenv("LOG_LEVEL", "info"),
+		RequestTimeout:        3 * time.Second,
+		BodyLimitBytes:        1 << 20,
+		OAuthProviders:        []string{"google", "facebook", "x"},
+		JWTSecret:             getenv("JWT_SECRET", "cabinet-studio-local-dev-only-change-me"),
+		AccessTTL:             getenvDuration("JWT_ACCESS_TTL", 15*time.Minute),
+		RefreshTTL:            getenvDuration("JWT_REFRESH_TTL", 30*24*time.Hour),
+		BBR:                   loadBBR(),
+		Datastore:             ds,
+		DatastorePath:         path,
+		EntitlementSigningKey: getenv("ENTITLEMENT_SIGNING_KEY", "cabinet-studio-entitlement-local-dev-only-change-me"),
 	}
 }
 

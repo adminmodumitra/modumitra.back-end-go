@@ -28,6 +28,8 @@ func actionFor(method, fullPath string) (string, bool) {
 		return org.ActionOrgTransfer, true
 	case rest == "/roles" && method == http.MethodGet:
 		return org.ActionOrgRoles, true
+	case rest == "/entitlements" && method == http.MethodGet:
+		return org.ActionOrgRead, true
 	case rest == "/members" && method == http.MethodGet:
 		return org.ActionMembersList, true
 	case rest == "/members/:userId" && method == http.MethodPatch:

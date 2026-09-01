@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/device"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/http/middleware"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
@@ -15,10 +16,11 @@ import (
 )
 
 type handlers struct {
-	cfg    config.Config
-	pinger store.Pinger
-	ident  *identity.Service
-	orgs   *org.Service
+	cfg     config.Config
+	pinger  store.Pinger
+	ident   *identity.Service
+	orgs    *org.Service
+	devices *device.Service
 }
 
 func (h *handlers) healthz(c *gin.Context) {

@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/device"
+	devicepg "github.com/Danish-13-Khan/backend-cabinet/internal/device/postgres"
 	httpapi "github.com/Danish-13-Khan/backend-cabinet/internal/http"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 	identpg "github.com/Danish-13-Khan/backend-cabinet/internal/identity/postgres"
@@ -112,7 +114,17 @@ func main() {
 		org.Settings{TrialDays: cfg.TrialDays},
 	)
 
-	engine := httpapi.NewRouter(cfg, st, ident, orgs)
+	devices := device.NewService(
+		devicepg.NewDeviceRepo(gdb),
+		devicepg.NewEntitlementRepo(gdb),
+		devicepg.NewTx(gdb),
+		orgs,
+		device.NewHMACSigner(cfg.EntitlementSigningKey, device.KeyIDV1),
+		device.SystemClock{},
+		device.NewIDGen(),
+	)
+
+	engine := httpapi.NewRouter(cfg, st, ident, orgs, devices)
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
 		Handler:           engine,

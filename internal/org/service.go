@@ -163,6 +163,23 @@ func (s *Service) Resolve(ctx context.Context, orgID, userID string) (string, er
 	return m.Role, nil
 }
 
+// MembershipOf returns the caller's membership including suspended (not removed).
+// Missing org/membership → not_found. Used by unsigned capabilities and snapshots.
+func (s *Service) MembershipOf(ctx context.Context, orgID, userID string) (*Organization, *Membership, error) {
+	o, err := s.loadOrg(ctx, orgID)
+	if err != nil {
+		return nil, nil, err
+	}
+	m, err := s.members.GetByOrgUser(ctx, orgID, userID)
+	if err != nil {
+		return nil, nil, mapRepoErr(err)
+	}
+	if m.Status == MemberRemoved || m.Status == MemberInvited {
+		return nil, nil, utils.E(utils.CodeNotFound)
+	}
+	return o, m, nil
+}
+
 func (s *Service) PrimaryForUser(ctx context.Context, userID string) (*Organization, error) {
 	if userID == "" {
 		return nil, nil
