@@ -4,17 +4,39 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	gormlogger "gorm.io/gorm/logger"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
 )
 
 type sqlStore struct {
-	db *sql.DB
+	db   *sql.DB
+	gorm *gorm.DB
+}
+
+type gormLogWriter struct{}
+
+func (gormLogWriter) Printf(format string, args ...any) {
+	// ParameterizedQueries is on; never interpolate secrets/DSN into logs.
+	slog.Warn("gorm", "msg", fmt.Sprintf(format, args...))
+}
+
+func newGormLogger() gormlogger.Interface {
+	return gormlogger.New(gormLogWriter{}, gormlogger.Config{
+		SlowThreshold:             time.Second,
+		LogLevel:                  gormlogger.Warn,
+		IgnoreRecordNotFoundError: true,
+		ParameterizedQueries:      true,
+		Colorful:                  false,
+	})
 }
 
 func openSQL(ctx context.Context, cfg config.SQLConfig) (Store, error) {
@@ -51,12 +73,25 @@ func openSQL(ctx context.Context, cfg config.SQLConfig) (Store, error) {
 	db.SetConnMaxLifetime(p.ConnMaxLifetime)
 	db.SetConnMaxIdleTime(p.ConnMaxLifetime)
 
-	return &sqlStore{db: db}, nil
+	gdb, err := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{
+		NowFunc:              func() time.Time { return time.Now().UTC() },
+		TranslateError:       true,
+		DisableAutomaticPing: true, // keep Open lazy like database/sql; readiness is store.Ping
+		Logger:               newGormLogger(),
+	})
+	if err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("open gorm: %w", err)
+	}
+
+	return &sqlStore{db: db, gorm: gdb}, nil
 }
 
 func (s *sqlStore) Driver() string { return "postgres" }
 
 func (s *sqlStore) DB() *sql.DB { return s.db }
+
+func (s *sqlStore) Gorm() *gorm.DB { return s.gorm }
 
 func (s *sqlStore) Ping(ctx context.Context) error {
 	return withPingSpan(ctx, "postgresql", func(ctx context.Context) error {

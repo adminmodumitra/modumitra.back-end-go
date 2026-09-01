@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"gorm.io/gorm"
+
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
 )
 
@@ -83,6 +85,21 @@ func (s *Set) SQLDB() *sql.DB {
 	}
 	return d.DB()
 }
+
+// Gorm returns the live Postgres *gorm.DB, or nil if Postgres is not enabled.
+func (s *Set) Gorm() *gorm.DB {
+	st := s.SQL()
+	if st == nil {
+		return nil
+	}
+	type gormer interface{ Gorm() *gorm.DB }
+	g, ok := st.(gormer)
+	if !ok {
+		return nil
+	}
+	return g.Gorm()
+}
+
 func (s *Set) Redis() Store { return s.find("redis") }
 func (s *Set) Mongo() Store { return s.find("mongodb") }
 

@@ -2,61 +2,55 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
 	"time"
+
+	"gorm.io/gorm"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 )
 
 type EmailTokenRepo struct {
-	db *sql.DB
+	db *gorm.DB
 }
 
-func NewEmailTokenRepo(db *sql.DB) *EmailTokenRepo { return &EmailTokenRepo{db: db} }
+func NewEmailTokenRepo(db *gorm.DB) *EmailTokenRepo { return &EmailTokenRepo{db: db} }
 
 func (r *EmailTokenRepo) Insert(ctx context.Context, t *identity.EmailToken) error {
-	q := `INSERT INTO email_tokens (public_id, user_id, purpose, token_hash, expires_at, created_at)
-		VALUES ($1,$2,$3,$4,$5,$6)`
-	_, err := conn(ctx, r.db).ExecContext(ctx, q,
-		t.ID, t.UserID, t.Purpose, t.TokenHash, t.ExpiresAt, t.CreatedAt,
-	)
-	return mapSQL(err)
+	m := tokenToModel(t)
+	if err := use(ctx, r.db).Create(&m).Error; err != nil {
+		return mapGorm(err)
+	}
+	return nil
 }
 
 func (r *EmailTokenRepo) GetByHash(ctx context.Context, hash string) (*identity.EmailToken, error) {
-	q := `SELECT public_id, user_id, purpose, token_hash, expires_at, consumed_at, created_at
-		FROM email_tokens WHERE token_hash = $1`
-	var t identity.EmailToken
-	var consumed sql.NullTime
-	err := conn(ctx, r.db).QueryRowContext(ctx, q, hash).Scan(
-		&t.ID, &t.UserID, &t.Purpose, &t.TokenHash, &t.ExpiresAt, &consumed, &t.CreatedAt,
-	)
-	if err != nil {
-		return nil, mapSQL(err)
+	var m EmailTokenModel
+	if err := use(ctx, r.db).Where("token_hash = ?", hash).Take(&m).Error; err != nil {
+		return nil, mapGorm(err)
 	}
-	t.ConsumedAt = nullTime(consumed)
-	t.ExpiresAt = t.ExpiresAt.UTC()
-	t.CreatedAt = t.CreatedAt.UTC()
-	return &t, nil
+	return tokenFromModel(&m), nil
 }
 
 func (r *EmailTokenRepo) Consume(ctx context.Context, id string, at time.Time) error {
-	q := `UPDATE email_tokens SET consumed_at = $1 WHERE public_id = $2 AND consumed_at IS NULL`
-	res, err := conn(ctx, r.db).ExecContext(ctx, q, at, id)
-	if err != nil {
-		return mapSQL(err)
+	res := use(ctx, r.db).Model(&EmailTokenModel{}).
+		Where("public_id = ? AND consumed_at IS NULL", id).
+		Update("consumed_at", at)
+	if res.Error != nil {
+		return mapGorm(res.Error)
 	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
+	if res.RowsAffected == 0 {
 		return identity.ErrNotFound
 	}
 	return nil
 }
 
 func (r *EmailTokenRepo) InvalidateOpen(ctx context.Context, userID, purpose string, at time.Time) error {
-	q := `UPDATE email_tokens SET consumed_at = $1 WHERE user_id = $2 AND purpose = $3 AND consumed_at IS NULL`
-	_, err := conn(ctx, r.db).ExecContext(ctx, q, at, userID, purpose)
-	return mapSQL(err)
+	if err := use(ctx, r.db).Model(&EmailTokenModel{}).
+		Where("user_id = ? AND purpose = ? AND consumed_at IS NULL", userID, purpose).
+		Update("consumed_at", at).Error; err != nil {
+		return mapGorm(err)
+	}
+	return nil
 }
 
 var _ identity.EmailTokenRepo = (*EmailTokenRepo)(nil)

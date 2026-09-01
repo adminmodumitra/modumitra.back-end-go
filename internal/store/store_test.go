@@ -154,6 +154,9 @@ func TestOpenSQLPoolDefaults(t *testing.T) {
 	if ss.db.Stats().MaxOpenConnections != 25 {
 		t.Fatalf("MaxOpenConnections=%d want 25", ss.db.Stats().MaxOpenConnections)
 	}
+	if ss.gorm == nil {
+		t.Fatal("expected gorm DB on sqlStore")
+	}
 }
 
 func TestEnabledDriversMultiple(t *testing.T) {
@@ -186,6 +189,9 @@ func TestOpenAllPostgresAndRedis(t *testing.T) {
 	if set.SQL() == nil || set.Redis() == nil || set.Mongo() != nil {
 		t.Fatalf("sql=%v redis=%v mongo=%v", set.SQL(), set.Redis(), set.Mongo())
 	}
+	if set.Gorm() == nil {
+		t.Fatal("expected Gorm() with postgres enabled")
+	}
 	if set.Driver() != "postgres,redis" {
 		t.Fatalf("driver=%q", set.Driver())
 	}
@@ -195,5 +201,19 @@ func TestOpenAllUnknownStops(t *testing.T) {
 	_, err := OpenAll(context.Background(), config.Datastore{Drivers: []string{"postgres", "cassandra"}})
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+func TestGormNilWithoutPostgres(t *testing.T) {
+	set, err := OpenAll(context.Background(), config.Datastore{
+		Drivers: []string{"redis"},
+		Redis:   config.RedisConfig{Addr: "127.0.0.1:6379"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer set.Close()
+	if set.Gorm() != nil || set.SQLDB() != nil {
+		t.Fatalf("gorm=%v sqldb=%v", set.Gorm(), set.SQLDB())
 	}
 }

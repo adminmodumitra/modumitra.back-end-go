@@ -2,126 +2,110 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
 	"time"
+
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 )
 
 type SessionRepo struct {
-	db *sql.DB
+	db *gorm.DB
 }
 
-func NewSessionRepo(db *sql.DB) *SessionRepo { return &SessionRepo{db: db} }
-
-const sessionCols = `public_id, user_id, device_id, refresh_token_hash, family_id,
-	expires_at, revoked_at, reuse_detected_at, replaced_by_session_id, device_name,
-	created_at, updated_at, last_seen_at`
-
-func scanSession(row *sql.Row) (*identity.Session, error) {
-	var s identity.Session
-	var deviceID, replacedBy, deviceName sql.NullString
-	var revoked, reuse sql.NullTime
-	err := row.Scan(
-		&s.ID, &s.UserID, &deviceID, &s.RefreshHash, &s.FamilyID,
-		&s.ExpiresAt, &revoked, &reuse, &replacedBy, &deviceName,
-		&s.CreatedAt, &s.UpdatedAt, &s.LastSeenAt,
-	)
-	if err != nil {
-		return nil, mapSQL(err)
-	}
-	s.DeviceID = nullString(deviceID)
-	s.ReplacedBy = nullString(replacedBy)
-	if deviceName.Valid {
-		s.DeviceName = deviceName.String
-	}
-	s.RevokedAt = nullTime(revoked)
-	s.ReuseDetectedAt = nullTime(reuse)
-	s.ExpiresAt = s.ExpiresAt.UTC()
-	s.CreatedAt = s.CreatedAt.UTC()
-	s.UpdatedAt = s.UpdatedAt.UTC()
-	s.LastSeenAt = s.LastSeenAt.UTC()
-	return &s, nil
-}
+func NewSessionRepo(db *gorm.DB) *SessionRepo { return &SessionRepo{db: db} }
 
 func (r *SessionRepo) GetByID(ctx context.Context, id string) (*identity.Session, error) {
-	q := `SELECT ` + sessionCols + ` FROM sessions WHERE public_id = $1`
-	return scanSession(conn(ctx, r.db).QueryRowContext(ctx, q, id))
+	var m SessionModel
+	if err := use(ctx, r.db).Where("public_id = ?", id).Take(&m).Error; err != nil {
+		return nil, mapGorm(err)
+	}
+	return sessionFromModel(&m), nil
 }
 
 func (r *SessionRepo) GetByRefreshHash(ctx context.Context, hash string) (*identity.Session, error) {
-	q := `SELECT ` + sessionCols + ` FROM sessions WHERE refresh_token_hash = $1`
-	return scanSession(conn(ctx, r.db).QueryRowContext(ctx, q, hash))
+	var m SessionModel
+	if err := use(ctx, r.db).Where("refresh_token_hash = ?", hash).Take(&m).Error; err != nil {
+		return nil, mapGorm(err)
+	}
+	return sessionFromModel(&m), nil
 }
 
 func (r *SessionRepo) GetByRefreshHashForUpdate(ctx context.Context, hash string) (*identity.Session, error) {
-	q := `SELECT ` + sessionCols + ` FROM sessions WHERE refresh_token_hash = $1 FOR UPDATE`
-	return scanSession(conn(ctx, r.db).QueryRowContext(ctx, q, hash))
+	var m SessionModel
+	if err := use(ctx, r.db).Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("refresh_token_hash = ?", hash).Take(&m).Error; err != nil {
+		return nil, mapGorm(err)
+	}
+	return sessionFromModel(&m), nil
 }
 
 func (r *SessionRepo) Insert(ctx context.Context, s *identity.Session) error {
-	q := `INSERT INTO sessions (
-		public_id, user_id, device_id, refresh_token_hash, family_id,
-		expires_at, device_name, last_seen_at, created_at, updated_at
-	) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`
-	_, err := conn(ctx, r.db).ExecContext(ctx, q,
-		s.ID, s.UserID, nil, s.RefreshHash, s.FamilyID,
-		s.ExpiresAt, nullIfEmpty(s.DeviceName), s.LastSeenAt, s.CreatedAt, s.UpdatedAt,
-	)
-	return mapSQL(err)
-}
-
-func nullIfEmpty(s string) any {
-	if s == "" {
-		return nil
+	m := sessionToModel(s)
+	if err := use(ctx, r.db).Create(&m).Error; err != nil {
+		return mapGorm(err)
 	}
-	return s
+	return nil
 }
 
 func (r *SessionRepo) RevokeAndReplace(ctx context.Context, oldID, newID string, at time.Time) error {
-	q := `UPDATE sessions SET revoked_at = $1, replaced_by_session_id = $2, updated_at = $1
-		WHERE public_id = $3`
-	res, err := conn(ctx, r.db).ExecContext(ctx, q, at, newID, oldID)
-	if err != nil {
-		return mapSQL(err)
+	res := use(ctx, r.db).Model(&SessionModel{}).Where("public_id = ?", oldID).Updates(map[string]any{
+		"revoked_at":             at,
+		"replaced_by_session_id": newID,
+		"updated_at":             at,
+	})
+	if res.Error != nil {
+		return mapGorm(res.Error)
 	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
+	if res.RowsAffected == 0 {
 		return identity.ErrNotFound
 	}
 	return nil
 }
 
 func (r *SessionRepo) MarkReuseAndRevokeFamily(ctx context.Context, sessionID, familyID string, at time.Time) error {
-	q1 := `UPDATE sessions SET reuse_detected_at = $1, revoked_at = COALESCE(revoked_at, $1), updated_at = $1
-		WHERE public_id = $2`
-	if _, err := conn(ctx, r.db).ExecContext(ctx, q1, at, sessionID); err != nil {
-		return mapSQL(err)
+	if err := use(ctx, r.db).Model(&SessionModel{}).Where("public_id = ?", sessionID).Updates(map[string]any{
+		"reuse_detected_at": at,
+		"revoked_at":        gorm.Expr("COALESCE(revoked_at, ?)", at),
+		"updated_at":        at,
+	}).Error; err != nil {
+		return mapGorm(err)
 	}
-	q2 := `UPDATE sessions SET revoked_at = $1, updated_at = $1
-		WHERE family_id = $2 AND revoked_at IS NULL`
-	if _, err := conn(ctx, r.db).ExecContext(ctx, q2, at, familyID); err != nil {
-		return mapSQL(err)
+	if err := use(ctx, r.db).Model(&SessionModel{}).
+		Where("family_id = ? AND revoked_at IS NULL", familyID).
+		Updates(map[string]any{
+			"revoked_at": at,
+			"updated_at": at,
+		}).Error; err != nil {
+		return mapGorm(err)
 	}
 	return nil
 }
 
 func (r *SessionRepo) Revoke(ctx context.Context, id string, at time.Time) error {
-	q := `UPDATE sessions SET revoked_at = $1, updated_at = $1
-		WHERE public_id = $2 AND revoked_at IS NULL`
-	_, err := conn(ctx, r.db).ExecContext(ctx, q, at, id)
-	return mapSQL(err)
+	if err := use(ctx, r.db).Model(&SessionModel{}).
+		Where("public_id = ? AND revoked_at IS NULL", id).
+		Updates(map[string]any{
+			"revoked_at": at,
+			"updated_at": at,
+		}).Error; err != nil {
+		return mapGorm(err)
+	}
+	return nil
 }
 
 func (r *SessionRepo) RevokeAllForUser(ctx context.Context, userID string, at time.Time) (int, error) {
-	q := `UPDATE sessions SET revoked_at = $1, updated_at = $1
-		WHERE user_id = $2 AND revoked_at IS NULL`
-	res, err := conn(ctx, r.db).ExecContext(ctx, q, at, userID)
-	if err != nil {
-		return 0, mapSQL(err)
+	res := use(ctx, r.db).Model(&SessionModel{}).
+		Where("user_id = ? AND revoked_at IS NULL", userID).
+		Updates(map[string]any{
+			"revoked_at": at,
+			"updated_at": at,
+		})
+	if res.Error != nil {
+		return 0, mapGorm(res.Error)
 	}
-	n, _ := res.RowsAffected()
-	return int(n), nil
+	return int(res.RowsAffected), nil
 }
 
 var _ identity.SessionRepo = (*SessionRepo)(nil)

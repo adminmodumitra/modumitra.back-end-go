@@ -2,71 +2,54 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
+
+	"gorm.io/gorm"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
 type InvitationRepo struct {
-	db *sql.DB
+	db *gorm.DB
 }
 
-func NewInvitationRepo(db *sql.DB) *InvitationRepo { return &InvitationRepo{db: db} }
-
-const inviteCols = `public_id, organization_id, email, role, status, token_hash, invited_by_user_id,
-	expires_at, accepted_at, accepted_by_user_id, revoked_at, revoked_by_user_id, resent_at, created_at, updated_at`
-
-func scanInvite(scanner interface{ Scan(dest ...any) error }) (*org.Invitation, error) {
-	var inv org.Invitation
-	var accepted, revoked, resent sql.NullTime
-	var acceptedBy, revokedBy sql.NullString
-	err := scanner.Scan(
-		&inv.ID, &inv.OrganizationID, &inv.Email, &inv.Role, &inv.Status, &inv.TokenHash, &inv.InvitedByUserID,
-		&inv.ExpiresAt, &accepted, &acceptedBy, &revoked, &revokedBy, &resent, &inv.CreatedAt, &inv.UpdatedAt,
-	)
-	if err != nil {
-		return nil, mapSQL(err)
-	}
-	inv.AcceptedAt = nullTime(accepted)
-	inv.AcceptedByUserID = nullString(acceptedBy)
-	inv.RevokedAt = nullTime(revoked)
-	inv.RevokedByUserID = nullString(revokedBy)
-	inv.ResentAt = nullTime(resent)
-	inv.ExpiresAt = inv.ExpiresAt.UTC()
-	inv.CreatedAt = inv.CreatedAt.UTC()
-	inv.UpdatedAt = inv.UpdatedAt.UTC()
-	return &inv, nil
-}
+func NewInvitationRepo(db *gorm.DB) *InvitationRepo { return &InvitationRepo{db: db} }
 
 func (r *InvitationRepo) Insert(ctx context.Context, inv *org.Invitation) error {
-	q := `INSERT INTO invitations (
-		public_id, organization_id, email, role, status, token_hash, invited_by_user_id,
-		expires_at, created_at, updated_at
-	) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`
-	_, err := conn(ctx, r.db).ExecContext(ctx, q,
-		inv.ID, inv.OrganizationID, inv.Email, inv.Role, inv.Status, inv.TokenHash, inv.InvitedByUserID,
-		inv.ExpiresAt, inv.CreatedAt, inv.UpdatedAt,
-	)
-	if err != nil && isUniqueViolation(err) {
-		return utils.E(utils.CodeInvitationPending)
+	m := inviteToModel(inv)
+	if err := use(ctx, r.db).Create(&m).Error; err != nil {
+		if isUnique(err) {
+			return utils.E(utils.CodeInvitationPending)
+		}
+		return mapGorm(err)
 	}
-	return mapSQL(err)
+	return nil
 }
 
 func (r *InvitationRepo) GetByID(ctx context.Context, id string) (*org.Invitation, error) {
-	q := `SELECT ` + inviteCols + ` FROM invitations WHERE public_id = $1`
-	return scanInvite(conn(ctx, r.db).QueryRowContext(ctx, q, id))
+	var m InvitationModel
+	if err := use(ctx, r.db).Where("public_id = ?", id).Take(&m).Error; err != nil {
+		return nil, mapGorm(err)
+	}
+	return inviteFromModel(&m), nil
 }
 
 func (r *InvitationRepo) GetByTokenHash(ctx context.Context, hash string) (*org.Invitation, error) {
-	q := `SELECT ` + inviteCols + ` FROM invitations WHERE token_hash = $1`
-	return scanInvite(conn(ctx, r.db).QueryRowContext(ctx, q, hash))
+	var m InvitationModel
+	if err := use(ctx, r.db).Where("token_hash = ?", hash).Take(&m).Error; err != nil {
+		return nil, mapGorm(err)
+	}
+	return inviteFromModel(&m), nil
 }
 
 func (r *InvitationRepo) GetPendingByOrgEmail(ctx context.Context, orgID, email string) (*org.Invitation, error) {
-	q := `SELECT ` + inviteCols + ` FROM invitations WHERE organization_id = $1 AND email = $2 AND status = 'pending'`
-	return scanInvite(conn(ctx, r.db).QueryRowContext(ctx, q, orgID, email))
+	var m InvitationModel
+	if err := use(ctx, r.db).
+		Where("organization_id = ? AND email = ? AND status = ?", orgID, email, org.InvitePending).
+		Take(&m).Error; err != nil {
+		return nil, mapGorm(err)
+	}
+	return inviteFromModel(&m), nil
 }
 
 func (r *InvitationRepo) ListByOrg(ctx context.Context, orgID, status, cursor string, limit int) ([]org.Invitation, string, error) {
@@ -74,36 +57,20 @@ func (r *InvitationRepo) ListByOrg(ctx context.Context, orgID, status, cursor st
 	if err != nil {
 		return nil, "", err
 	}
-	q := `SELECT ` + inviteCols + ` FROM invitations WHERE organization_id = $1`
-	args := []any{orgID}
-	n := 2
+	q := use(ctx, r.db).Model(&InvitationModel{}).Where("organization_id = ?", orgID)
 	if status != "" {
-		q += ` AND status = $` + itoa(n)
-		args = append(args, status)
-		n++
+		q = q.Where("status = ?", status)
 	}
 	if cid != "" {
-		q += ` AND (created_at, public_id) < ($` + itoa(n) + `, $` + itoa(n+1) + `)`
-		args = append(args, ct, cid)
-		n += 2
+		q = q.Where("(created_at, public_id) < (?, ?)", ct, cid)
 	}
-	q += ` ORDER BY created_at DESC, public_id DESC LIMIT $` + itoa(n)
-	args = append(args, limit+1)
-	rows, err := conn(ctx, r.db).QueryContext(ctx, q, args...)
-	if err != nil {
-		return nil, "", mapSQL(err)
+	var rows []InvitationModel
+	if err := q.Order("created_at DESC, public_id DESC").Limit(limit + 1).Find(&rows).Error; err != nil {
+		return nil, "", mapGorm(err)
 	}
-	defer rows.Close()
-	var out []org.Invitation
-	for rows.Next() {
-		inv, err := scanInvite(rows)
-		if err != nil {
-			return nil, "", err
-		}
-		out = append(out, *inv)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, "", mapSQL(err)
+	out := make([]org.Invitation, 0, len(rows))
+	for i := range rows {
+		out = append(out, *inviteFromModel(&rows[i]))
 	}
 	next := ""
 	if limit > 0 && len(out) > limit {
@@ -115,18 +82,21 @@ func (r *InvitationRepo) ListByOrg(ctx context.Context, orgID, status, cursor st
 }
 
 func (r *InvitationRepo) Update(ctx context.Context, inv *org.Invitation) error {
-	q := `UPDATE invitations SET status = $1, token_hash = $2, expires_at = $3, accepted_at = $4,
-		accepted_by_user_id = $5, revoked_at = $6, revoked_by_user_id = $7, resent_at = $8, updated_at = $9
-		WHERE public_id = $10`
-	res, err := conn(ctx, r.db).ExecContext(ctx, q,
-		inv.Status, inv.TokenHash, inv.ExpiresAt, inv.AcceptedAt, inv.AcceptedByUserID,
-		inv.RevokedAt, inv.RevokedByUserID, inv.ResentAt, inv.UpdatedAt, inv.ID,
-	)
-	if err != nil {
-		return mapSQL(err)
+	res := use(ctx, r.db).Model(&InvitationModel{}).Where("public_id = ?", inv.ID).Updates(map[string]any{
+		"status":              inv.Status,
+		"token_hash":          inv.TokenHash,
+		"expires_at":          inv.ExpiresAt,
+		"accepted_at":         inv.AcceptedAt,
+		"accepted_by_user_id": inv.AcceptedByUserID,
+		"revoked_at":          inv.RevokedAt,
+		"revoked_by_user_id":  inv.RevokedByUserID,
+		"resent_at":           inv.ResentAt,
+		"updated_at":          inv.UpdatedAt,
+	})
+	if res.Error != nil {
+		return mapGorm(res.Error)
 	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
+	if res.RowsAffected == 0 {
 		return org.ErrNotFound
 	}
 	return nil

@@ -70,8 +70,8 @@ func main() {
 		}
 	}
 
-	db := st.SQLDB()
-	if db == nil {
+	gdb := st.Gorm()
+	if gdb == nil {
 		slog.Error("identity requires postgres; enable SQL in datastore config")
 		os.Exit(1)
 	}
@@ -79,10 +79,10 @@ func main() {
 	clk := identity.SystemClock{}
 	ids := identity.NewIDGen()
 	ident := identity.NewService(
-		identpg.NewUserRepo(db),
-		identpg.NewSessionRepo(db),
-		identpg.NewEmailTokenRepo(db),
-		identpg.NewTx(db),
+		identpg.NewUserRepo(gdb),
+		identpg.NewSessionRepo(gdb),
+		identpg.NewEmailTokenRepo(gdb),
+		identpg.NewTx(gdb),
 		identity.NewArgon2idHasher(),
 		identity.NewJWTTokens(cfg.JWTSecret, identity.Issuer, cfg.AccessTTL, clk),
 		identity.NewLogMailer(cfg.LogLevel),
@@ -100,11 +100,11 @@ func main() {
 	)
 
 	orgs := org.NewService(
-		orgpg.NewOrgRepo(db),
-		orgpg.NewMemberRepo(db),
-		orgpg.NewInvitationRepo(db),
-		identpg.NewUserRepo(db),
-		orgpg.NewTx(db),
+		orgpg.NewOrgRepo(gdb),
+		orgpg.NewMemberRepo(gdb),
+		orgpg.NewInvitationRepo(gdb),
+		identpg.NewUserRepo(gdb),
+		orgpg.NewTx(gdb),
 		org.NewLogMailer(cfg.LogLevel),
 		org.SystemClock{},
 		org.NewIDGen(),
