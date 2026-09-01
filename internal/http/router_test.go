@@ -163,6 +163,40 @@ func TestJWTUnauthenticated(t *testing.T) {
 	}
 }
 
+func TestPublicRouteWithoutAuthorization(t *testing.T) {
+	r := testRouter(t, fakePinger{})
+	req := httptest.NewRequest(http.MethodGet, "/v1/public/config", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	if got := w.Header().Get("WWW-Authenticate"); got != "" {
+		t.Fatalf("WWW-Authenticate=%q; JWT must not run on public routes", got)
+	}
+}
+
+func TestNoRouteNotJWT(t *testing.T) {
+	r := testRouter(t, fakePinger{})
+	req := httptest.NewRequest(http.MethodGet, "/v1/does-not-exist", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	var body map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	errObj, _ := body["error"].(map[string]any)
+	if errObj["code"] != "not_found" {
+		t.Fatalf("error=%v", body)
+	}
+	if got := w.Header().Get("WWW-Authenticate"); got != "" {
+		t.Fatalf("WWW-Authenticate=%q; NoRoute must not run JWT", got)
+	}
+}
+
 func TestTraceparentEcho(t *testing.T) {
 	r := testRouter(t, fakePinger{})
 	const wantTrace = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"

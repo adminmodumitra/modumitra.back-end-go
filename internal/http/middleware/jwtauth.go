@@ -9,39 +9,15 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
-func skipJWT(path string) bool {
-	switch path {
-	case "/healthz", "/readyz", "/v1/public/config",
-		"/v1/auth/register",
-		"/v1/auth/verify-email",
-		"/v1/auth/resend-verification",
-		"/v1/auth/login",
-		"/v1/auth/refresh",
-		"/v1/auth/logout",
-		"/v1/auth/password-reset",
-		"/v1/auth/password-reset/confirm",
-		"/v1/auth/otp/request",
-		"/v1/auth/otp/verify",
-		"/v1/auth/otp/resend":
-		return true
-	default:
-		return false
-	}
-}
-
 // AccessVerifier validates a Bearer access JWT and returns user and session public ids.
 type AccessVerifier interface {
 	ValidateAccess(ctx context.Context, token string) (userID, sessionID string, err error)
 }
 
-// JWTAuth skips health, public config, and public auth routes. All other
-// routes require a valid Bearer JWT whose session is not revoked or expired.
+// JWTAuth always requires a valid Bearer JWT whose session is not revoked or expired.
+// Mount only on auth-required groups; public routes never see it.
 func JWTAuth(v AccessVerifier) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if skipJWT(c.Request.URL.Path) {
-			c.Next()
-			return
-		}
 		c.Header(utils.HeaderWWWAuth, "Bearer")
 		if v == nil {
 			Abort(c, utils.E(utils.CodeUnauthenticated))

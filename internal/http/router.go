@@ -13,51 +13,52 @@ import (
 func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service) *gin.Engine {
 	r := gin.New()
 	_ = r.SetTrustedProxies(nil)
-	useMiddleware(r, cfg, ident)
-	registerRoutes(r, cfg, pinger, ident)
-	return r
-}
+	h := &handlers{cfg: cfg, pinger: pinger, ident: ident}
 
-func useMiddleware(r *gin.Engine, cfg config.Config, ident *identity.Service) {
+	// Process-wide only: not limiters. Needed so healthz still has request_id/trace_id.
+	r.Use(middleware.RequestID())
+	r.Use(middleware.Recover())
+	r.Use(middleware.OTEL(cfg.ServiceName)...)
+
+	public := r.Group("/")
+	public.Use(middleware.BBR(cfg.BBR)) // ONLY limiter on free/non-auth APIs
+	{
+		public.GET("/healthz", h.healthz)
+		public.GET("/readyz", h.readyz)
+		public.GET("/v1/public/config", h.publicConfig)
+		public.POST("/v1/auth/register", h.register)
+		public.POST("/v1/auth/verify-email", h.verifyEmail)
+		public.POST("/v1/auth/resend-verification", h.resendVerification)
+		public.POST("/v1/auth/login", h.login)
+		public.POST("/v1/auth/refresh", h.refresh)
+		public.POST("/v1/auth/logout", h.logout)
+		public.POST("/v1/auth/password-reset", h.passwordReset)
+		public.POST("/v1/auth/password-reset/confirm", h.passwordResetConfirm)
+		public.POST("/v1/auth/otp/request", h.otpRequest)
+		public.POST("/v1/auth/otp/verify", h.otpVerify)
+		public.POST("/v1/auth/otp/resend", h.otpRequest)
+	}
+
+	authed := r.Group("/")
 	var verifier middleware.AccessVerifier
 	if ident != nil {
 		verifier = ident
 	}
-	r.Use(middleware.RequestID())
-	r.Use(middleware.Recover())
-	r.Use(middleware.OTEL(cfg.ServiceName)...)
-	r.Use(middleware.BBR(cfg.BBR))
-	r.Use(middleware.Timeout(cfg.RequestTimeout))
-	r.Use(middleware.BodyLimit(cfg.BodyLimitBytes))
-	r.Use(middleware.IPRateLimit(rate.Limit(30), 60))
-	r.Use(middleware.UserRateLimit())
-	r.Use(middleware.JWTAuth(verifier))
-	r.Use(middleware.Tenant())
-	r.Use(middleware.RBAC())
-	r.Use(middleware.Idempotency())
-}
-
-func registerRoutes(r *gin.Engine, cfg config.Config, pinger store.Pinger, ident *identity.Service) {
-	h := &handlers{cfg: cfg, pinger: pinger, ident: ident}
-	r.GET("/healthz", h.healthz)
-	r.GET("/readyz", h.readyz)
-	r.GET("/v1/public/config", h.publicConfig)
-
-	r.POST("/v1/auth/register", h.register)
-	r.POST("/v1/auth/verify-email", h.verifyEmail)
-	r.POST("/v1/auth/resend-verification", h.resendVerification)
-	r.POST("/v1/auth/login", h.login)
-	r.POST("/v1/auth/refresh", h.refresh)
-	r.POST("/v1/auth/logout", h.logout)
-	r.POST("/v1/auth/logout-all", h.logoutAll)
-	r.POST("/v1/auth/password-reset", h.passwordReset)
-	r.POST("/v1/auth/password-reset/confirm", h.passwordResetConfirm)
-	r.POST("/v1/auth/otp/request", h.otpRequest)
-	r.POST("/v1/auth/otp/verify", h.otpVerify)
-	r.POST("/v1/auth/otp/resend", h.otpRequest)
-
-	r.GET("/v1/me", h.me)
-	r.POST("/v1/me/password", h.changePassword)
+	authed.Use(middleware.BBR(cfg.BBR))
+	authed.Use(middleware.Timeout(cfg.RequestTimeout))
+	authed.Use(middleware.BodyLimit(cfg.BodyLimitBytes))
+	authed.Use(middleware.IPRateLimit(rate.Limit(30), 60))
+	authed.Use(middleware.UserRateLimit())
+	authed.Use(middleware.JWTAuth(verifier)) // no skip list; this group is auth-only
+	authed.Use(middleware.Tenant())
+	authed.Use(middleware.RBAC())
+	authed.Use(middleware.Idempotency())
+	{
+		authed.POST("/v1/auth/logout-all", h.logoutAll)
+		authed.GET("/v1/me", h.me)
+		authed.POST("/v1/me/password", h.changePassword)
+	}
 
 	r.NoRoute(h.noRoute)
+	return r
 }

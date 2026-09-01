@@ -77,7 +77,7 @@ func (h *handlers) publicConfig(c *gin.Context) {
 }
 
 func (h *handlers) noRoute(c *gin.Context) {
-	// JWT already 401s unknown /v1 and everything else; this is a fallback.
+	// JWT is group-scoped, so unmatched paths 404 rather than 401.
 	if !c.Writer.Written() {
 		middleware.Abort(c, utils.E(utils.CodeNotFound))
 	}
