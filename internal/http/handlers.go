@@ -10,6 +10,7 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/http/middleware"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/store"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
 type handlers struct {
@@ -31,7 +32,7 @@ func (h *handlers) readyz(c *gin.Context) {
 	rid, tid := middleware.RequestIDFrom(c), middleware.TraceIDFrom(c)
 	if h.pinger == nil {
 		slog.Error("readyz missing pinger", "request_id", rid, "trace_id", tid)
-		middleware.WriteError(c, http.StatusServiceUnavailable, "service_unavailable", "Service is not ready", nil)
+		middleware.Abort(c, utils.E(utils.CodeServiceUnavailable))
 		return
 	}
 	checks := gin.H{}
@@ -44,12 +45,12 @@ func (h *handlers) readyz(c *gin.Context) {
 		}
 		if err != nil {
 			slog.Error("readyz datastore ping failed", "request_id", rid, "trace_id", tid, "error", err)
-			middleware.WriteError(c, http.StatusServiceUnavailable, "service_unavailable", "Service is not ready", gin.H{"checks": checks})
+			middleware.Abort(c, utils.E(utils.CodeServiceUnavailable).WithDetails(gin.H{"checks": checks}))
 			return
 		}
 	} else if err := h.pinger.Ping(c.Request.Context()); err != nil {
 		slog.Error("readyz datastore ping failed", "request_id", rid, "trace_id", tid)
-		middleware.WriteError(c, http.StatusServiceUnavailable, "service_unavailable", "Service is not ready", nil)
+		middleware.Abort(c, utils.E(utils.CodeServiceUnavailable))
 		return
 	} else {
 		checks["store"] = "ok"
@@ -80,6 +81,6 @@ func (h *handlers) publicConfig(c *gin.Context) {
 func (h *handlers) noRoute(c *gin.Context) {
 	// JWT already 401s unknown /v1 and everything else; this is a fallback.
 	if !c.Writer.Written() {
-		middleware.WriteError(c, http.StatusNotFound, "not_found", "Not found", nil)
+		middleware.Abort(c, utils.E(utils.CodeNotFound))
 	}
 }

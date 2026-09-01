@@ -2,10 +2,11 @@ package middleware
 
 import (
 	"log/slog"
-	"net/http"
 	"runtime/debug"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
 func Recover() gin.HandlerFunc {
@@ -19,7 +20,7 @@ func Recover() gin.HandlerFunc {
 					"stack", string(debug.Stack()),
 				)
 				if !c.Writer.Written() {
-					WriteError(c, http.StatusInternalServerError, "internal_error", "Internal server error", nil)
+					Abort(c, utils.Generic(nil))
 				} else {
 					c.Abort()
 				}

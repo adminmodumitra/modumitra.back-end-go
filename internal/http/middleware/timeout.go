@@ -2,10 +2,11 @@ package middleware
 
 import (
 	"context"
-	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
 func Timeout(d time.Duration) gin.HandlerFunc {
@@ -15,7 +16,7 @@ func Timeout(d time.Duration) gin.HandlerFunc {
 		c.Request = c.Request.WithContext(ctx)
 		c.Next()
 		if ctx.Err() == context.DeadlineExceeded && !c.Writer.Written() {
-			WriteError(c, http.StatusServiceUnavailable, "service_unavailable", "Request timed out", nil)
+			Abort(c, utils.E(utils.CodeServiceUnavailable).WithMessage("Request timed out"))
 		}
 	}
 }

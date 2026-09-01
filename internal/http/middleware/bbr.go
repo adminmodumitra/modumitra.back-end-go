@@ -1,13 +1,12 @@
 package middleware
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	krlimit "github.com/go-kratos/aegis/ratelimit"
 	"github.com/go-kratos/aegis/ratelimit/bbr"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
 // BBR is process-wide adaptive load-shedding (Kratos aegis BBR).
@@ -31,9 +30,9 @@ func BBR(cfg config.BBR) gin.HandlerFunc {
 		}
 		done, err := limiter.Allow()
 		if err != nil {
-			WriteError(c, http.StatusTooManyRequests, "rate_limited", "Service is overloaded", gin.H{
+			Abort(c, utils.E(utils.CodeRateLimited).WithMessage("Service is overloaded").WithDetails(gin.H{
 				"limiter": "bbr",
-			})
+			}))
 			return
 		}
 		defer done(krlimit.DoneInfo{})

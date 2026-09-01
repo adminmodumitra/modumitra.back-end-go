@@ -1,13 +1,14 @@
 package middleware
 
 import (
-	"net/http"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
+
+	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
 func IPRateLimit(rps rate.Limit, burst int) gin.HandlerFunc {
@@ -37,7 +38,7 @@ func IPRateLimit(rps rate.Limit, burst int) gin.HandlerFunc {
 			c.Header("X-RateLimit-Limit", strconv.Itoa(burst))
 			c.Header("X-RateLimit-Remaining", "0")
 			c.Header("X-RateLimit-Reset", strconv.FormatInt(time.Now().Add(time.Second).Unix(), 10))
-			WriteError(c, http.StatusTooManyRequests, "rate_limited", "Too many requests", nil)
+			Abort(c, utils.E(utils.CodeRateLimited))
 			return
 		}
 		c.Next()

@@ -1,9 +1,9 @@
 package middleware
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+
+	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
 func skipJWT(path string) bool {
@@ -23,7 +23,7 @@ func JWTAuth() gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		c.Header("WWW-Authenticate", "Bearer")
-		WriteError(c, http.StatusUnauthorized, "unauthenticated", "Authentication required", nil)
+		c.Header(utils.HeaderWWWAuth, "Bearer")
+		Abort(c, utils.E(utils.CodeUnauthenticated))
 	}
 }
