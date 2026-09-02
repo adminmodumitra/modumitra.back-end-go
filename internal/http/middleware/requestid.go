@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
 func RequestID() gin.HandlerFunc {
@@ -15,6 +17,7 @@ func RequestID() gin.HandlerFunc {
 		}
 		c.Set(ctxRequestID, id)
 		c.Header("X-Request-Id", id)
+		c.Request = c.Request.WithContext(utils.WithRequestID(c.Request.Context(), id))
 		c.Next()
 	}
 }

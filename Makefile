@@ -1,5 +1,5 @@
 # Cabinet Studio API — slice 0
-.PHONY: up down logs test run build tidy
+.PHONY: up down logs test run build tidy proto
 
 up:
 	docker compose up --build -d
@@ -22,3 +22,6 @@ build:
 
 tidy:
 	go mod tidy
+
+proto:
+	protoc --go_out=. --go_opt=module=github.com/Danish-13-Khan/backend-cabinet proto/cabinet/v1/outbox.proto

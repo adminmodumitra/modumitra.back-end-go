@@ -10,6 +10,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/outbox"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
@@ -24,6 +25,7 @@ type Service struct {
 	ids       IDGen
 	tokens    Tokens
 	trialDays int
+	outbox    outbox.Writer
 }
 
 func NewService(
@@ -37,6 +39,7 @@ func NewService(
 	ids IDGen,
 	tokens Tokens,
 	cfg Settings,
+	ob outbox.Writer,
 ) *Service {
 	if clock == nil {
 		clock = SystemClock{}
@@ -61,13 +64,16 @@ func NewService(
 		ids:       ids,
 		tokens:    tokens,
 		trialDays: cfg.TrialDays,
+		outbox:    ob,
 	}
 }
+
+func (s *Service) Outbox() outbox.Writer { return s.outbox }
 
 func NewMemoryService(users identity.UserRepo, trialDays int) (*Service, *RecordingMailer, *Memory) {
 	mem := NewMemory()
 	mail := &RecordingMailer{}
-	svc := NewService(mem.Orgs(), mem.Members(), mem.Invites(), users, mem, mail, SystemClock{}, NewIDGen(), NewTokens(), Settings{TrialDays: trialDays})
+	svc := NewService(mem.Orgs(), mem.Members(), mem.Invites(), users, mem, mail, SystemClock{}, NewIDGen(), NewTokens(), Settings{TrialDays: trialDays}, outbox.NewMemoryWriter())
 	return svc, mail, mem
 }
 
@@ -237,7 +243,19 @@ func (s *Service) Create(ctx context.Context, actorID, name string) (*Organizati
 		if err := s.orgs.Insert(ctx, o); err != nil {
 			return err
 		}
-		return s.members.Insert(ctx, m)
+		if err := s.members.Insert(ctx, m); err != nil {
+			return err
+		}
+		if err := outbox.Enqueue(ctx, s.outbox, outbox.OrgCreated(ctx, o.ID, actorID, o.Name, now)); err != nil {
+			return err
+		}
+		if err := outbox.Enqueue(ctx, s.outbox, outbox.MembershipCreated(ctx, m.ID, o.ID, actorID, m.Role, now)); err != nil {
+			return err
+		}
+		if o.TrialEndsAt != nil {
+			return outbox.Enqueue(ctx, s.outbox, outbox.BillingTrialStarted(ctx, o.ID, actorID, *o.TrialEndsAt, now))
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, nil, mapRepoErr(err)
@@ -802,7 +820,13 @@ func (s *Service) AcceptInvitation(ctx context.Context, actorID, rawToken string
 		inv.AcceptedAt = &now
 		inv.AcceptedByUserID = &actorID
 		inv.UpdatedAt = now
-		return s.invites.Update(ctx, inv)
+		if err := s.invites.Update(ctx, inv); err != nil {
+			return err
+		}
+		if err := outbox.Enqueue(ctx, s.outbox, outbox.InvitationAccepted(ctx, inv.ID, o.ID, actorID, membership.Role, now)); err != nil {
+			return err
+		}
+		return outbox.Enqueue(ctx, s.outbox, outbox.MembershipCreated(ctx, membership.ID, o.ID, actorID, membership.Role, now))
 	})
 	if err != nil {
 		return nil, nil, mapRepoErr(err)

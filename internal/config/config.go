@@ -37,6 +37,9 @@ type Config struct {
 	EntitlementSigningKey string
 	BillingProvider       string
 	BillingWebhookSecret  string
+	KafkaEnabled          bool
+	KafkaBrokers          []string
+	KafkaClientID         string
 }
 
 // DurationAsString unmarshals JSON durations like "10s".
@@ -287,6 +290,9 @@ func Load() Config {
 		EntitlementSigningKey: getenv("ENTITLEMENT_SIGNING_KEY", "cabinet-studio-entitlement-local-dev-only-change-me"),
 		BillingProvider:       getenv("BILLING_PROVIDER", "fake"),
 		BillingWebhookSecret:  getenv("BILLING_WEBHOOK_SECRET", "cabinet-studio-billing-webhook-local-dev-only"),
+		KafkaEnabled:          getenvBool("KAFKA_ENABLED", false),
+		KafkaBrokers:          splitCSV(os.Getenv("KAFKA_BROKERS")),
+		KafkaClientID:         getenv("KAFKA_CLIENT_ID", "cabinet-studio-api"),
 	}
 }
 
@@ -455,4 +461,15 @@ func getenvDuration(key string, fallback time.Duration) time.Duration {
 		return fallback
 	}
 	return d
+}
+
+func splitCSV(raw string) []string {
+	var out []string
+	for _, p := range strings.Split(raw, ",") {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }

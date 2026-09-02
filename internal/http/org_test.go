@@ -10,6 +10,10 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/device"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/outbox"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/outbox/pb"
+
+	"google.golang.org/protobuf/proto"
 )
 
 func orgRouter(t *testing.T) (http.Handler, *identity.RecordingMailer, *org.RecordingMailer) {
@@ -235,5 +239,50 @@ func TestMeStill401WithoutToken(t *testing.T) {
 	}
 	if errorCode(t, w) != "unauthenticated" {
 		t.Fatalf("code=%s", errorCode(t, w))
+	}
+}
+
+func TestCreateOrganizationOutboxProto(t *testing.T) {
+	cfg := config.Load()
+	cfg.ServiceName = "cabinet-studio-api-test"
+	svc, mail, mem := identity.NewMemoryService(testSettings(cfg))
+	orgs, _, orgMem := org.NewMemoryService(mem.Users(), cfg.TrialDays)
+	devs, _ := device.NewMemoryService(orgs, cfg.EntitlementSigningKey)
+	bills, _, _ := billing.NewMemoryService(orgMem.Orgs(), orgMem.Members(), orgMem.Invites(), mem.Users(), billing.Settings{Provider: billing.ProviderFake, WebhookSecret: cfg.BillingWebhookSecret})
+	h := NewRouter(cfg, fakePinger{}, svc, orgs, devs, bills)
+	access, _ := registerVerifyLogin(t, h, mail, "ada-outbox@example.com", "reg-org-outbox")
+	w := doJSON(t, h, http.MethodPost, "/v1/organizations", map[string]any{
+		"name": "Outbox Cabinets",
+	}, map[string]string{
+		"Authorization":   "Bearer " + access,
+		"Idempotency-Key": "org-create-outbox",
+	})
+	if w.Code != http.StatusCreated {
+		t.Fatalf("create=%d %s", w.Code, w.Body.String())
+	}
+	var created map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &created); err != nil {
+		t.Fatal(err)
+	}
+	orgID, _ := created["organization"].(map[string]any)["id"].(string)
+	mw, ok := orgs.Outbox().(*outbox.MemoryWriter)
+	if !ok {
+		t.Fatal("expected memory outbox")
+	}
+	var found *pb.Envelope
+	for _, row := range mw.Rows() {
+		var env pb.Envelope
+		if err := proto.Unmarshal(row.Payload, &env); err != nil {
+			t.Fatalf("not protobuf: %v", err)
+		}
+		if env.EventType == outbox.EventOrgCreated {
+			found = &env
+		}
+	}
+	if found == nil {
+		t.Fatal("missing org.created proto in outbox")
+	}
+	if found.GetOrgCreated().GetOrganizationId() != orgID {
+		t.Fatalf("org_id=%s want %s", found.GetOrgCreated().GetOrganizationId(), orgID)
 	}
 }

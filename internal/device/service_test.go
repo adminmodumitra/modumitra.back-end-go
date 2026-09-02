@@ -9,6 +9,7 @@ import (
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/outbox"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
@@ -28,7 +29,7 @@ func setup(t *testing.T) (*Service, *org.Service, *identity.Service, *identity.R
 	signer := NewHMACSigner("test-entitlement-signing-key", KeyIDV1)
 	clk := &FrozenClock{T: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)}
 	store := NewMemory()
-	svc := NewService(store.Devices(), store.Entitlements(), store, orgs, signer, clk, NewIDGen())
+	svc := NewService(store.Devices(), store.Entitlements(), store, orgs, signer, clk, NewIDGen(), outbox.NewMemoryWriter())
 	return svc, orgs, ident, imail, signer, store
 }
 

@@ -44,13 +44,15 @@
       "plans.capabilities",
       "entitlements.capabilities",
       "audit_events.metadata",
-      "outbox.payload",
       "billing_events.summary",
       "idempotency_keys.response_body"
     ],
     "password": "argon2id PHC",
     "token_hash": "SHA-256(pepper||raw) hex",
-    "scale": "managed Postgres (Neon/RDS) + read replica later; no Citus for v1"
+    "scale": "managed Postgres (Neon/RDS) + read replica later; no Citus for v1",
+    "bytea": [
+      "outbox.payload (marshaled cabinet.v1.Envelope protobuf, never JSON)"
+    ]
   },
   "tables": {
     "users": {
@@ -2515,9 +2517,9 @@
         },
         {
           "name": "payload",
-          "type": "JSONB",
+          "type": "BYTEA",
           "nullable": false,
-          "notes": ""
+          "notes": "marshaled cabinet.v1.Envelope protobuf; Kafka value is raw bytes, never JSON"
         },
         {
           "name": "attempts",

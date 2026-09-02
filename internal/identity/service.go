@@ -9,6 +9,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/outbox"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
@@ -25,6 +26,7 @@ type Service struct {
 	clock    Clock
 	ids      IDGen
 	cfg      Settings
+	outbox   outbox.Writer
 }
 
 func NewService(
@@ -38,6 +40,7 @@ func NewService(
 	clock Clock,
 	ids IDGen,
 	cfg Settings,
+	ob outbox.Writer,
 ) *Service {
 	if cfg.Issuer == "" {
 		cfg.Issuer = Issuer
@@ -71,6 +74,7 @@ func NewService(
 		clock:    clock,
 		ids:      ids,
 		cfg:      cfg,
+		outbox:   ob,
 	}
 }
 
@@ -84,7 +88,7 @@ func NewMemoryService(cfg Settings) (*Service, *RecordingMailer, *Memory) {
 		cfg.JWTSecret = "test-secret-for-cabinet-studio-hs256"
 	}
 	tok := NewJWTTokens(cfg.JWTSecret, cfg.Issuer, cfg.AccessTTL, clock)
-	svc := NewService(mem.Users(), mem.Sessions(), mem.EmailTokens(), mem, PlainHasher{}, tok, mail, clock, ids, cfg)
+	svc := NewService(mem.Users(), mem.Sessions(), mem.EmailTokens(), mem, PlainHasher{}, tok, mail, clock, ids, cfg, outbox.NewMemoryWriter())
 	return svc, mail, mem
 }
 
@@ -171,7 +175,10 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (*User, error)
 		if err := s.users.Insert(ctx, u); err != nil {
 			return err
 		}
-		return s.emails.Insert(ctx, et)
+		if err := s.emails.Insert(ctx, et); err != nil {
+			return err
+		}
+		return outbox.Enqueue(ctx, s.outbox, outbox.UserCreated(ctx, u.ID, now))
 	})
 	if err != nil {
 		return nil, mapRepoErr(err)
@@ -282,12 +289,21 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (*User, *TokenPair, 
 		return nil, nil, utils.E(utils.CodeInvalidCredentials)
 	}
 
-	pair, err := s.issueSession(ctx, u.ID, strings.TrimSpace(in.DeviceName))
+	now := s.clock.Now()
+	var pair *TokenPair
+	err = s.tx.InTx(ctx, func(ctx context.Context) error {
+		p, sess, err := s.issueSession(ctx, u.ID, strings.TrimSpace(in.DeviceName))
+		if err != nil {
+			return err
+		}
+		pair = p
+		if err := s.users.SetLastLogin(ctx, u.ID, now); err != nil {
+			return err
+		}
+		return outbox.Enqueue(ctx, s.outbox, outbox.AuthLogin(ctx, u.ID, sess.ID, now))
+	})
 	if err != nil {
-		return nil, nil, err
-	}
-	if err := s.users.SetLastLogin(ctx, u.ID, s.clock.Now()); err != nil {
-		slog.ErrorContext(ctx, "set last_login_at", "user_id", u.ID, "error", err)
+		return nil, nil, mapRepoErr(err)
 	}
 	slog.InfoContext(ctx, "auth.login", "user_id", u.ID)
 	u.PasswordHash = ""
@@ -373,7 +389,7 @@ func (s *Service) VerifyOTP(ctx context.Context, email, otp, deviceName string) 
 		if err := s.emails.Consume(ctx, tok.ID, now); err != nil {
 			return err
 		}
-		p, err := s.issueSession(ctx, u.ID, strings.TrimSpace(deviceName))
+		p, _, err := s.issueSession(ctx, u.ID, strings.TrimSpace(deviceName))
 		if err != nil {
 			return err
 		}
@@ -639,7 +655,7 @@ func (s *Service) ValidateAccess(ctx context.Context, raw string) (string, strin
 	return userID, sessionID, nil
 }
 
-func (s *Service) issueSession(ctx context.Context, userID, deviceName string) (*TokenPair, error) {
+func (s *Service) issueSession(ctx context.Context, userID, deviceName string) (*TokenPair, *Session, error) {
 	now := s.clock.Now()
 	rawRT, rtHash := s.tokens.NewRefresh()
 	sess := &Session{
@@ -654,18 +670,18 @@ func (s *Service) issueSession(ctx context.Context, userID, deviceName string) (
 		LastSeenAt:  now,
 	}
 	if err := s.sessions.Insert(ctx, sess); err != nil {
-		return nil, mapRepoErr(err)
+		return nil, nil, mapRepoErr(err)
 	}
 	access, err := s.tokens.IssueAccess(ctx, userID, sess.ID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	return &TokenPair{
 		AccessToken:  access,
 		RefreshToken: rawRT,
 		ExpiresIn:    s.expiresIn(),
 		TokenType:    "Bearer",
-	}, nil
+	}, sess, nil
 }
 
 func (s *Service) lookupEmailToken(ctx context.Context, raw, prefix, purpose string) (*EmailToken, error) {

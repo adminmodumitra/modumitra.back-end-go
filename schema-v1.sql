@@ -22,7 +22,8 @@
 --     reserved for TTL-like cleanup jobs (tokens, oauth states, device codes,
 --     idempotency_keys 24h, expired data_exports) and never for tenants.
 --   * JSONB: plans.capabilities, entitlements.capabilities, audit_events.metadata,
---     outbox.payload, billing_events.summary, idempotency_keys.response_body.
+--     billing_events.summary, idempotency_keys.response_body.
+--   * BYTEA: outbox.payload (marshaled cabinet.v1.Envelope protobuf, never JSON).
 --   * No PAN/CVC. Tokens stored as hashes only (SHA-256(pepper||raw) hex).
 --   * Password: argon2id PHC string. Never plaintext.
 -- =============================================================================
@@ -648,7 +649,7 @@ CREATE TABLE outbox (
     event_id         TEXT        NOT NULL,
     topic            TEXT        NOT NULL,
     partition_key    TEXT        NOT NULL,
-    payload          JSONB       NOT NULL,
+    payload          BYTEA       NOT NULL,
     attempts         INTEGER     NOT NULL DEFAULT 0,
     last_error       TEXT,
     available_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -665,7 +666,7 @@ CREATE INDEX idx_outbox_publisher_due ON outbox (available_at, published_at);
 COMMENT ON TABLE outbox IS 'Transactional outbox. HTTP/webhook handlers insert a row in the SAME transaction as domain writes. A publisher worker sends to Kafka after commit and sets published_at. Kafka is not the source of truth.';
 COMMENT ON COLUMN outbox.event_id IS 'Publish idempotency key; often equal to public_id.';
 COMMENT ON COLUMN outbox.partition_key IS 'Usually organization public_id string. Not existence-checked.';
-COMMENT ON COLUMN outbox.payload IS 'JSONB redacted domain event (public ids, no secrets).';
+COMMENT ON COLUMN outbox.payload IS 'Marshaled cabinet.v1.Envelope protobuf bytes (public ids, no secrets). Never JSON.';
 
 -- -----------------------------------------------------------------------------
 -- 18. idempotency_keys

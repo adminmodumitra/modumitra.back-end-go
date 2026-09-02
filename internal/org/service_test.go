@@ -5,9 +5,13 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"google.golang.org/protobuf/proto"
 	"time"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/outbox"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/outbox/pb"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
@@ -320,5 +324,38 @@ func TestAdminCannotDemoteOwner(t *testing.T) {
 	_, err = orgs.PatchMember(context.Background(), b.ID, o.ID, a.ID, RoleViewer, "")
 	if codeOf(err) != utils.CodeForbidden {
 		t.Fatalf("err=%v code=%s", err, codeOf(err))
+	}
+}
+
+func TestCreateOrgEnqueuesProto(t *testing.T) {
+	orgs, ident, mail, _ := setup(t)
+	u := mustUser(t, ident, mail, "ada@example.com")
+	o, _, err := orgs.Create(context.Background(), u.ID, "Lovelace Cabinets")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mw, ok := orgs.Outbox().(*outbox.MemoryWriter)
+	if !ok {
+		t.Fatal("expected memory outbox writer")
+	}
+	var found *pb.Envelope
+	for _, row := range mw.Rows() {
+		var env pb.Envelope
+		if err := proto.Unmarshal(row.Payload, &env); err != nil {
+			t.Fatalf("payload not protobuf: %v", err)
+		}
+		if env.EventType == outbox.EventOrgCreated {
+			found = &env
+			if row.Topic != outbox.TopicOrg {
+				t.Fatalf("topic=%s", row.Topic)
+			}
+		}
+	}
+	if found == nil {
+		t.Fatal("missing org.created outbox row")
+	}
+	body := found.GetOrgCreated()
+	if body == nil || body.OrganizationId != o.ID || body.OwnerUserId != u.ID {
+		t.Fatalf("body=%+v org=%s user=%s", body, o.ID, u.ID)
 	}
 }

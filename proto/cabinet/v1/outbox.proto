@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package cabinet.v1;
+
+option go_package = "github.com/Danish-13-Khan/backend-cabinet/internal/outbox/pb";
+
+import "google/protobuf/timestamp.proto";
+
+// Envelope is the Kafka message value. Wire format is protobuf bytes only.
+message Envelope {
+  string event_id = 1;
+  string event_type = 2;       // e.g. org.created
+  string partition_key = 3;
+  string trace_id = 4;         // W3C 32-hex, same as HTTP
+  string request_id = 5;
+  google.protobuf.Timestamp occurred_at = 6;
+  oneof body {
+    UserCreated user_created = 10;
+    AuthLogin auth_login = 11;
+    OrgCreated org_created = 12;
+    MembershipCreated membership_created = 13;
+    BillingTrialStarted billing_trial_started = 14;
+    BillingSubscriptionUpdated billing_subscription_updated = 15;
+    DeviceActivated device_activated = 16;
+    InvitationAccepted invitation_accepted = 17;
+  }
+}
+
+// Public ids only. No secrets, tokens, passwords, or raw IPs.
+
+message UserCreated {
+  string user_id = 1;
+}
+
+message AuthLogin {
+  string user_id = 1;
+  string session_id = 2;
+}
+
+message OrgCreated {
+  string organization_id = 1;
+  string owner_user_id = 2;
+  string name = 3;
+}
+
+message MembershipCreated {
+  string membership_id = 1;
+  string organization_id = 2;
+  string user_id = 3;
+  string role = 4;
+}
+
+message BillingTrialStarted {
+  string organization_id = 1;
+  string owner_user_id = 2;
+  google.protobuf.Timestamp trial_ends_at = 3;
+}
+
+message BillingSubscriptionUpdated {
+  string organization_id = 1;
+  string subscription_id = 2;
+  string plan_id = 3;
+  string status = 4;
+}
+
+message DeviceActivated {
+  string device_id = 1;
+  string user_id = 2;
+  string platform = 3;
+}
+
+message InvitationAccepted {
+  string invitation_id = 1;
+  string organization_id = 2;
+  string user_id = 3;
+  string role = 4;
+}

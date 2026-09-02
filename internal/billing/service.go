@@ -10,6 +10,7 @@ import (
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/outbox"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
@@ -27,6 +28,7 @@ type Service struct {
 	clock    Clock
 	ids      IDGen
 	cfg      Settings
+	outbox   outbox.Writer
 }
 
 func NewService(
@@ -43,6 +45,7 @@ func NewService(
 	clock Clock,
 	ids IDGen,
 	cfg Settings,
+	ob outbox.Writer,
 ) *Service {
 	if clock == nil {
 		clock = SystemClock{}
@@ -59,7 +62,7 @@ func NewService(
 	return &Service{
 		plans: plans, subs: subs, invoices: invoices, events: events,
 		provider: provider, orgs: orgs, members: members, invites: invites,
-		users: users, tx: tx, clock: clock, ids: ids, cfg: cfg,
+		users: users, tx: tx, clock: clock, ids: ids, cfg: cfg, outbox: ob,
 	}
 }
 
@@ -69,7 +72,7 @@ func NewMemoryService(orgs Organizations, members Members, invites Invites, user
 	if cfg.Provider == "" {
 		cfg.Provider = ProviderFake
 	}
-	svc := NewService(mem.Plans(), mem.Subs(), mem.Invoices(), mem.Events(), fp, orgs, members, invites, users, mem, SystemClock{}, NewIDGen(), cfg)
+	svc := NewService(mem.Plans(), mem.Subs(), mem.Invoices(), mem.Events(), fp, orgs, members, invites, users, mem, SystemClock{}, NewIDGen(), cfg, outbox.NewMemoryWriter())
 	return svc, mem, fp
 }
 
@@ -575,6 +578,19 @@ func (s *Service) HandleWebhook(ctx context.Context, raw []byte) error {
 		if applyErr != nil {
 			_ = s.events.MarkFailed(ctx, evt.ID, applyErr.Error(), now)
 			return applyErr
+		}
+		if env.Type == EventCheckoutCompleted && orgID != "" {
+			planID := asString(env.Data.Object, "plan_id")
+			status := StatusActive
+			if subID != "" {
+				if sub, gerr := s.subs.GetByID(ctx, subID); gerr == nil && sub != nil {
+					planID = sub.PlanID
+					status = sub.Status
+				}
+			}
+			if err := outbox.Enqueue(ctx, s.outbox, outbox.BillingSubscriptionUpdated(ctx, orgID, subID, planID, status, now)); err != nil {
+				return err
+			}
 		}
 		return s.events.MarkProcessed(ctx, evt.ID, strPtr(orgID), strPtr(subID), now)
 	})

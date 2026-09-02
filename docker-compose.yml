@@ -38,6 +38,9 @@ services:
       BBR_WINDOW_SIZE: 10s
       BBR_BUCKETS: "100"
       BBR_CPU_THRESHOLD: "800"
+      KAFKA_ENABLED: "false"
+      KAFKA_BROKERS: ""
+      KAFKA_CLIENT_ID: cabinet-studio-api
     depends_on:
       postgres:
         condition: service_healthy

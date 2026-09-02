@@ -22,6 +22,9 @@ func clearDatastoreEnv(t *testing.T) {
 		"REDIS_TLS",
 		"MONGO_URI",
 		"MONGO_DATABASE",
+		"KAFKA_ENABLED",
+		"KAFKA_BROKERS",
+		"KAFKA_CLIENT_ID",
 	}
 	for _, k := range keys {
 		t.Setenv(k, "")
@@ -256,5 +259,33 @@ func TestNormalizedDriver(t *testing.T) {
 		if got != want {
 			t.Fatalf("%q -> %q want %q", in, got, want)
 		}
+	}
+}
+
+func TestKafkaDefaults(t *testing.T) {
+	clearDatastoreEnv(t)
+	t.Setenv("DATASTORE_CONFIG", dummyPath(t))
+	cfg := Load()
+	if cfg.KafkaEnabled {
+		t.Fatal("KAFKA_ENABLED should default false")
+	}
+	if cfg.KafkaClientID != "cabinet-studio-api" {
+		t.Fatalf("client_id=%q", cfg.KafkaClientID)
+	}
+	if len(cfg.KafkaBrokers) != 0 {
+		t.Fatalf("brokers=%v", cfg.KafkaBrokers)
+	}
+	t.Setenv("KAFKA_ENABLED", "true")
+	t.Setenv("KAFKA_BROKERS", "kafka-1:9092, kafka-2:9092")
+	t.Setenv("KAFKA_CLIENT_ID", "cabinet-test")
+	cfg = Load()
+	if !cfg.KafkaEnabled {
+		t.Fatal("expected enabled")
+	}
+	if cfg.KafkaClientID != "cabinet-test" {
+		t.Fatalf("client_id=%q", cfg.KafkaClientID)
+	}
+	if len(cfg.KafkaBrokers) != 2 || cfg.KafkaBrokers[0] != "kafka-1:9092" {
+		t.Fatalf("brokers=%v", cfg.KafkaBrokers)
 	}
 }

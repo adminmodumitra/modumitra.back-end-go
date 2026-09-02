@@ -21,6 +21,7 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
 	orgpg "github.com/Danish-13-Khan/backend-cabinet/internal/org/postgres"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/outbox"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/store"
 )
 
@@ -80,6 +81,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	obWriter := outbox.NewWriter(gdb)
 	clk := identity.SystemClock{}
 	ids := identity.NewIDGen()
 	ident := identity.NewService(
@@ -101,6 +103,7 @@ func main() {
 			JWTSecret:      cfg.JWTSecret,
 			Issuer:         identity.Issuer,
 		},
+		obWriter,
 	)
 
 	orgs := org.NewService(
@@ -114,6 +117,7 @@ func main() {
 		org.NewIDGen(),
 		org.NewTokens(),
 		org.Settings{TrialDays: cfg.TrialDays},
+		obWriter,
 	)
 
 	devices := device.NewService(
@@ -124,6 +128,7 @@ func main() {
 		device.NewHMACSigner(cfg.EntitlementSigningKey, device.KeyIDV1),
 		device.SystemClock{},
 		device.NewIDGen(),
+		obWriter,
 	)
 
 	var provider billing.Provider
@@ -146,7 +151,13 @@ func main() {
 		billing.SystemClock{},
 		billing.NewIDGen(),
 		billing.Settings{Provider: provider.Name(), WebhookSecret: cfg.BillingWebhookSecret},
+		obWriter,
 	)
+
+	pub := outbox.NewPublisher(cfg.KafkaEnabled, cfg.KafkaBrokers, cfg.KafkaClientID)
+	worker := outbox.NewWorker(outbox.NewStore(gdb), pub, outbox.SystemClock{})
+	go worker.Run(ctx)
+	slog.Info("outbox worker started", "kafka_enabled", cfg.KafkaEnabled, "brokers", cfg.KafkaBrokers)
 
 	engine := httpapi.NewRouter(cfg, st, ident, orgs, devices, bills)
 	srv := &http.Server{
@@ -177,5 +188,10 @@ func main() {
 	defer cancel()
 	if err := srv.Shutdown(c); err != nil {
 		slog.Error("http shutdown", "error", err)
+	}
+	if closer, ok := pub.(interface{ Close() error }); ok {
+		if err := closer.Close(); err != nil {
+			slog.Error("kafka publisher close", "error", err)
+		}
 	}
 }

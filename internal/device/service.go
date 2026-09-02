@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/outbox"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
@@ -19,6 +20,7 @@ type Service struct {
 	signer  Signer
 	clock   Clock
 	ids     IDGen
+	outbox  outbox.Writer
 }
 
 func NewService(
@@ -29,6 +31,7 @@ func NewService(
 	signer Signer,
 	clock Clock,
 	ids IDGen,
+	ob outbox.Writer,
 ) *Service {
 	if clock == nil {
 		clock = SystemClock{}
@@ -48,12 +51,13 @@ func NewService(
 		signer:  signer,
 		clock:   clock,
 		ids:     ids,
+		outbox:  ob,
 	}
 }
 
 func NewMemoryService(orgs OrgLookup, signingKey string) (*Service, *Memory) {
 	mem := NewMemory()
-	svc := NewService(mem.Devices(), mem.Entitlements(), mem, orgs, NewHMACSigner(signingKey, KeyIDV1), SystemClock{}, NewIDGen())
+	svc := NewService(mem.Devices(), mem.Entitlements(), mem, orgs, NewHMACSigner(signingKey, KeyIDV1), SystemClock{}, NewIDGen(), outbox.NewMemoryWriter())
 	return svc, mem
 }
 
@@ -151,7 +155,7 @@ func (s *Service) Activate(ctx context.Context, userID, name, platform string) (
 		}
 		outDev = d
 		outSnap = snap
-		return nil
+		return outbox.Enqueue(ctx, s.outbox, outbox.DeviceActivated(ctx, d.ID, userID, d.Platform, now))
 	})
 	if err != nil {
 		return nil, nil, err

@@ -31,7 +31,8 @@ Machine-readable companion: [`schema-v1.json`](./schema-v1.json).
 | Tenant isolation field | `organization_id` = `organizations.public_id` (`org_…`) |
 | Referential integrity | Real `FOREIGN KEY` constraints (see §1.6). Application transactions still required for multi-row invariants (last owner, seat counts, refresh-family revoke). |
 | Soft delete | Status/state columns. **No physical DELETE** of tenant rows in app code. Physical DELETE is only for TTL-like cleanup jobs (§6). |
-| JSONB | `plans.capabilities`, `entitlements.capabilities`, `audit_events.metadata`, `outbox.payload`, `billing_events.summary`, `idempotency_keys.response_body` |
+| JSONB | `plans.capabilities`, `entitlements.capabilities`, `audit_events.metadata`, `billing_events.summary`, `idempotency_keys.response_body` |
+| BYTEA | `outbox.payload` (marshaled `cabinet.v1.Envelope` protobuf; never JSON on the wire) |
 | Password hash | argon2id PHC string. Never plaintext. |
 | Token hash | SHA-256 of `pepper || raw_token` (hex). Never raw tokens. No PAN/CVC. |
 | Access tokens | Signed JWT; **not stored** in PostgreSQL |
@@ -1483,9 +1484,9 @@ Typical `action` values: `auth.login`, `org.created`, `org.deleted`, `org.owners
 | --- | --- | --- | --- | --- |
 | `public_id` | `TEXT` | NO | `obx_` | Internal |
 | `event_id` | `TEXT` | NO | = `public_id` | Unique. Kafka key / idempotent publish |
-| `topic` | `TEXT` | NO | — | e.g. `cabinet.org.events` |
+| `topic` | `TEXT` | NO | — | e.g. `cabinet.org.v1` |
 | `partition_key` | `TEXT` | NO | org or user id | Usually `organization_id` string; **no FK** |
-| `payload` | `JSONB` | NO | — | Redacted domain event JSON (public ids, no secrets) |
+| `payload` | `BYTEA` | NO | — | Marshaled `cabinet.v1.Envelope` protobuf (public ids, no secrets). Kafka value is these raw bytes — never JSON |
 | `attempts` | `INTEGER` | NO | `0` | Publish attempts |
 | `last_error` | `TEXT` | YES | `NULL` | Truncated safe error |
 | `available_at` | `TIMESTAMPTZ` | NO | `now()` | Backoff; publisher queries `available_at <= now()` |
@@ -1515,12 +1516,7 @@ None. `partition_key` is typically `organizations.public_id` or `users.public_id
   "event_id": "obx_01j6n8x4k2m9p7q3",
   "topic": "cabinet.org.events",
   "partition_key": "org_studio9d2e4c6a80",
-  "payload": {
-    "type": "org.created",
-    "organization_id": "org_studio9d2e4c6a80",
-    "owner_user_id": "usr_ada01f3e8c2b4a90",
-    "occurred_at": "2026-09-01T00:00:00Z"
-  },
+  "payload": "<BYTEA marshaled cabinet.v1.Envelope protobuf; Kafka value is these raw bytes, never JSON>",
   "attempts": 0,
   "last_error": null,
   "available_at": "2026-09-01T00:00:00Z",
