@@ -86,6 +86,7 @@ func (h *handlers) primaryOrgView(c *gin.Context, userID string) *OrganizationVi
 }
 
 func (h *handlers) createOrg(c *gin.Context) {
+	logEnter(c, "create_org")
 	if !h.requireOrgs(c) {
 		return
 	}
@@ -115,6 +116,7 @@ func (h *handlers) createOrg(c *gin.Context) {
 }
 
 func (h *handlers) listOrgs(c *gin.Context) {
+	logEnter(c, "list_orgs")
 	if !h.requireOrgs(c) {
 		return
 	}
@@ -145,6 +147,7 @@ func (h *handlers) listOrgs(c *gin.Context) {
 }
 
 func (h *handlers) getOrg(c *gin.Context) {
+	logEnter(c, "get_org")
 	if !h.requireOrgs(c) {
 		return
 	}
@@ -160,6 +163,7 @@ func (h *handlers) getOrg(c *gin.Context) {
 }
 
 func (h *handlers) patchOrg(c *gin.Context) {
+	logEnter(c, "patch_org")
 	if !h.requireOrgs(c) {
 		return
 	}
@@ -180,6 +184,7 @@ func (h *handlers) patchOrg(c *gin.Context) {
 }
 
 func (h *handlers) deleteOrg(c *gin.Context) {
+	logEnter(c, "delete_org")
 	if !h.requireOrgs(c) {
 		return
 	}
@@ -199,6 +204,7 @@ func (h *handlers) deleteOrg(c *gin.Context) {
 }
 
 func (h *handlers) leaveOrg(c *gin.Context) {
+	logEnter(c, "leave_org")
 	if !h.requireOrgs(c) {
 		return
 	}
@@ -218,6 +224,7 @@ func (h *handlers) leaveOrg(c *gin.Context) {
 }
 
 func (h *handlers) transferOwnership(c *gin.Context) {
+	logEnter(c, "transfer_ownership")
 	if !h.requireOrgs(c) {
 		return
 	}
@@ -244,6 +251,7 @@ func (h *handlers) transferOwnership(c *gin.Context) {
 }
 
 func (h *handlers) orgRoles(c *gin.Context) {
+	logEnter(c, "org_roles")
 	if !h.requireOrgs(c) {
 		return
 	}
@@ -260,6 +268,7 @@ func (h *handlers) orgRoles(c *gin.Context) {
 }
 
 func (h *handlers) listMembers(c *gin.Context) {
+	logEnter(c, "list_members")
 	if !h.requireOrgs(c) {
 		return
 	}
@@ -286,6 +295,7 @@ func (h *handlers) listMembers(c *gin.Context) {
 }
 
 func (h *handlers) patchMember(c *gin.Context) {
+	logEnter(c, "patch_member")
 	if !h.requireOrgs(c) {
 		return
 	}
@@ -306,6 +316,7 @@ func (h *handlers) patchMember(c *gin.Context) {
 }
 
 func (h *handlers) suspendMember(c *gin.Context) {
+	logEnter(c, "suspend_member")
 	if !h.requireOrgs(c) {
 		return
 	}
@@ -324,6 +335,7 @@ func (h *handlers) suspendMember(c *gin.Context) {
 }
 
 func (h *handlers) removeMember(c *gin.Context) {
+	logEnter(c, "remove_member")
 	if !h.requireOrgs(c) {
 		return
 	}
@@ -342,6 +354,7 @@ func (h *handlers) removeMember(c *gin.Context) {
 }
 
 func (h *handlers) createInvitation(c *gin.Context) {
+	logEnter(c, "create_invitation")
 	if !h.requireOrgs(c) {
 		return
 	}
@@ -365,6 +378,7 @@ func (h *handlers) createInvitation(c *gin.Context) {
 }
 
 func (h *handlers) listInvitations(c *gin.Context) {
+	logEnter(c, "list_invitations")
 	if !h.requireOrgs(c) {
 		return
 	}
@@ -391,6 +405,7 @@ func (h *handlers) listInvitations(c *gin.Context) {
 }
 
 func (h *handlers) revokeInvitation(c *gin.Context) {
+	logEnter(c, "revoke_invitation")
 	if !h.requireOrgs(c) {
 		return
 	}
@@ -407,6 +422,7 @@ func (h *handlers) revokeInvitation(c *gin.Context) {
 }
 
 func (h *handlers) resendInvitation(c *gin.Context) {
+	logEnter(c, "resend_invitation")
 	if !h.requireOrgs(c) {
 		return
 	}
@@ -427,6 +443,7 @@ func (h *handlers) resendInvitation(c *gin.Context) {
 }
 
 func (h *handlers) previewInvitation(c *gin.Context) {
+	logEnter(c, "preview_invitation")
 	if !h.requireOrgs(c) {
 		return
 	}
@@ -447,6 +464,7 @@ func (h *handlers) previewInvitation(c *gin.Context) {
 }
 
 func (h *handlers) acceptInvitation(c *gin.Context) {
+	logEnter(c, "accept_invitation")
 	if !h.requireOrgs(c) {
 		return
 	}

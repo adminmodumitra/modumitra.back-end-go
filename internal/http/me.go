@@ -13,6 +13,7 @@ type changePasswordBody struct {
 }
 
 func (h *handlers) me(c *gin.Context) {
+	logEnter(c, "me")
 	if !h.requireIdent(c) {
 		return
 	}
@@ -28,6 +29,7 @@ func (h *handlers) me(c *gin.Context) {
 }
 
 func (h *handlers) changePassword(c *gin.Context) {
+	logEnter(c, "change_password")
 	if !h.requireIdent(c) {
 		return
 	}

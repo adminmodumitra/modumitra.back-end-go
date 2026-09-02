@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"errors"
-	"log/slog"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/billing"
 	billingpg "github.com/Danish-13-Khan/backend-cabinet/internal/billing/postgres"
@@ -29,14 +31,23 @@ import (
 
 func main() {
 	cfg := config.Load()
-	obs.InitLogger(cfg.LogLevel)
+	if err := cfg.Log.Validate(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	w, err := obs.OpenSinks(cfg.Log.Sinks)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	obs.InitLoggerWithWriter(w, cfg.Log.Level, cfg.ServiceName)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	shutdownTracer, err := obs.Init(ctx, cfg.ServiceName, cfg.OTLPEndpoint)
 	if err != nil {
-		slog.Warn("otel init failed; continuing with local traces only", "error", err)
+		log.Warn().Err(err).Msg("otel init failed; continuing with local traces only")
 	}
 	defer func() {
 		c, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -48,12 +59,12 @@ func main() {
 
 	st, err := store.OpenAll(ctx, cfg.Datastore)
 	if err != nil {
-		slog.Error("datastore open", "drivers", cfg.Datastore.EnabledDrivers(), "error", err)
+		log.Error().Strs("drivers", cfg.Datastore.EnabledDrivers()).Err(err).Msg("datastore open")
 		os.Exit(1)
 	}
 	defer func() {
 		if err := st.Close(); err != nil {
-			slog.Error("datastore close", "error", err)
+			log.Error().Err(err).Msg("datastore close")
 		}
 	}()
 
@@ -70,16 +81,16 @@ func main() {
 			}
 		}
 		if err := st.Ping(ctx); err == nil {
-			slog.Info("datastore ping ok", "drivers", drivers)
+			log.Info().Strs("drivers", drivers).Msg("datastore ping ok")
 			break
 		} else {
-			slog.Warn("datastore ping failed; retrying", "drivers", drivers, "error", err, "attempt", i+1)
+			log.Warn().Strs("drivers", drivers).Err(err).Int("attempt", i+1).Msg("datastore ping failed; retrying")
 		}
 	}
 
 	gdb := st.Gorm()
 	if gdb == nil {
-		slog.Error("identity requires postgres; enable SQL in datastore config")
+		log.Error().Msg("identity requires postgres; enable SQL in datastore config")
 		os.Exit(1)
 	}
 
@@ -93,7 +104,7 @@ func main() {
 		identpg.NewTx(gdb),
 		identity.NewArgon2idHasher(),
 		identity.NewJWTTokens(cfg.JWTSecret, identity.Issuer, cfg.AccessTTL, clk),
-		identity.NewLogMailer(cfg.LogLevel),
+		identity.NewLogMailer(cfg.Log.Level),
 		clk,
 		ids,
 		identity.Settings{
@@ -114,7 +125,7 @@ func main() {
 		orgpg.NewInvitationRepo(gdb),
 		identpg.NewUserRepo(gdb),
 		orgpg.NewTx(gdb),
-		org.NewLogMailer(cfg.LogLevel),
+		org.NewLogMailer(cfg.Log.Level),
 		org.SystemClock{},
 		org.NewIDGen(),
 		org.NewTokens(),
@@ -159,7 +170,7 @@ func main() {
 	pub := outbox.NewPublisher(cfg.KafkaEnabled, cfg.KafkaBrokers, cfg.KafkaClientID)
 	worker := outbox.NewWorker(outbox.NewStore(gdb), pub, outbox.SystemClock{})
 	go worker.Run(ctx)
-	slog.Info("outbox worker started", "kafka_enabled", cfg.KafkaEnabled, "brokers", cfg.KafkaBrokers)
+	log.Info().Bool("kafka_enabled", cfg.KafkaEnabled).Strs("brokers", cfg.KafkaBrokers).Msg("outbox worker started")
 
 	ssoSvc := sso.NewService(
 		ssopg.NewIdentityRepo(gdb),
@@ -192,7 +203,7 @@ func main() {
 
 	errCh := make(chan error, 1)
 	go func() {
-		slog.Info("listening", "addr", cfg.HTTPAddr, "drivers", drivers)
+		log.Info().Str("addr", cfg.HTTPAddr).Strs("drivers", drivers).Msg("listening")
 		errCh <- srv.ListenAndServe()
 	}()
 
@@ -200,7 +211,7 @@ func main() {
 	case <-ctx.Done():
 	case err := <-errCh:
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			slog.Error("http server", "error", err)
+			log.Error().Err(err).Msg("http server")
 			os.Exit(1)
 		}
 	}
@@ -208,11 +219,11 @@ func main() {
 	c, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(c); err != nil {
-		slog.Error("http shutdown", "error", err)
+		log.Error().Err(err).Msg("http shutdown")
 	}
 	if closer, ok := pub.(interface{ Close() error }); ok {
 		if err := closer.Close(); err != nil {
-			slog.Error("kafka publisher close", "error", err)
+			log.Error().Err(err).Msg("kafka publisher close")
 		}
 	}
 }

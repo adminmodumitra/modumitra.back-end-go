@@ -2,7 +2,6 @@ package httpapi
 
 import (
 	"context"
-	"log/slog"
 
 	"github.com/gin-gonic/gin"
 
@@ -28,8 +27,7 @@ type handlers struct {
 }
 
 func (h *handlers) healthz(c *gin.Context) {
-	rid, tid := middleware.RequestIDFrom(c), middleware.TraceIDFrom(c)
-	slog.Info("healthz", "request_id", rid, "trace_id", tid)
+	logEnter(c, "healthz")
 	middleware.WriteJSON(c, utils.StatusOK, HealthOK{
 		Meta:   metaFrom(c),
 		Status: "ok",
@@ -37,9 +35,8 @@ func (h *handlers) healthz(c *gin.Context) {
 }
 
 func (h *handlers) readyz(c *gin.Context) {
-	rid, tid := middleware.RequestIDFrom(c), middleware.TraceIDFrom(c)
+	logEnter(c, "readyz")
 	if h.pinger == nil {
-		slog.Error("readyz missing pinger", "request_id", rid, "trace_id", tid)
 		middleware.Abort(c, utils.E(utils.CodeServiceUnavailable))
 		return
 	}
@@ -52,18 +49,15 @@ func (h *handlers) readyz(c *gin.Context) {
 			checks[k] = v
 		}
 		if err != nil {
-			slog.Error("readyz datastore ping failed", "request_id", rid, "trace_id", tid, "error", err)
 			middleware.Abort(c, utils.E(utils.CodeServiceUnavailable).WithDetails(map[string]any{"checks": checks}))
 			return
 		}
 	} else if err := h.pinger.Ping(c.Request.Context()); err != nil {
-		slog.Error("readyz datastore ping failed", "request_id", rid, "trace_id", tid)
 		middleware.Abort(c, utils.E(utils.CodeServiceUnavailable))
 		return
 	} else {
 		checks["store"] = "ok"
 	}
-	slog.Info("readyz", "request_id", rid, "trace_id", tid, "checks", checks)
 	middleware.WriteJSON(c, utils.StatusOK, ReadyOK{
 		Meta:   metaFrom(c),
 		Status: "ready",
@@ -72,8 +66,7 @@ func (h *handlers) readyz(c *gin.Context) {
 }
 
 func (h *handlers) publicConfig(c *gin.Context) {
-	rid, tid := middleware.RequestIDFrom(c), middleware.TraceIDFrom(c)
-	slog.Info("public_config", "request_id", rid, "trace_id", tid)
+	logEnter(c, "public_config")
 	middleware.WriteJSON(c, utils.StatusOK, PublicConfigOK{
 		Meta:           metaFrom(c),
 		TermsVersion:   h.cfg.TermsVersion,
@@ -85,6 +78,7 @@ func (h *handlers) publicConfig(c *gin.Context) {
 }
 
 func (h *handlers) noRoute(c *gin.Context) {
+	logEnter(c, "no_route")
 	// JWT is group-scoped, so unmatched paths 404 rather than 401.
 	if !c.Writer.Written() {
 		middleware.Abort(c, utils.E(utils.CodeNotFound))

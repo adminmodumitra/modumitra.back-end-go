@@ -29,6 +29,11 @@ const (
 	DriverMongo    = "mongodb"
 	DriverNoSQL    = "nosql"
 
+	SinkStderr     = "stderr"
+	SinkStdout     = "stdout"
+	SinkLoki       = "loki"
+	SinkCloudWatch = "cloudwatch"
+
 	JSONCode      = "code"
 	JSONMessage   = "message"
 	JSONRequestID = "request_id"

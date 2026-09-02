@@ -2,11 +2,14 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
 const (
@@ -24,7 +27,7 @@ type Config struct {
 	PrivacyVersion        string
 	MinAppVersion         string
 	TrialDays             int
-	LogLevel              string
+	Log                   Log
 	RequestTimeout        time.Duration
 	BodyLimitBytes        int64
 	OAuthProviders        []string
@@ -45,6 +48,22 @@ type Config struct {
 	OAuthX                OAuthApp
 	OAuthRedirectURI      string
 	OAuthDeviceVerifyURI  string
+}
+
+// Log is process logging: JSON on configured sinks (default stderr).
+type Log struct {
+	Level      string
+	Format     string
+	Sinks      []string
+	LokiURL    string
+	CloudWatch CloudWatchLog
+}
+
+// CloudWatchLog is reserved until a CloudWatch writer ships.
+type CloudWatchLog struct {
+	Region    string
+	LogGroup  string
+	LogStream string
 }
 
 // OAuthApp is a single provider's confidential client credentials.
@@ -288,7 +307,7 @@ func Load() Config {
 		PrivacyVersion:        getenv("PRIVACY_VERSION", "2026-06-01"),
 		MinAppVersion:         getenv("MIN_APP_VERSION", "1.0.0"),
 		TrialDays:             getenvInt("TRIAL_DAYS", 14),
-		LogLevel:              getenv("LOG_LEVEL", "info"),
+		Log:                   loadLog(),
 		RequestTimeout:        3 * time.Second,
 		BodyLimitBytes:        1 << 20,
 		OAuthProviders:        []string{"google", "facebook", "x"},
@@ -447,6 +466,65 @@ func loadBBR() BBR {
 		Buckets:      getenvInt("BBR_BUCKETS", 100),
 		CpuThreshold: getenvInt64("BBR_CPU_THRESHOLD", 800),
 	}
+}
+
+func loadLog() Log {
+	sinks := normalizeLogSinks(splitCSV(os.Getenv("LOG_SINK")))
+	if len(sinks) == 0 {
+		sinks = []string{utils.SinkStderr}
+	}
+	region := getenv("AWS_REGION", "")
+	if region == "" {
+		region = getenv("CLOUDWATCH_REGION", "")
+	}
+	return Log{
+		Level:   getenv("LOG_LEVEL", "info"),
+		Format:  getenv("LOG_FORMAT", "json"),
+		Sinks:   sinks,
+		LokiURL: getenv("LOKI_URL", ""),
+		CloudWatch: CloudWatchLog{
+			Region:    region,
+			LogGroup:  getenv("CLOUDWATCH_LOG_GROUP", ""),
+			LogStream: getenv("CLOUDWATCH_LOG_STREAM", ""),
+		},
+	}
+}
+
+func normalizeLogSinks(in []string) []string {
+	seen := make(map[string]struct{}, len(in))
+	var out []string
+	for _, s := range in {
+		s = strings.ToLower(strings.TrimSpace(s))
+		if s == "" {
+			continue
+		}
+		if _, ok := seen[s]; ok {
+			continue
+		}
+		seen[s] = struct{}{}
+		out = append(out, s)
+	}
+	return out
+}
+
+// SinksOrDefault is stderr when no sinks are configured.
+func (l Log) SinksOrDefault() []string {
+	if len(l.Sinks) == 0 {
+		return []string{utils.SinkStderr}
+	}
+	return l.Sinks
+}
+
+// Validate rejects unsupported log formats. Sinks are checked by obs.OpenSinks.
+func (l Log) Validate() error {
+	format := strings.ToLower(strings.TrimSpace(l.Format))
+	if format == "" {
+		format = "json"
+	}
+	if format != "json" {
+		return fmt.Errorf("log format %q not supported (want json)", l.Format)
+	}
+	return nil
 }
 
 func getenv(key, fallback string) string {

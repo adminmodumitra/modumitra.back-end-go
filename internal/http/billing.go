@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"encoding/json"
 	"io"
 	"strings"
 
@@ -39,6 +40,7 @@ type previewBody struct {
 }
 
 func (h *handlers) listPlans(c *gin.Context) {
+	logEnter(c, "list_plans")
 	if !h.requireBilling(c) {
 		return
 	}
@@ -59,6 +61,7 @@ func (h *handlers) listPlans(c *gin.Context) {
 }
 
 func (h *handlers) getSubscription(c *gin.Context) {
+	logEnter(c, "get_subscription")
 	if !h.requireBilling(c) {
 		return
 	}
@@ -74,6 +77,7 @@ func (h *handlers) getSubscription(c *gin.Context) {
 }
 
 func (h *handlers) checkoutSession(c *gin.Context) {
+	logEnter(c, "checkout_session")
 	if !h.requireBilling(c) {
 		return
 	}
@@ -99,6 +103,7 @@ func (h *handlers) checkoutSession(c *gin.Context) {
 }
 
 func (h *handlers) portalSession(c *gin.Context) {
+	logEnter(c, "portal_session")
 	if !h.requireBilling(c) {
 		return
 	}
@@ -124,6 +129,7 @@ func (h *handlers) portalSession(c *gin.Context) {
 }
 
 func (h *handlers) cancelSubscription(c *gin.Context) {
+	logEnter(c, "cancel_subscription")
 	if !h.requireBilling(c) {
 		return
 	}
@@ -148,6 +154,7 @@ func (h *handlers) cancelSubscription(c *gin.Context) {
 }
 
 func (h *handlers) resumeSubscription(c *gin.Context) {
+	logEnter(c, "resume_subscription")
 	if !h.requireBilling(c) {
 		return
 	}
@@ -166,6 +173,7 @@ func (h *handlers) resumeSubscription(c *gin.Context) {
 }
 
 func (h *handlers) listInvoices(c *gin.Context) {
+	logEnter(c, "list_invoices")
 	if !h.requireBilling(c) {
 		return
 	}
@@ -191,6 +199,7 @@ func (h *handlers) listInvoices(c *gin.Context) {
 }
 
 func (h *handlers) getInvoice(c *gin.Context) {
+	logEnter(c, "get_invoice")
 	if !h.requireBilling(c) {
 		return
 	}
@@ -206,6 +215,7 @@ func (h *handlers) getInvoice(c *gin.Context) {
 }
 
 func (h *handlers) getSeats(c *gin.Context) {
+	logEnter(c, "get_seats")
 	if !h.requireBilling(c) {
 		return
 	}
@@ -231,6 +241,7 @@ func (h *handlers) getSeats(c *gin.Context) {
 }
 
 func (h *handlers) previewDowngrade(c *gin.Context) {
+	logEnter(c, "preview_downgrade")
 	if !h.requireBilling(c) {
 		return
 	}
@@ -263,6 +274,7 @@ func (h *handlers) previewDowngrade(c *gin.Context) {
 }
 
 func (h *handlers) billingWebhook(c *gin.Context) {
+	logEnter(c, "billing_webhook")
 	if !h.requireBilling(c) {
 		return
 	}
@@ -275,6 +287,18 @@ func (h *handlers) billingWebhook(c *gin.Context) {
 	if err := billing.VerifyWebhookSignature(secret, raw, c.GetHeader(utils.HeaderStripeSignature), c.GetHeader(utils.HeaderBillingSignature)); err != nil {
 		middleware.Abort(c, err)
 		return
+	}
+	var meta struct {
+		ID   string `json:"id"`
+		Type string `json:"type"`
+	}
+	if json.Unmarshal(raw, &meta) == nil {
+		if meta.ID != "" {
+			c.Set("event_id", meta.ID)
+		}
+		if meta.Type != "" {
+			c.Set("event_type", meta.Type)
+		}
 	}
 	if err := h.billing.HandleWebhook(c.Request.Context(), raw); err != nil {
 		middleware.Abort(c, err)

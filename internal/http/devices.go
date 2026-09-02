@@ -42,6 +42,7 @@ type patchDeviceBody struct {
 }
 
 func (h *handlers) listDevices(c *gin.Context) {
+	logEnter(c, "list_devices")
 	if !h.requireDevices(c) {
 		return
 	}
@@ -74,6 +75,7 @@ func (h *handlers) listDevices(c *gin.Context) {
 }
 
 func (h *handlers) activateDevice(c *gin.Context) {
+	logEnter(c, "activate_device")
 	if !h.requireDevices(c) {
 		return
 	}
@@ -98,6 +100,7 @@ func (h *handlers) activateDevice(c *gin.Context) {
 }
 
 func (h *handlers) patchDevice(c *gin.Context) {
+	logEnter(c, "patch_device")
 	if !h.requireDevices(c) {
 		return
 	}
@@ -122,6 +125,7 @@ func (h *handlers) patchDevice(c *gin.Context) {
 }
 
 func (h *handlers) deleteDevice(c *gin.Context) {
+	logEnter(c, "delete_device")
 	if !h.requireDevices(c) {
 		return
 	}
@@ -138,6 +142,7 @@ func (h *handlers) deleteDevice(c *gin.Context) {
 }
 
 func (h *handlers) orgEntitlements(c *gin.Context) {
+	logEnter(c, "org_entitlements")
 	if !h.requireDevices(c) {
 		return
 	}
@@ -153,6 +158,7 @@ func (h *handlers) orgEntitlements(c *gin.Context) {
 }
 
 func (h *handlers) meCapabilities(c *gin.Context) {
+	logEnter(c, "me_capabilities")
 	if !h.requireDevices(c) {
 		return
 	}

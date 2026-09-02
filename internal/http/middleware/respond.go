@@ -58,6 +58,9 @@ func InjectHeaders(c *gin.Context) {
 func WriteJSON(c *gin.Context, status int, body any) {
 	InjectHeaders(c)
 	c.JSON(status, body)
+	if status >= 200 && status < 300 {
+		Success(c, OpFrom(c), status)
+	}
 }
 
 func WriteError(c *gin.Context, status int, code, message string, details map[string]any) {
@@ -83,4 +86,5 @@ func Abort(c *gin.Context, err error) {
 		e = utils.Generic(nil)
 	}
 	WriteError(c, e.HTTP, e.Code.String(), e.Message, e.Details)
+	Exit(c, OpFrom(c), e.HTTP, e.Code.String())
 }

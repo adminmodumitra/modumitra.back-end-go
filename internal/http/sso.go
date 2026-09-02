@@ -20,6 +20,7 @@ func (h *handlers) requireSSO(c *gin.Context) bool {
 }
 
 func (h *handlers) oauthProviders(c *gin.Context) {
+	logEnter(c, "oauth_providers")
 	if !h.requireSSO(c) {
 		return
 	}
@@ -40,6 +41,7 @@ type oauthStartBody struct {
 }
 
 func (h *handlers) oauthStart(c *gin.Context) {
+	logEnter(c, "oauth_start")
 	if !h.requireSSO(c) {
 		return
 	}
@@ -85,6 +87,7 @@ func (h *handlers) oauthStart(c *gin.Context) {
 }
 
 func (h *handlers) oauthCallback(c *gin.Context) {
+	logEnter(c, "oauth_callback")
 	if !h.requireSSO(c) {
 		return
 	}
@@ -99,6 +102,9 @@ func (h *handlers) oauthCallback(c *gin.Context) {
 func (h *handlers) writeOAuthLogin(c *gin.Context, u *identity.User, pair *identity.TokenPair, provider string) {
 	if pair == nil {
 		pair = &identity.TokenPair{TokenType: "Bearer"}
+	}
+	if u != nil {
+		c.Set(utils.CtxUserID, u.ID)
 	}
 	middleware.WriteJSON(c, utils.StatusOK, OAuthLoginOK{
 		LoginOK: LoginOK{
@@ -117,6 +123,7 @@ func (h *handlers) writeOAuthLogin(c *gin.Context, u *identity.User, pair *ident
 }
 
 func (h *handlers) listIdentities(c *gin.Context) {
+	logEnter(c, "list_identities")
 	if !h.requireSSO(c) {
 		return
 	}
@@ -142,6 +149,7 @@ type oauthLinkBody struct {
 }
 
 func (h *handlers) linkIdentity(c *gin.Context) {
+	logEnter(c, "link_identity")
 	if !h.requireSSO(c) {
 		return
 	}
@@ -165,6 +173,7 @@ func (h *handlers) linkIdentity(c *gin.Context) {
 }
 
 func (h *handlers) unlinkIdentity(c *gin.Context) {
+	logEnter(c, "unlink_identity")
 	if !h.requireSSO(c) {
 		return
 	}
@@ -186,6 +195,7 @@ type deviceCodeBody struct {
 }
 
 func (h *handlers) deviceCode(c *gin.Context) {
+	logEnter(c, "device_code")
 	if !h.requireSSO(c) {
 		return
 	}
@@ -215,6 +225,7 @@ type deviceTokenBody struct {
 }
 
 func (h *handlers) deviceToken(c *gin.Context) {
+	logEnter(c, "device_token")
 	if !h.requireSSO(c) {
 		return
 	}
@@ -228,6 +239,7 @@ func (h *handlers) deviceToken(c *gin.Context) {
 		middleware.Abort(c, err)
 		return
 	}
+	c.Set(utils.CtxUserID, u.ID)
 	middleware.WriteJSON(c, utils.StatusOK, LoginOK{
 		TokenOK: TokenOK{
 			Meta:         metaFrom(c),

@@ -48,6 +48,7 @@ func (h *handlers) requireIdent(c *gin.Context) bool {
 }
 
 func (h *handlers) register(c *gin.Context) {
+	logEnter(c, "register")
 	if !h.requireIdent(c) {
 		return
 	}
@@ -74,6 +75,7 @@ func (h *handlers) register(c *gin.Context) {
 		middleware.Abort(c, err)
 		return
 	}
+	c.Set(utils.CtxUserID, u.ID)
 	middleware.WriteJSON(c, utils.StatusCreated, UserOK{
 		Meta: metaFrom(c),
 		User: userView(u),
@@ -81,6 +83,7 @@ func (h *handlers) register(c *gin.Context) {
 }
 
 func (h *handlers) verifyEmail(c *gin.Context) {
+	logEnter(c, "verify_email")
 	if !h.requireIdent(c) {
 		return
 	}
@@ -94,6 +97,7 @@ func (h *handlers) verifyEmail(c *gin.Context) {
 		middleware.Abort(c, err)
 		return
 	}
+	c.Set(utils.CtxUserID, u.ID)
 	middleware.WriteJSON(c, utils.StatusOK, UserOK{
 		Meta: metaFrom(c),
 		User: userView(u),
@@ -101,6 +105,7 @@ func (h *handlers) verifyEmail(c *gin.Context) {
 }
 
 func (h *handlers) resendVerification(c *gin.Context) {
+	logEnter(c, "resend_verification")
 	if !h.requireIdent(c) {
 		return
 	}
@@ -120,6 +125,7 @@ func (h *handlers) resendVerification(c *gin.Context) {
 }
 
 func (h *handlers) login(c *gin.Context) {
+	logEnter(c, "login")
 	if !h.requireIdent(c) {
 		return
 	}
@@ -137,6 +143,7 @@ func (h *handlers) login(c *gin.Context) {
 		middleware.Abort(c, err)
 		return
 	}
+	c.Set(utils.CtxUserID, u.ID)
 	middleware.WriteJSON(c, utils.StatusOK, LoginOK{
 		TokenOK: TokenOK{
 			Meta:         metaFrom(c),
@@ -151,6 +158,7 @@ func (h *handlers) login(c *gin.Context) {
 }
 
 func (h *handlers) refresh(c *gin.Context) {
+	logEnter(c, "refresh")
 	if !h.requireIdent(c) {
 		return
 	}
@@ -174,6 +182,7 @@ func (h *handlers) refresh(c *gin.Context) {
 }
 
 func (h *handlers) logout(c *gin.Context) {
+	logEnter(c, "logout")
 	if !h.requireIdent(c) {
 		return
 	}
@@ -193,6 +202,7 @@ func (h *handlers) logout(c *gin.Context) {
 }
 
 func (h *handlers) logoutAll(c *gin.Context) {
+	logEnter(c, "logout_all")
 	if !h.requireIdent(c) {
 		return
 	}
@@ -209,6 +219,7 @@ func (h *handlers) logoutAll(c *gin.Context) {
 }
 
 func (h *handlers) passwordReset(c *gin.Context) {
+	logEnter(c, "password_reset")
 	if !h.requireIdent(c) {
 		return
 	}
@@ -228,6 +239,7 @@ func (h *handlers) passwordReset(c *gin.Context) {
 }
 
 func (h *handlers) passwordResetConfirm(c *gin.Context) {
+	logEnter(c, "password_reset_confirm")
 	if !h.requireIdent(c) {
 		return
 	}
@@ -260,6 +272,7 @@ type otpVerifyBody struct {
 }
 
 func (h *handlers) otpRequest(c *gin.Context) {
+	logEnter(c, "otp_request")
 	if !h.requireIdent(c) {
 		return
 	}
@@ -279,6 +292,7 @@ func (h *handlers) otpRequest(c *gin.Context) {
 }
 
 func (h *handlers) otpVerify(c *gin.Context) {
+	logEnter(c, "otp_verify")
 	if !h.requireIdent(c) {
 		return
 	}
@@ -292,6 +306,7 @@ func (h *handlers) otpVerify(c *gin.Context) {
 		middleware.Abort(c, err)
 		return
 	}
+	c.Set(utils.CtxUserID, u.ID)
 	middleware.WriteJSON(c, utils.StatusOK, LoginOK{
 		TokenOK: TokenOK{
 			Meta:         metaFrom(c),

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
 func clearDatastoreEnv(t *testing.T) {
@@ -25,6 +27,14 @@ func clearDatastoreEnv(t *testing.T) {
 		"KAFKA_ENABLED",
 		"KAFKA_BROKERS",
 		"KAFKA_CLIENT_ID",
+		"LOG_LEVEL",
+		"LOG_FORMAT",
+		"LOG_SINK",
+		"LOKI_URL",
+		"AWS_REGION",
+		"CLOUDWATCH_REGION",
+		"CLOUDWATCH_LOG_GROUP",
+		"CLOUDWATCH_LOG_STREAM",
 	}
 	for _, k := range keys {
 		t.Setenv(k, "")
@@ -287,5 +297,100 @@ func TestKafkaDefaults(t *testing.T) {
 	}
 	if len(cfg.KafkaBrokers) != 2 || cfg.KafkaBrokers[0] != "kafka-1:9092" {
 		t.Fatalf("brokers=%v", cfg.KafkaBrokers)
+	}
+}
+
+func TestLogDefaults(t *testing.T) {
+	clearDatastoreEnv(t)
+	t.Setenv("DATASTORE_CONFIG", dummyPath(t))
+	cfg := Load()
+	if cfg.Log.Level != "info" {
+		t.Fatalf("level=%q", cfg.Log.Level)
+	}
+	if cfg.Log.Format != "json" {
+		t.Fatalf("format=%q", cfg.Log.Format)
+	}
+	if err := cfg.Log.Validate(); err != nil {
+		t.Fatalf("validate: %v", err)
+	}
+	if len(cfg.Log.Sinks) != 1 || cfg.Log.Sinks[0] != utils.SinkStderr {
+		t.Fatalf("sinks=%v", cfg.Log.Sinks)
+	}
+	def := cfg.Log.SinksOrDefault()
+	if len(def) != 1 || def[0] != utils.SinkStderr {
+		t.Fatalf("SinksOrDefault=%v", def)
+	}
+}
+
+func TestLogSinkCSV(t *testing.T) {
+	clearDatastoreEnv(t)
+	t.Setenv("DATASTORE_CONFIG", dummyPath(t))
+	t.Setenv("LOG_SINK", "stderr,stdout")
+	cfg := Load()
+	if len(cfg.Log.Sinks) != 2 || cfg.Log.Sinks[0] != utils.SinkStderr || cfg.Log.Sinks[1] != utils.SinkStdout {
+		t.Fatalf("sinks=%v", cfg.Log.Sinks)
+	}
+	t.Setenv("LOG_SINK", " STDERR , stdout,stderr ")
+	cfg = Load()
+	if len(cfg.Log.Sinks) != 2 || cfg.Log.Sinks[0] != "stderr" || cfg.Log.Sinks[1] != "stdout" {
+		t.Fatalf("lowercase/dedupe sinks=%v", cfg.Log.Sinks)
+	}
+}
+
+func TestLogSinkLokiLoadsConfig(t *testing.T) {
+	clearDatastoreEnv(t)
+	t.Setenv("DATASTORE_CONFIG", dummyPath(t))
+	t.Setenv("LOG_SINK", "loki")
+	t.Setenv("LOKI_URL", "http://loki:3100")
+	cfg := Load()
+	if len(cfg.Log.Sinks) != 1 || cfg.Log.Sinks[0] != utils.SinkLoki {
+		t.Fatalf("sinks=%v", cfg.Log.Sinks)
+	}
+	if cfg.Log.LokiURL != "http://loki:3100" {
+		t.Fatalf("LokiURL=%q", cfg.Log.LokiURL)
+	}
+	if err := cfg.Log.Validate(); err != nil {
+		t.Fatalf("loki must not fail config: %v", err)
+	}
+}
+
+func TestLogFormatUnsupported(t *testing.T) {
+	clearDatastoreEnv(t)
+	t.Setenv("DATASTORE_CONFIG", dummyPath(t))
+	t.Setenv("LOG_FORMAT", "text")
+	cfg := Load()
+	if cfg.Log.Format != "text" {
+		t.Fatalf("format=%q", cfg.Log.Format)
+	}
+	err := cfg.Log.Validate()
+	if err == nil || !strings.Contains(err.Error(), `log format "text" not supported (want json)`) {
+		t.Fatalf("validate=%v", err)
+	}
+}
+
+func TestLogCloudWatchRegionPrecedence(t *testing.T) {
+	clearDatastoreEnv(t)
+	t.Setenv("DATASTORE_CONFIG", dummyPath(t))
+	t.Setenv("CLOUDWATCH_REGION", "us-east-1")
+	t.Setenv("CLOUDWATCH_LOG_GROUP", "/cabinet/studio-api")
+	t.Setenv("CLOUDWATCH_LOG_STREAM", "api")
+	cfg := Load()
+	if cfg.Log.CloudWatch.Region != "us-east-1" {
+		t.Fatalf("region=%q", cfg.Log.CloudWatch.Region)
+	}
+	if cfg.Log.CloudWatch.LogGroup != "/cabinet/studio-api" || cfg.Log.CloudWatch.LogStream != "api" {
+		t.Fatalf("cloudwatch=%+v", cfg.Log.CloudWatch)
+	}
+	t.Setenv("AWS_REGION", "ap-south-1")
+	cfg = Load()
+	if cfg.Log.CloudWatch.Region != "ap-south-1" {
+		t.Fatalf("AWS_REGION should win, got %q", cfg.Log.CloudWatch.Region)
+	}
+}
+
+func TestSinksOrDefaultEmpty(t *testing.T) {
+	got := (Log{}).SinksOrDefault()
+	if len(got) != 1 || got[0] != utils.SinkStderr {
+		t.Fatalf("%v", got)
 	}
 }

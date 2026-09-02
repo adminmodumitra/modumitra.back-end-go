@@ -2,8 +2,6 @@ package obs
 
 import (
 	"context"
-	"log/slog"
-	"os"
 	"strings"
 
 	"go.opentelemetry.io/otel"
@@ -14,23 +12,6 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 )
-
-// InitLogger configures JSON slog on stderr.
-func InitLogger(level string) {
-	var lvl slog.Level
-	switch strings.ToLower(strings.TrimSpace(level)) {
-	case "debug":
-		lvl = slog.LevelDebug
-	case "warn", "warning":
-		lvl = slog.LevelWarn
-	case "error":
-		lvl = slog.LevelError
-	default:
-		lvl = slog.LevelInfo
-	}
-	h := slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: lvl})
-	slog.SetDefault(slog.New(h))
-}
 
 // Init installs a W3C propagator and an OTLP/gRPC tracer provider.
 // Handlers must never start a new root trace; they use the request context.
