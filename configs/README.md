@@ -11,15 +11,13 @@ Go change.
 | [`cabinet.dev.json`](./cabinet.dev.json) | Shared/dev compose (`APP_ENV=dev` or `development`). Docker hostnames (`postgres`, `kafka:9092`, `otel:4317`). Kafka on, debug logs, billing still placeholders (`Live()` false). JWT stays the local-dev secret. |
 | [`cabinet.production.json`](./cabinet.production.json) | Production (`APP_ENV=production` or `prod`). Same keys, **no real secrets in git**: empty JWT, entitlement key, billing webhook/prices, OAuth clients, Kafka brokers. Fill via env (`JWT_SECRET`, `DATABASE_URL`, `KAFKA_BROKERS`, `BILLING_*`, `OAUTH_*`). Until then `Live()` is false. |
 | [`cabinet.dummy.json`](./cabinet.dummy.json) | Alias of `cabinet.local.json` so old `CABINET_CONFIG` paths keep working. |
-| [`datastore.dummy.json`](./datastore.dummy.json) | Datastore-only fallback if the cabinet file is unset/missing and `DATASTORE_CONFIG` still points here. |
-| [`datastore.remote.example.json`](./datastore.remote.example.json) | Placeholder host/user/password for a remote server. Copy, fill in. Do not commit secrets. |
 
 Load order:
 
 1. `CABINET_CONFIG` if set (explicit path wins)
 2. Else `APP_ENV` (or `CABINET_ENV`): `local` (default) → `cabinet.local.json`; `dev`/`development` → `cabinet.dev.json`; `production`/`prod` → `cabinet.production.json`; unknown → local
 3. Env wins for secrets (same names as `.env.example`)
-4. If the cabinet file is missing, current env + `DATASTORE_CONFIG` JSON still works
+4. If the cabinet file is missing, in-memory defaults (localhost Postgres)
 
 Flip local → live by editing the JSON (or env):
 
@@ -34,7 +32,6 @@ Point DSN / URI / Addr at localhost or a remote host — same binary. Overrides 
 
 - `APP_ENV` / `CABINET_ENV` — selects which cabinet JSON to load when `CABINET_CONFIG` is unset
 - `CABINET_CONFIG` — explicit path to the nested JSON (wins over `APP_ENV`)
-- `DATASTORE_CONFIG` — overlays `datastore` (and is the fallback if cabinet JSON is missing)
 - `DATASTORE_DRIVER` — overrides `Driver`
 - `DATABASE_URL` — overrides `SQL.DSN`
 - `REDIS_ADDR`, `REDIS_PASSWORD` — Redis

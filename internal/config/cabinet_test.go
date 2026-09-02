@@ -143,10 +143,9 @@ func TestOAuthPlaceholderDisabled(t *testing.T) {
 	}
 }
 
-func TestCabinetMissingFallsBackToDatastoreJSON(t *testing.T) {
+func TestCabinetMissingUsesDefaults(t *testing.T) {
 	clearDatastoreEnv(t)
 	t.Setenv("CABINET_CONFIG", filepath.Join(t.TempDir(), "missing.json"))
-	t.Setenv("DATASTORE_CONFIG", dummyPath(t))
 	cfg := Load()
 	if cfg.Datastore.Driver != "postgres" {
 		t.Fatalf("Driver=%q", cfg.Datastore.Driver)

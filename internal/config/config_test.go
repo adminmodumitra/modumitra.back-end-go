@@ -60,7 +60,7 @@ func dummyPath(t *testing.T) string {
 		t.Fatal(err)
 	}
 	for i := 0; i < 8; i++ {
-		cand := filepath.Join(dir, "configs", "datastore.dummy.json")
+		cand := filepath.Join(dir, "configs", "cabinet.local.json")
 		if _, err := os.Stat(cand); err == nil {
 			return cand
 		}
@@ -70,13 +70,13 @@ func dummyPath(t *testing.T) string {
 		}
 		dir = parent
 	}
-	t.Fatal("configs/datastore.dummy.json not found")
+	t.Fatal("configs/cabinet.local.json not found")
 	return ""
 }
 
 func TestLoadDummyConfig(t *testing.T) {
 	clearDatastoreEnv(t)
-	t.Setenv("DATASTORE_CONFIG", dummyPath(t))
+	t.Setenv("CABINET_CONFIG", dummyPath(t))
 
 	cfg := Load()
 	if cfg.Datastore.Driver != "postgres" {
@@ -113,7 +113,7 @@ func TestLoadDummyConfig(t *testing.T) {
 
 func TestEnvOverrides(t *testing.T) {
 	clearDatastoreEnv(t)
-	t.Setenv("DATASTORE_CONFIG", dummyPath(t))
+	t.Setenv("CABINET_CONFIG", dummyPath(t))
 	t.Setenv("DATASTORE_DRIVER", "redis")
 	t.Setenv("DATABASE_URL", "postgres://cabinet:s3cret@db.example.com:5432/cabinet_studio?sslmode=require")
 	t.Setenv("REDIS_ADDR", "redis.example.com:6380")
@@ -286,7 +286,7 @@ func TestNormalizedDriver(t *testing.T) {
 
 func TestKafkaDefaults(t *testing.T) {
 	clearDatastoreEnv(t)
-	t.Setenv("DATASTORE_CONFIG", dummyPath(t))
+	t.Setenv("CABINET_CONFIG", dummyPath(t))
 	cfg := Load()
 	if cfg.KafkaEnabled {
 		t.Fatal("KAFKA_ENABLED should default false")
@@ -314,7 +314,7 @@ func TestKafkaDefaults(t *testing.T) {
 
 func TestLogDefaults(t *testing.T) {
 	clearDatastoreEnv(t)
-	t.Setenv("DATASTORE_CONFIG", dummyPath(t))
+	t.Setenv("CABINET_CONFIG", dummyPath(t))
 	cfg := Load()
 	if cfg.Log.Level != "info" {
 		t.Fatalf("level=%q", cfg.Log.Level)
@@ -336,7 +336,7 @@ func TestLogDefaults(t *testing.T) {
 
 func TestLogSinkCSV(t *testing.T) {
 	clearDatastoreEnv(t)
-	t.Setenv("DATASTORE_CONFIG", dummyPath(t))
+	t.Setenv("CABINET_CONFIG", dummyPath(t))
 	t.Setenv("LOG_SINK", "stderr,stdout")
 	cfg := Load()
 	if len(cfg.Log.Sinks) != 2 || cfg.Log.Sinks[0] != utils.SinkStderr || cfg.Log.Sinks[1] != utils.SinkStdout {
@@ -351,7 +351,7 @@ func TestLogSinkCSV(t *testing.T) {
 
 func TestLogSinkLokiLoadsConfig(t *testing.T) {
 	clearDatastoreEnv(t)
-	t.Setenv("DATASTORE_CONFIG", dummyPath(t))
+	t.Setenv("CABINET_CONFIG", dummyPath(t))
 	t.Setenv("LOG_SINK", "loki")
 	t.Setenv("LOKI_URL", "http://loki:3100")
 	cfg := Load()
@@ -368,7 +368,7 @@ func TestLogSinkLokiLoadsConfig(t *testing.T) {
 
 func TestLogFormatUnsupported(t *testing.T) {
 	clearDatastoreEnv(t)
-	t.Setenv("DATASTORE_CONFIG", dummyPath(t))
+	t.Setenv("CABINET_CONFIG", dummyPath(t))
 	t.Setenv("LOG_FORMAT", "text")
 	cfg := Load()
 	if cfg.Log.Format != "text" {
@@ -382,7 +382,7 @@ func TestLogFormatUnsupported(t *testing.T) {
 
 func TestLogCloudWatchRegionPrecedence(t *testing.T) {
 	clearDatastoreEnv(t)
-	t.Setenv("DATASTORE_CONFIG", dummyPath(t))
+	t.Setenv("CABINET_CONFIG", dummyPath(t))
 	t.Setenv("CLOUDWATCH_REGION", "us-east-1")
 	t.Setenv("CLOUDWATCH_LOG_GROUP", "/cabinet/studio-api")
 	t.Setenv("CLOUDWATCH_LOG_STREAM", "api")

@@ -91,7 +91,7 @@ go run ./cmd/api
 
 Local dummy JSON uses billing `price_*_placeholder`, empty OAuth, and Kafka off — FakeProvider + LogMailer + NoopPublisher. Replace those values in [`configs/cabinet.dummy.json`](./configs/cabinet.dummy.json) or the matching env (`BILLING_PRICE_*`, `OAUTH_*`, `KAFKA_BROKERS`) to select the live adapter. No Go change. StripeProvider is still a stub (no live Stripe HTTP).
 
-To point at a remote server, copy [`configs/datastore.remote.example.json`](./configs/datastore.remote.example.json), fill in host/user/password, and set `DATASTORE_CONFIG` — or keep the dummy file and override `DATABASE_URL` / `REDIS_ADDR` / `MONGO_URI`. Switch engines with `DATASTORE_DRIVER=redis` or `mongodb`. Logs never print raw DSN, password, or URI.
+To point at a remote server, keep the cabinet JSON and override `DATABASE_URL` / `REDIS_ADDR` / `MONGO_URI`. Switch engines with `DATASTORE_DRIVER=redis` or `mongodb`. Logs never print raw DSN, password, or URI.
 
 Pool settings in the dummy file (`MaxOpenConns` 25, `MaxIdleConns` 10, `ConnMaxLifetime` `1h`) map onto `sql.DB`, go-redis, and the Mongo driver. `MaxOpenConns` of 0 is treated as 25.
 
@@ -109,8 +109,7 @@ See [`.env.example`](./.env.example). Do not commit `.env`.
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `HTTP_ADDR` | `:8080` | Listen address |
-| `CABINET_CONFIG` | `configs/cabinet.dummy.json` | Nested app JSON (http, log, datastore, jwt, billing, oauth, kafka, mail). See [`configs/`](./configs/) |
-| `DATASTORE_CONFIG` | (file) | Overlays `datastore`; fallback if cabinet JSON is missing |
+| `CABINET_CONFIG` | `configs/cabinet.local.json` | Nested app JSON (http, log, datastore, jwt, billing, oauth, kafka, mail). See [`configs/`](./configs/) |
 | `DATASTORE_DRIVER` | (file) | `postgres` / `sql` / `redis` / `mongodb` / `nosql`. Unknown driver refuses boot |
 | `DATABASE_URL` | (file SQL.DSN) | Overrides `SQL.DSN` (local or remote Postgres) |
 | `REDIS_ADDR` | (file) | Overrides `Redis.Addr` (`host:port`) |
@@ -148,9 +147,9 @@ See [`.env.example`](./.env.example). Do not commit `.env`.
 
 ```
 cmd/api/main.go
-configs/cabinet.dummy.json
-configs/datastore.dummy.json
-configs/datastore.remote.example.json
+configs/cabinet.local.json
+configs/cabinet.dev.json
+configs/cabinet.production.json
 internal/config
 internal/http
 internal/http/middleware

@@ -58,8 +58,6 @@ func Load() Config {
 	cpath := resolveCabinetPath()
 	if applyCabinetFile(&cfg, cpath) {
 		cfg.DatastorePath = cpath
-	} else {
-		applyDatastoreJSON(&cfg, resolveDatastorePath())
 	}
 	overlayDatastoreFile(&cfg)
 	applyEnv(&cfg)

@@ -3,7 +3,6 @@ package config
 import (
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 func defaultDatastore() Datastore {
@@ -35,17 +34,6 @@ func defaultDatastore() Datastore {
 			ConnMaxLifetime: poolLife,
 		},
 	}
-}
-
-func resolveConfigPath(envKey, defaultRel string) string {
-	if p := strings.TrimSpace(os.Getenv(envKey)); p != "" {
-		return p
-	}
-	return findRel(defaultRel)
-}
-
-func resolveDatastorePath() string {
-	return resolveConfigPath("DATASTORE_CONFIG", defaultDatastorePath)
 }
 
 func findRel(rel string) string {

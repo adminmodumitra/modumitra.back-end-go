@@ -6,10 +6,9 @@ import (
 )
 
 const (
-	defaultDatastorePath = "configs/datastore.dummy.json"
-	defaultCabinetPath   = "configs/cabinet.local.json"
-	defaultMaxOpenConns  = 25
-	defaultConnLifetime  = time.Hour
+	defaultCabinetPath  = "configs/cabinet.local.json"
+	defaultMaxOpenConns = 25
+	defaultConnLifetime = time.Hour
 )
 
 type Datastore struct {
