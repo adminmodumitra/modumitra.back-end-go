@@ -1,0 +1,92 @@
+{
+  "http": {
+    "addr": ":8080"
+  },
+  "log": {
+    "level": "debug",
+    "format": "json",
+    "sinks": ["stderr"]
+  },
+  "datastore": {
+    "Driver": "postgres",
+    "Drivers": ["postgres"],
+    "SQL": {
+      "Enabled": true,
+      "Driver": "postgres",
+      "DSN": "postgres://cabinet:cabinet@postgres:5432/cabinet_studio_dev?sslmode=disable",
+      "MaxOpenConns": 25,
+      "MaxIdleConns": 10,
+      "ConnMaxLifetime": "1h"
+    },
+    "Redis": {
+      "Enabled": false,
+      "Addr": "redis:6379",
+      "Password": "",
+      "DB": 0,
+      "TLS": false,
+      "MaxOpenConns": 25,
+      "MaxIdleConns": 10,
+      "ConnMaxLifetime": "1h"
+    },
+    "NoSQL": {
+      "Enabled": false,
+      "URI": "mongodb://mongo:27017",
+      "Database": "cabinet_studio",
+      "MaxOpenConns": 25,
+      "MaxIdleConns": 10,
+      "ConnMaxLifetime": "1h"
+    }
+  },
+  "jwt": {
+    "secret": "cabinet-studio-local-dev-only-change-me",
+    "access_ttl": "15m",
+    "refresh_ttl": "720h"
+  },
+  "billing": {
+    "provider": "auto",
+    "webhook_secret": "cabinet-studio-billing-webhook-local-dev-only",
+    "prices": {
+      "studio_monthly": "price_studio_monthly_placeholder",
+      "team_monthly": "price_team_monthly_placeholder"
+    }
+  },
+  "oauth": {
+    "google": {
+      "client_id": "",
+      "client_secret": ""
+    },
+    "facebook": {
+      "client_id": "",
+      "client_secret": ""
+    },
+    "x": {
+      "client_id": "",
+      "client_secret": ""
+    },
+    "redirect_uri": "cabinetstudio://oauth/callback",
+    "device_verification_uri": "https://app.cabinetstudio.example/device"
+  },
+  "kafka": {
+    "enabled": true,
+    "brokers": ["kafka:9092"],
+    "client_id": "cabinet-studio-api"
+  },
+  "otel": {
+    "endpoint": "otel:4317",
+    "service_name": "cabinet-studio-api"
+  },
+  "bbr": {
+    "Enabled": true,
+    "WindowSize": "10s",
+    "Buckets": 100,
+    "CpuThreshold": 800
+  },
+  "entitlement_signing_key": "cabinet-studio-entitlement-local-dev-only-change-me",
+  "terms_version": "2026-06-01",
+  "privacy_version": "2026-06-01",
+  "min_app_version": "1.0.0",
+  "trial_days": 14,
+  "mail": {
+    "driver": "log"
+  }
+}

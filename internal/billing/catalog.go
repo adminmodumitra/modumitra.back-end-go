@@ -7,7 +7,8 @@ func catalogEpoch() time.Time {
 }
 
 // SeedPlans returns the three catalog rows from schema-v1.sql.
-func SeedPlans() []Plan {
+// studioPriceID and teamPriceID are injected (from config); tests pass ids.
+func SeedPlans(studioPriceID, teamPriceID string) []Plan {
 	at := catalogEpoch()
 	return []Plan{
 		{
@@ -27,7 +28,7 @@ func SeedPlans() []Plan {
 				CloudProjects: true, OrganizationAssets: true, ProposalBranding: true,
 				MaxSeats: 1, MaxDevices: 3, MaxCloudProjects: 50,
 			},
-			Provider: ProviderStripe, ProviderPriceID: "price_studio_monthly_placeholder",
+			Provider: ProviderStripe, ProviderPriceID: studioPriceID,
 			SortOrder: 10, CreatedAt: at, UpdatedAt: at,
 		},
 		{
@@ -38,7 +39,7 @@ func SeedPlans() []Plan {
 				CloudProjects: true, OrganizationAssets: true, ProposalBranding: true,
 				EngineeringHandoff: true, MaxSeats: 5, MaxDevices: 3, MaxCloudProjects: 500,
 			},
-			Provider: ProviderStripe, ProviderPriceID: "price_team_monthly_placeholder",
+			Provider: ProviderStripe, ProviderPriceID: teamPriceID,
 			SortOrder: 20, CreatedAt: at, UpdatedAt: at,
 		},
 	}

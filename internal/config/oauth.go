@@ -1,17 +1,13 @@
 package config
 
-import (
-	"strings"
-)
-
 // OAuthApp is a single provider's confidential client credentials.
 type OAuthApp struct {
-	ClientID     string
-	ClientSecret string
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
 }
 
 func (a OAuthApp) Enabled() bool {
-	return strings.TrimSpace(a.ClientID) != "" && strings.TrimSpace(a.ClientSecret) != ""
+	return liveValue(a.ClientID) && liveValue(a.ClientSecret)
 }
 
 // LiveOAuthProviders is the subset of google/facebook/x that have both client id and secret.

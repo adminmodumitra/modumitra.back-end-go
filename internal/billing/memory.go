@@ -32,8 +32,7 @@ func NewMemory() *Memory {
 		events:        map[string]*Event{},
 		evtProv:       map[string]*Event{},
 	}
-	for i := range SeedPlans() {
-		p := SeedPlans()[i]
+	for _, p := range SeedPlans("price_studio_monthly_placeholder", "price_team_monthly_placeholder") {
 		m.plans[p.ID] = clonePlan(&p)
 	}
 	return m

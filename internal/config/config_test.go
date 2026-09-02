@@ -15,6 +15,11 @@ import (
 func clearDatastoreEnv(t *testing.T) {
 	t.Helper()
 	keys := []string{
+		"CABINET_CONFIG",
+		"APP_ENV",
+		"CABINET_ENV",
+		"JWT_SECRET",
+		"ENTITLEMENT_SIGNING_KEY",
 		"DATASTORE_CONFIG",
 		"DATASTORE_DRIVER",
 		"DATABASE_URL",
@@ -35,6 +40,13 @@ func clearDatastoreEnv(t *testing.T) {
 		"CLOUDWATCH_REGION",
 		"CLOUDWATCH_LOG_GROUP",
 		"CLOUDWATCH_LOG_STREAM",
+		"BILLING_PROVIDER",
+		"BILLING_WEBHOOK_SECRET",
+		"BILLING_PRICE_STUDIO_MONTHLY",
+		"BILLING_PRICE_TEAM_MONTHLY",
+		"MAIL_DRIVER",
+		"OAUTH_GOOGLE_CLIENT_ID",
+		"OAUTH_GOOGLE_CLIENT_SECRET",
 	}
 	for _, k := range keys {
 		t.Setenv(k, "")

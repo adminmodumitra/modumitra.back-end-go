@@ -37,16 +37,24 @@ func defaultDatastore() Datastore {
 	}
 }
 
-func resolveDatastorePath() string {
-	if p := strings.TrimSpace(os.Getenv("DATASTORE_CONFIG")); p != "" {
+func resolveConfigPath(envKey, defaultRel string) string {
+	if p := strings.TrimSpace(os.Getenv(envKey)); p != "" {
 		return p
 	}
+	return findRel(defaultRel)
+}
+
+func resolveDatastorePath() string {
+	return resolveConfigPath("DATASTORE_CONFIG", defaultDatastorePath)
+}
+
+func findRel(rel string) string {
 	dir, err := os.Getwd()
 	if err != nil {
-		return defaultDatastorePath
+		return rel
 	}
 	for i := 0; i < 8; i++ {
-		cand := filepath.Join(dir, defaultDatastorePath)
+		cand := filepath.Join(dir, rel)
 		if _, err := os.Stat(cand); err == nil {
 			return cand
 		}
@@ -56,5 +64,5 @@ func resolveDatastorePath() string {
 		}
 		dir = parent
 	}
-	return defaultDatastorePath
+	return rel
 }

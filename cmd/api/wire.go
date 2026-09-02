@@ -83,7 +83,7 @@ func wire(ctx context.Context, cfg config.Config, gdb *gorm.DB) wired {
 	)
 
 	var provider billing.Provider
-	if cfg.BillingProvider == billing.ProviderStripe {
+	if cfg.Billing.Live() {
 		provider = billing.NewStripeProvider()
 	} else {
 		provider = billing.NewFakeProvider()
@@ -102,7 +102,7 @@ func wire(ctx context.Context, cfg config.Config, gdb *gorm.DB) wired {
 		billingpg.NewTx(gdb),
 		billing.SystemClock{},
 		billing.NewIDGen(),
-		billing.Settings{Provider: provider.Name(), WebhookSecret: cfg.BillingWebhookSecret},
+		billing.Settings{Provider: provider.Name(), WebhookSecret: cfg.Billing.WebhookSecret},
 		obWriter,
 	)
 

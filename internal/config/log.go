@@ -10,40 +10,60 @@ import (
 
 // Log is process logging: JSON on configured sinks (default stderr).
 type Log struct {
-	Level      string
-	Format     string
-	Sinks      []string
-	LokiURL    string
-	CloudWatch CloudWatchLog
+	Level      string        `json:"level"`
+	Format     string        `json:"format"`
+	Sinks      []string      `json:"sinks"`
+	LokiURL    string        `json:"loki_url"`
+	CloudWatch CloudWatchLog `json:"cloudwatch"`
 }
 
 // CloudWatchLog is reserved until a CloudWatch writer ships.
 type CloudWatchLog struct {
-	Region    string
-	LogGroup  string
-	LogStream string
+	Region    string `json:"region"`
+	LogGroup  string `json:"log_group"`
+	LogStream string `json:"log_stream"`
 }
 
-func loadLog() Log {
-	sinks := normalizeLogSinks(splitCSV(os.Getenv("LOG_SINK")))
-	if len(sinks) == 0 {
-		sinks = []string{utils.SinkStderr}
+func applyFileLog(cfg *Config, l Log) {
+	if l.Level != "" {
+		cfg.Log.Level = l.Level
 	}
+	if l.Format != "" {
+		cfg.Log.Format = l.Format
+	}
+	if len(l.Sinks) > 0 {
+		cfg.Log.Sinks = normalizeLogSinks(l.Sinks)
+	}
+	if l.LokiURL != "" {
+		cfg.Log.LokiURL = l.LokiURL
+	}
+	if l.CloudWatch.Region != "" {
+		cfg.Log.CloudWatch.Region = l.CloudWatch.Region
+	}
+	if l.CloudWatch.LogGroup != "" {
+		cfg.Log.CloudWatch.LogGroup = l.CloudWatch.LogGroup
+	}
+	if l.CloudWatch.LogStream != "" {
+		cfg.Log.CloudWatch.LogStream = l.CloudWatch.LogStream
+	}
+}
+
+func applyLogEnv(cfg *Config) {
+	cfg.Log.Level = getenv("LOG_LEVEL", cfg.Log.Level)
+	cfg.Log.Format = getenv("LOG_FORMAT", cfg.Log.Format)
+	if v := strings.TrimSpace(os.Getenv("LOG_SINK")); v != "" {
+		cfg.Log.Sinks = normalizeLogSinks(splitCSV(v))
+	}
+	cfg.Log.LokiURL = getenv("LOKI_URL", cfg.Log.LokiURL)
 	region := getenv("AWS_REGION", "")
 	if region == "" {
-		region = getenv("CLOUDWATCH_REGION", "")
+		region = getenv("CLOUDWATCH_REGION", cfg.Log.CloudWatch.Region)
 	}
-	return Log{
-		Level:   getenv("LOG_LEVEL", "info"),
-		Format:  getenv("LOG_FORMAT", "json"),
-		Sinks:   sinks,
-		LokiURL: getenv("LOKI_URL", ""),
-		CloudWatch: CloudWatchLog{
-			Region:    region,
-			LogGroup:  getenv("CLOUDWATCH_LOG_GROUP", ""),
-			LogStream: getenv("CLOUDWATCH_LOG_STREAM", ""),
-		},
+	if region != "" {
+		cfg.Log.CloudWatch.Region = region
 	}
+	cfg.Log.CloudWatch.LogGroup = getenv("CLOUDWATCH_LOG_GROUP", cfg.Log.CloudWatch.LogGroup)
+	cfg.Log.CloudWatch.LogStream = getenv("CLOUDWATCH_LOG_STREAM", cfg.Log.CloudWatch.LogStream)
 }
 
 func normalizeLogSinks(in []string) []string {
