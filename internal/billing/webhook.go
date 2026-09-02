@@ -69,7 +69,7 @@ func (s *Service) HandleWebhook(ctx context.Context, raw []byte) error {
 				return err
 			}
 		}
-		return s.events.MarkProcessed(ctx, evt.ID, strPtr(orgID), strPtr(subID), now)
+		return s.events.MarkProcessed(ctx, evt.ID, strPtr(orgID), strPtr(subID), s.accountIDFor(ctx, orgID, subID), now)
 	})
 	if errors.Is(err, ErrDuplicate) {
 		return nil
@@ -79,7 +79,7 @@ func (s *Service) HandleWebhook(ctx context.Context, raw []byte) error {
 
 func redactSummary(typ string, obj map[string]any) map[string]any {
 	out := map[string]any{"type": typ}
-	for _, k := range []string{"id", "organization_id", "plan_id", "customer", "subscription", "amount_total", "currency", "status"} {
+	for _, k := range []string{"id", "organization_id", "billing_account_id", "plan_id", "customer", "subscription", "amount_total", "currency", "status"} {
 		if v, ok := obj[k]; ok {
 			out[k] = v
 		}

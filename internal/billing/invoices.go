@@ -7,17 +7,17 @@ import (
 )
 
 func (s *Service) ListInvoices(ctx context.Context, actorID, orgID, status, cursor string, limit int) ([]Invoice, string, error) {
-	_, m, err := s.loadVisible(ctx, actorID, orgID)
+	a, err := s.resolveAccess(ctx, actorID, orgID)
 	if err != nil {
 		return nil, "", err
 	}
-	if err := requireRead(m); err != nil {
+	if err := requireRead(a); err != nil {
 		return nil, "", err
 	}
 	if limit <= 0 {
 		limit = DefaultLimit
 	}
-	items, next, err := s.invoices.ListByOrg(ctx, orgID, status, cursor, limit)
+	items, next, err := s.invoices.ListByAccount(ctx, a.Account.ID, status, cursor, limit)
 	if err != nil {
 		return nil, "", mapRepoErr(err)
 	}
@@ -28,18 +28,18 @@ func (s *Service) ListInvoices(ctx context.Context, actorID, orgID, status, curs
 }
 
 func (s *Service) GetInvoice(ctx context.Context, actorID, orgID, invoiceID string) (*Invoice, error) {
-	_, m, err := s.loadVisible(ctx, actorID, orgID)
+	a, err := s.resolveAccess(ctx, actorID, orgID)
 	if err != nil {
 		return nil, err
 	}
-	if err := requireRead(m); err != nil {
+	if err := requireRead(a); err != nil {
 		return nil, err
 	}
 	inv, err := s.invoices.GetByID(ctx, invoiceID)
 	if err != nil {
 		return nil, mapRepoErr(err)
 	}
-	if inv.OrganizationID != orgID {
+	if inv.BillingAccountID != a.Account.ID {
 		return nil, utils.E(utils.CodeNotFound)
 	}
 	return inv, nil

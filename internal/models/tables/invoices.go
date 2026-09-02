@@ -4,7 +4,8 @@ import "time"
 
 type Invoice struct {
 	PublicID          string     `gorm:"column:public_id;primaryKey"`
-	OrganizationID    string     `gorm:"column:organization_id"`
+	BillingAccountID  string     `gorm:"column:billing_account_id"`
+	OrganizationID    *string    `gorm:"column:organization_id"`
 	SubscriptionID    *string    `gorm:"column:subscription_id"`
 	Provider          string     `gorm:"column:provider"`
 	ProviderInvoiceID string     `gorm:"column:provider_invoice_id"`

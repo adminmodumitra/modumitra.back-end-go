@@ -14,7 +14,7 @@ func (h *handlers) getSeats(c *gin.Context) {
 	if !h.requireBilling(c) {
 		return
 	}
-	seats, err := h.billing.Seats(c.Request.Context(), middleware.UserIDFrom(c), c.Param("id"))
+	seats, err := h.billing.Seats(c.Request.Context(), middleware.UserIDFrom(c), h.billingTenant(c))
 	if err != nil {
 		middleware.Abort(c, err)
 		return
@@ -45,7 +45,7 @@ func (h *handlers) previewDowngrade(c *gin.Context) {
 		middleware.Abort(c, utils.E(utils.CodeValidation))
 		return
 	}
-	preview, err := h.billing.PreviewDowngrade(c.Request.Context(), middleware.UserIDFrom(c), c.Param("id"), body.PlanID, body.Seats)
+	preview, err := h.billing.PreviewDowngrade(c.Request.Context(), middleware.UserIDFrom(c), h.billingTenant(c), body.PlanID, body.Seats)
 	if err != nil {
 		middleware.Abort(c, err)
 		return

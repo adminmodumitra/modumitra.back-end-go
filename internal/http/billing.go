@@ -1,6 +1,8 @@
 package httpapi
 
 import (
+	"strings"
+
 	"github.com/Danish-13-Khan/backend-cabinet/internal/models/dto"
 
 	"github.com/gin-gonic/gin"
@@ -8,6 +10,13 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/http/middleware"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
+
+func (h *handlers) billingTenant(c *gin.Context) string {
+	if id := c.Param("id"); id != "" {
+		return id
+	}
+	return strings.TrimSpace(c.GetHeader(utils.HeaderOrganization))
+}
 
 func (h *handlers) requireBilling(c *gin.Context) bool {
 	if h.billing == nil {
@@ -43,7 +52,7 @@ func (h *handlers) getSubscription(c *gin.Context) {
 	if !h.requireBilling(c) {
 		return
 	}
-	sub, err := h.billing.GetSubscription(c.Request.Context(), middleware.UserIDFrom(c), c.Param("id"))
+	sub, err := h.billing.GetSubscription(c.Request.Context(), middleware.UserIDFrom(c), h.billingTenant(c))
 	if err != nil {
 		middleware.Abort(c, err)
 		return
@@ -67,7 +76,7 @@ func (h *handlers) checkoutSession(c *gin.Context) {
 		middleware.Abort(c, utils.E(utils.CodeValidation))
 		return
 	}
-	sess, err := h.billing.Checkout(c.Request.Context(), middleware.UserIDFrom(c), c.Param("id"), body.PlanID, body.SuccessURL, body.CancelURL)
+	sess, err := h.billing.Checkout(c.Request.Context(), middleware.UserIDFrom(c), h.billingTenant(c), body.PlanID, body.SuccessURL, body.CancelURL)
 	if err != nil {
 		middleware.Abort(c, err)
 		return
@@ -93,7 +102,7 @@ func (h *handlers) portalSession(c *gin.Context) {
 		middleware.Abort(c, utils.E(utils.CodeValidation))
 		return
 	}
-	sess, err := h.billing.Portal(c.Request.Context(), middleware.UserIDFrom(c), c.Param("id"), body.ReturnURL)
+	sess, err := h.billing.Portal(c.Request.Context(), middleware.UserIDFrom(c), h.billingTenant(c), body.ReturnURL)
 	if err != nil {
 		middleware.Abort(c, err)
 		return

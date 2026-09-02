@@ -22,6 +22,7 @@ type Service struct {
 	ids      IDGen
 	cfg      Settings
 	outbox   outbox.Writer
+	personal PersonalProvisioner
 }
 
 func NewService(
@@ -72,6 +73,8 @@ func NewService(
 		outbox:   ob,
 	}
 }
+
+func (s *Service) SetPersonalProvisioner(p PersonalProvisioner) { s.personal = p }
 
 // NewMemoryService builds a service with in-memory repos and a recording mailer.
 func NewMemoryService(cfg Settings) (*Service, *RecordingMailer, *Memory) {

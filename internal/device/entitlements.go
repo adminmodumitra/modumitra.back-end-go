@@ -28,8 +28,22 @@ func (s *Service) Capabilities(ctx context.Context, userID, orgID string) (*Capa
 	if userID == "" {
 		return nil, utils.E(utils.CodeUnauthenticated)
 	}
-	if strings.TrimSpace(orgID) == "" {
-		return nil, utils.E(utils.CodeValidation).WithDetails(map[string]any{"field": "organization_id"})
+	now := s.clock.Now().UTC()
+	personalPlan, personalStatus := PlanNone, SubNone
+	if s.planLookup != nil {
+		p, st, err := s.planLookup.PlanForOwner(ctx, "user", userID)
+		if err != nil {
+			return nil, err
+		}
+		personalPlan, personalStatus = p, st
+	}
+	personalCaps := Intersect("owner", personalPlan)
+	orgID = strings.TrimSpace(orgID)
+	if orgID == "" {
+		return &CapabilitiesResult{
+			UserID: userID, Plan: personalPlan, SubscriptionStatus: personalStatus,
+			Capabilities: personalCaps, IssuedAt: now,
+		}, nil
 	}
 	if s.orgs == nil {
 		return nil, utils.E(utils.CodeServiceUnavailable)
@@ -44,16 +58,17 @@ func (s *Service) Capabilities(ctx context.Context, userID, orgID string) (*Capa
 	if !m.Active() {
 		return nil, utils.E(utils.CodeNotFound)
 	}
-	now := s.clock.Now().UTC()
 	plan, status := planOf(o, now)
+	if s.planLookup != nil {
+		if p, st, err := s.planLookup.PlanForOwner(ctx, "organization", orgID); err != nil {
+			return nil, err
+		} else if p != PlanNone {
+			plan, status = p, st
+		}
+	}
 	return &CapabilitiesResult{
-		UserID:             userID,
-		OrganizationID:     o.ID,
-		Role:               m.Role,
-		MembershipStatus:   m.Status,
-		Plan:               plan,
-		SubscriptionStatus: status,
-		Capabilities:       Intersect(m.Role, plan),
-		IssuedAt:           now,
+		UserID: userID, OrganizationID: o.ID, Role: m.Role, MembershipStatus: m.Status,
+		Plan: plan, SubscriptionStatus: status,
+		Capabilities: Union(personalCaps, Intersect(m.Role, plan)), IssuedAt: now,
 	}, nil
 }

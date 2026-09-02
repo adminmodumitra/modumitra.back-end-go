@@ -6,25 +6,31 @@ import (
 )
 
 type Memory struct {
-	mu       sync.Mutex
-	plans    map[string]*Plan
-	subs     map[string]*Subscription
-	subsOrg  map[string]*Subscription
-	invoices map[string]*Invoice
-	invProv  map[string]*Invoice
-	events   map[string]*Event
-	evtProv  map[string]*Event
+	mu            sync.Mutex
+	plans         map[string]*Plan
+	accounts      map[string]*BillingAccount
+	accountsOwner map[string]*BillingAccount
+	subs          map[string]*Subscription
+	subsOrg       map[string]*Subscription
+	subsAccount   map[string]*Subscription
+	invoices      map[string]*Invoice
+	invProv       map[string]*Invoice
+	events        map[string]*Event
+	evtProv       map[string]*Event
 }
 
 func NewMemory() *Memory {
 	m := &Memory{
-		plans:    map[string]*Plan{},
-		subs:     map[string]*Subscription{},
-		subsOrg:  map[string]*Subscription{},
-		invoices: map[string]*Invoice{},
-		invProv:  map[string]*Invoice{},
-		events:   map[string]*Event{},
-		evtProv:  map[string]*Event{},
+		plans:         map[string]*Plan{},
+		accounts:      map[string]*BillingAccount{},
+		accountsOwner: map[string]*BillingAccount{},
+		subs:          map[string]*Subscription{},
+		subsOrg:       map[string]*Subscription{},
+		subsAccount:   map[string]*Subscription{},
+		invoices:      map[string]*Invoice{},
+		invProv:       map[string]*Invoice{},
+		events:        map[string]*Event{},
+		evtProv:       map[string]*Event{},
 	}
 	for i := range SeedPlans() {
 		p := SeedPlans()[i]
@@ -38,6 +44,7 @@ func (m *Memory) InTx(ctx context.Context, fn func(context.Context) error) error
 }
 
 func (m *Memory) Plans() *MemPlans       { return &MemPlans{Memory: m} }
+func (m *Memory) Accounts() *MemAccounts { return &MemAccounts{Memory: m} }
 func (m *Memory) Subs() *MemSubs         { return &MemSubs{Memory: m} }
 func (m *Memory) Invoices() *MemInvoices { return &MemInvoices{Memory: m} }
 func (m *Memory) Events() *MemEvents     { return &MemEvents{Memory: m} }
@@ -108,6 +115,10 @@ func cloneEvent(e *Event) *Event {
 		return nil
 	}
 	cp := *e
+	if e.BillingAccountID != nil {
+		s := *e.BillingAccountID
+		cp.BillingAccountID = &s
+	}
 	if e.OrganizationID != nil {
 		s := *e.OrganizationID
 		cp.OrganizationID = &s

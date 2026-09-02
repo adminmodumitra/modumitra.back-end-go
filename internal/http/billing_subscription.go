@@ -23,7 +23,7 @@ func (h *handlers) cancelSubscription(c *gin.Context) {
 		return
 	}
 	atEnd := body.AtPeriodEnd != nil && *body.AtPeriodEnd
-	sub, err := h.billing.Cancel(c.Request.Context(), middleware.UserIDFrom(c), c.Param("id"), atEnd)
+	sub, err := h.billing.Cancel(c.Request.Context(), middleware.UserIDFrom(c), h.billingTenant(c), atEnd)
 	if err != nil {
 		middleware.Abort(c, err)
 		return
@@ -42,7 +42,7 @@ func (h *handlers) resumeSubscription(c *gin.Context) {
 	if !requireIdempotencyKey(c) {
 		return
 	}
-	sub, err := h.billing.Resume(c.Request.Context(), middleware.UserIDFrom(c), c.Param("id"))
+	sub, err := h.billing.Resume(c.Request.Context(), middleware.UserIDFrom(c), h.billingTenant(c))
 	if err != nil {
 		middleware.Abort(c, err)
 		return

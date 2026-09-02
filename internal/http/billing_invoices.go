@@ -20,7 +20,7 @@ func (h *handlers) listInvoices(c *gin.Context) {
 		middleware.Abort(c, err)
 		return
 	}
-	items, next, err := h.billing.ListInvoices(c.Request.Context(), middleware.UserIDFrom(c), c.Param("id"), c.Query("status"), c.Query("cursor"), limit)
+	items, next, err := h.billing.ListInvoices(c.Request.Context(), middleware.UserIDFrom(c), h.billingTenant(c), c.Query("status"), c.Query("cursor"), limit)
 	if err != nil {
 		middleware.Abort(c, err)
 		return
@@ -41,7 +41,7 @@ func (h *handlers) getInvoice(c *gin.Context) {
 	if !h.requireBilling(c) {
 		return
 	}
-	inv, err := h.billing.GetInvoice(c.Request.Context(), middleware.UserIDFrom(c), c.Param("id"), c.Param("invoiceId"))
+	inv, err := h.billing.GetInvoice(c.Request.Context(), middleware.UserIDFrom(c), h.billingTenant(c), c.Param("invoiceId"))
 	if err != nil {
 		middleware.Abort(c, err)
 		return

@@ -32,7 +32,11 @@ func (h *handlers) meCapabilities(c *gin.Context) {
 	if !h.requireDevices(c) {
 		return
 	}
-	res, err := h.devices.Capabilities(c.Request.Context(), middleware.UserIDFrom(c), strings.TrimSpace(c.Query("organization_id")))
+	orgID := strings.TrimSpace(c.GetHeader(utils.HeaderOrganization))
+	if orgID == "" {
+		orgID = strings.TrimSpace(c.Query("organization_id"))
+	}
+	res, err := h.devices.Capabilities(c.Request.Context(), middleware.UserIDFrom(c), orgID)
 	if err != nil {
 		middleware.Abort(c, err)
 		return

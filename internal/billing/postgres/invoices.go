@@ -40,12 +40,20 @@ func (r *InvoiceRepo) GetByProviderInvoiceID(ctx context.Context, providerInvoic
 	return invFromModel(&m), nil
 }
 
+func (r *InvoiceRepo) ListByAccount(ctx context.Context, accountID, status, cursor string, limit int) ([]billing.Invoice, string, error) {
+	return r.list(ctx, "billing_account_id = ?", accountID, status, cursor, limit)
+}
+
 func (r *InvoiceRepo) ListByOrg(ctx context.Context, orgID, status, cursor string, limit int) ([]billing.Invoice, string, error) {
+	return r.list(ctx, "organization_id = ?", orgID, status, cursor, limit)
+}
+
+func (r *InvoiceRepo) list(ctx context.Context, col, id, status, cursor string, limit int) ([]billing.Invoice, string, error) {
 	ct, cid, err := billing.DecodeCursor(cursor)
 	if err != nil {
 		return nil, "", err
 	}
-	q := use(ctx, r.db).Model(&tables.Invoice{}).Where("organization_id = ?", orgID)
+	q := use(ctx, r.db).Model(&tables.Invoice{}).Where(col, id)
 	if status != "" {
 		q = q.Where("status = ?", status)
 	}

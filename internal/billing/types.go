@@ -40,6 +40,7 @@ const (
 	EventCheckoutCompleted = "checkout.session.completed"
 	EventInvoicePaid       = "invoice.paid"
 
+	PrefixAccount  = "ba_"
 	PrefixSub      = "sub_"
 	PrefixInvoice  = "invc_"
 	PrefixEvent    = "bev_"

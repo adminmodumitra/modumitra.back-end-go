@@ -115,6 +115,7 @@ func (p *FakeProvider) CompletedPayload(sessionID string) ([]byte, error) {
 		"data": map[string]any{
 			"object": map[string]any{
 				"id":                  rec.Session.ID,
+				"billing_account_id":  rec.Input.BillingAccountID,
 				"organization_id":     rec.Input.OrganizationID,
 				"plan_id":             rec.Input.PlanID,
 				"customer":            rec.Session.CustomerID,

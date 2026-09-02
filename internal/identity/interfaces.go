@@ -72,3 +72,8 @@ type IDGen interface {
 type TxRunner interface {
 	InTx(ctx context.Context, fn func(ctx context.Context) error) error
 }
+
+// PersonalProvisioner creates a user-owned billing account + trial. Implemented by billing.
+type PersonalProvisioner interface {
+	EnsurePersonal(ctx context.Context, userID string) error
+}

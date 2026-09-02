@@ -1,7 +1,6 @@
 package billing
 
 import (
-	"context"
 	"errors"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
@@ -12,6 +11,7 @@ import (
 
 type Service struct {
 	plans    PlanRepo
+	accounts AccountRepo
 	subs     SubscriptionRepo
 	invoices InvoiceRepo
 	events   EventRepo
@@ -29,6 +29,7 @@ type Service struct {
 
 func NewService(
 	plans PlanRepo,
+	accounts AccountRepo,
 	subs SubscriptionRepo,
 	invoices InvoiceRepo,
 	events EventRepo,
@@ -56,7 +57,7 @@ func NewService(
 		cfg.Provider = provider.Name()
 	}
 	return &Service{
-		plans: plans, subs: subs, invoices: invoices, events: events,
+		plans: plans, accounts: accounts, subs: subs, invoices: invoices, events: events,
 		provider: provider, orgs: orgs, members: members, invites: invites,
 		users: users, tx: tx, clock: clock, ids: ids, cfg: cfg, outbox: ob,
 	}
@@ -68,7 +69,7 @@ func NewMemoryService(orgs Organizations, members Members, invites Invites, user
 	if cfg.Provider == "" {
 		cfg.Provider = ProviderFake
 	}
-	svc := NewService(mem.Plans(), mem.Subs(), mem.Invoices(), mem.Events(), fp, orgs, members, invites, users, mem, SystemClock{}, NewIDGen(), cfg, outbox.NewMemoryWriter())
+	svc := NewService(mem.Plans(), mem.Accounts(), mem.Subs(), mem.Invoices(), mem.Events(), fp, orgs, members, invites, users, mem, SystemClock{}, NewIDGen(), cfg, outbox.NewMemoryWriter())
 	return svc, mem, fp
 }
 
@@ -80,49 +81,4 @@ func mapRepoErr(err error) error {
 		return utils.E(utils.CodeNotFound)
 	}
 	return utils.From(err)
-}
-
-func (s *Service) loadVisible(ctx context.Context, actorID, orgID string) (*org.Organization, *org.Membership, error) {
-	if actorID == "" {
-		return nil, nil, utils.E(utils.CodeUnauthenticated)
-	}
-	o, err := s.orgs.GetByID(ctx, orgID)
-	if err != nil {
-		return nil, nil, mapRepoErr(err)
-	}
-	if o.Deleted() {
-		return nil, nil, utils.E(utils.CodeNotFound)
-	}
-	m, err := s.members.GetByOrgUser(ctx, orgID, actorID)
-	if err != nil {
-		return nil, nil, mapRepoErr(err)
-	}
-	if !m.Active() {
-		return nil, nil, utils.E(utils.CodeNotFound)
-	}
-	return o, m, nil
-}
-
-func requireRead(m *org.Membership) error {
-	if m == nil {
-		return utils.E(utils.CodeNotFound)
-	}
-	switch m.Role {
-	case org.RoleOwner, org.RoleAdmin, org.RoleBillingAdmin:
-		return nil
-	default:
-		return utils.E(utils.CodeForbidden)
-	}
-}
-
-func requireWrite(m *org.Membership) error {
-	if m == nil {
-		return utils.E(utils.CodeNotFound)
-	}
-	switch m.Role {
-	case org.RoleOwner, org.RoleBillingAdmin:
-		return nil
-	default:
-		return utils.E(utils.CodeForbidden)
-	}
 }

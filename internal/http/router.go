@@ -18,6 +18,15 @@ func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, 
 	r := gin.New()
 	_ = r.SetTrustedProxies(nil)
 	h := &handlers{cfg: cfg, pinger: pinger, ident: ident, orgs: orgs, devices: devices, billing: bills, sso: ssoSvc}
+	if ident != nil && bills != nil {
+		ident.SetPersonalProvisioner(billing.Provisioner{Service: bills})
+	}
+	if orgs != nil && bills != nil {
+		orgs.SetOrgProvisioner(billing.Provisioner{Service: bills})
+	}
+	if devices != nil && bills != nil {
+		devices.SetPlanLookup(bills)
+	}
 
 	// Process-wide only: not limiters. Needed so healthz still has request_id/trace_id.
 	r.Use(middleware.RequestID())
@@ -94,6 +103,15 @@ func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, 
 		authed.DELETE("/v1/devices/:id", h.deleteDevice)
 		authed.GET("/v1/organizations/:id/entitlements", h.orgEntitlements)
 		authed.GET("/v1/billing/plans", h.listPlans)
+		authed.GET("/v1/billing/subscription", h.getSubscription)
+		authed.POST("/v1/billing/checkout-session", h.checkoutSession)
+		authed.POST("/v1/billing/portal-session", h.portalSession)
+		authed.POST("/v1/billing/subscription/cancel", h.cancelSubscription)
+		authed.POST("/v1/billing/subscription/resume", h.resumeSubscription)
+		authed.GET("/v1/billing/invoices", h.listInvoices)
+		authed.GET("/v1/billing/invoices/:invoiceId", h.getInvoice)
+		authed.GET("/v1/billing/seats", h.getSeats)
+		authed.POST("/v1/billing/seats/preview-downgrade", h.previewDowngrade)
 		authed.GET("/v1/organizations/:id/subscription", h.getSubscription)
 		authed.POST("/v1/organizations/:id/checkout-session", h.checkoutSession)
 		authed.POST("/v1/organizations/:id/portal-session", h.portalSession)

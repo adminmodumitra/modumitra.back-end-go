@@ -22,7 +22,6 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (*User, error)
 	if len(in.Password) < minPasswordLen {
 		return nil, utils.E(utils.CodeWeakPassword)
 	}
-
 	hash, err := s.hasher.Hash(ctx, in.Password)
 	if err != nil {
 		return nil, utils.Generic(err)
@@ -60,7 +59,13 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (*User, error)
 		if err := s.emails.Insert(ctx, et); err != nil {
 			return err
 		}
-		return outbox.Enqueue(ctx, s.outbox, outbox.UserCreated(ctx, u.ID, now))
+		if err := outbox.Enqueue(ctx, s.outbox, outbox.UserCreated(ctx, u.ID, now)); err != nil {
+			return err
+		}
+		if s.personal != nil {
+			return s.personal.EnsurePersonal(ctx, u.ID)
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, mapRepoErr(err)

@@ -34,6 +34,7 @@ type Plan struct {
 
 type Subscription struct {
 	ID                     string
+	BillingAccountID       string
 	OrganizationID         string
 	PlanID                 string
 	PlanCode               string
@@ -53,6 +54,7 @@ type Subscription struct {
 
 type Invoice struct {
 	ID                string
+	BillingAccountID  string
 	OrganizationID    string
 	SubscriptionID    *string
 	Provider          string
@@ -72,18 +74,19 @@ type Invoice struct {
 }
 
 type Event struct {
-	ID              string
-	Provider        string
-	ProviderEventID string
-	Type            string
-	OrganizationID  *string
-	SubscriptionID  *string
-	Status          string
-	PayloadDigest   string
-	Summary         map[string]any
-	Error           string
-	ProcessedAt     *time.Time
-	CreatedAt       time.Time
+	ID               string
+	Provider         string
+	ProviderEventID  string
+	Type             string
+	BillingAccountID *string
+	OrganizationID   *string
+	SubscriptionID   *string
+	Status           string
+	PayloadDigest    string
+	Summary          map[string]any
+	Error            string
+	ProcessedAt      *time.Time
+	CreatedAt        time.Time
 }
 
 type CheckoutSession struct {

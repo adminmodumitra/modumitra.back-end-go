@@ -5,7 +5,7 @@
 **API twin:** [`API_CONTRACTS_V1.md`](./API_CONTRACTS_V1.md) (64 unique method+path pairs) and [`openapi-v1.yaml`](./openapi-v1.yaml)  
 **Database:** `cabinet_studio`  
 **Schema:** `public`  
-**Tables:** 19 (no extras in v1)  
+**Tables:** 20 (no extras in v1)  
 **Baseline date:** 2026-09-01  
 **Status:** Approved schema for implementation; not evidence that tables are deployed  
 
@@ -21,12 +21,12 @@ Machine-readable companion: [`schema-v1.json`](./schema-v1.json).
 | Engine | PostgreSQL **16+** (managed: Neon or AWS RDS). MongoDB is **not** used. |
 | Database name | `cabinet_studio` |
 | Schema | `public` |
-| Tables | **19** — same names as the former document-store collections |
+| Tables | **20** — 19 former collections plus `billing_accounts` |
 | API routes | **64** unique method+path pairs (unchanged) |
 | Baseline | **2026-09-01** |
 | Public / row primary key | `public_id TEXT PRIMARY KEY` with opaque prefixed strings (`usr_`, `org_`, …). **Do not** use `SERIAL` / `BIGSERIAL` as public API ids. Internal bigserial is not used in v1. |
 | Timestamps | `TIMESTAMPTZ NOT NULL DEFAULT now()`, stored UTC. JSON wire format is ISO-8601 with `Z`. Set `timezone = 'UTC'` on connections. |
-| Enumerations | **TEXT + named CHECK** constraints (not PostgreSQL `ENUM` types). CHECK is easier to migrate (`ALTER TABLE … DROP/ADD CONSTRAINT`) than `ALTER TYPE`. Choice is consistent on all 19 tables. |
+| Enumerations | **TEXT + named CHECK** constraints (not PostgreSQL `ENUM` types). CHECK is easier to migrate (`ALTER TABLE … DROP/ADD CONSTRAINT`) than `ALTER TYPE`. Choice is consistent on all 20 tables. |
 | Field names | `snake_case` (SQL and API) |
 | Tenant isolation field | `organization_id` = `organizations.public_id` (`org_…`) |
 | Referential integrity | Real `FOREIGN KEY` constraints (see §1.6). Application transactions still required for multi-row invariants (last owner, seat counts, refresh-family revoke). |
@@ -56,6 +56,7 @@ Each table CHECKs `public_id ~ '^<prefix>_'`.
 | `usr_` | `users` | yes (`id`) |
 | `oid_` | `oauth_identities` | no (addressed by `provider`) |
 | `org_` | `organizations` | yes |
+| `ba_` | `billing_accounts` | no (addressed via owner) |
 | `mbr_` | `memberships` | no (paths use `userId`) |
 | `inv_` | `invitations` | yes |
 | `dev_` | `devices` | yes |
@@ -90,7 +91,7 @@ Raw one-time secrets (never persisted):
 Every row that belongs to a cabinet business **must** include `organization_id` (`org_…` string) except where noted nullable.
 
 **Tenant-scoped (always have `organization_id` except documented nullables):**  
-`organizations` (self id), `memberships`, `invitations`, `subscriptions`, `invoices`, `billing_events` (nullable if provider event arrives before org map), `entitlements` (nullable only when the user has no org yet), `audit_events` (nullable FK), `outbox` (partition key is usually org, no FK).
+`organizations` (self id), `memberships`, `invitations`, `billing_accounts` (org-owned rows; personal accounts have `owner_type=user`), `subscriptions` (`organization_id` NULL for personal), `invoices` (`organization_id` NULL for personal), `billing_events` (nullable if provider event arrives before account/org map), `entitlements` (nullable when the user has no org; personal entitlements may have `organization_id` null), `audit_events` (nullable FK), `outbox` (partition key is usually org, no FK).
 
 **User-owned / global (no required `organization_id`):**  
 `users`, `oauth_identities`, `devices`, `sessions`, `email_tokens`, `oauth_states`, `device_codes`, `data_exports`, `idempotency_keys`, `plans`.
@@ -129,7 +130,7 @@ Never log raw secrets. Never store provider OAuth access/refresh tokens.
 
 ### 1.6 Foreign keys (real CONSTRAINT)
 
-All FKs reference `public_id`. Count: **28**.
+All FKs reference `public_id`. Count: **31**.
 
 | Constraint | From | To | ON DELETE |
 | --- | --- | --- | --- |
@@ -148,10 +149,13 @@ All FKs reference `public_id`. Count: **28**.
 | `fk_email_tokens_user_id` | `email_tokens.user_id` | `users(public_id)` | CASCADE |
 | `fk_oauth_states_user_id` | `oauth_states.user_id` | `users(public_id)` | CASCADE |
 | `fk_device_codes_user_id` | `device_codes.user_id` | `users(public_id)` | SET NULL |
-| `fk_subscriptions_organization_id` | `subscriptions.organization_id` | `organizations(public_id)` | RESTRICT (**UNIQUE**) |
+| `fk_subscriptions_billing_account_id` | `subscriptions.billing_account_id` | `billing_accounts(public_id)` | RESTRICT (**UNIQUE**) |
+| `fk_subscriptions_organization_id` | `subscriptions.organization_id` | `organizations(public_id)` | RESTRICT (nullable denorm; not unique) |
 | `fk_subscriptions_plan_id` | `subscriptions.plan_id` | `plans(public_id)` | RESTRICT |
-| `fk_invoices_organization_id` | `invoices.organization_id` | `organizations(public_id)` | RESTRICT |
+| `fk_invoices_billing_account_id` | `invoices.billing_account_id` | `billing_accounts(public_id)` | RESTRICT |
+| `fk_invoices_organization_id` | `invoices.organization_id` | `organizations(public_id)` | RESTRICT (nullable denorm) |
 | `fk_invoices_subscription_id` | `invoices.subscription_id` | `subscriptions(public_id)` | SET NULL |
+| `fk_billing_events_billing_account_id` | `billing_events.billing_account_id` | `billing_accounts(public_id)` | SET NULL (nullable) |
 | `fk_billing_events_organization_id` | `billing_events.organization_id` | `organizations(public_id)` | SET NULL (nullable) |
 | `fk_billing_events_subscription_id` | `billing_events.subscription_id` | `subscriptions(public_id)` | SET NULL |
 | `fk_entitlements_user_id` | `entitlements.user_id` | `users(public_id)` | CASCADE |
@@ -185,8 +189,13 @@ erDiagram
   users ||--o{ invitations : invites
   organizations ||--o{ memberships : has
   organizations ||--o{ invitations : issues
-  organizations ||--|{ subscriptions : billed_as
-  organizations ||--o{ invoices : has
+  users ||--o{ billing_accounts : personal
+  organizations ||--o{ billing_accounts : company
+  billing_accounts ||--|{ subscriptions : billed_as
+  billing_accounts ||--o{ invoices : has
+  billing_accounts ||--o{ billing_events : receives
+  organizations ||--o{ subscriptions : denorm
+  organizations ||--o{ invoices : denorm
   organizations ||--o{ billing_events : receives
   organizations ||--o{ entitlements : grants
   organizations ||--o{ audit_events : records
@@ -254,6 +263,13 @@ erDiagram
   }
   plans {
     text public_id PK
+  }
+  billing_accounts {
+    text public_id PK
+    text owner_type
+    text owner_id
+    text provider
+    text provider_customer_id UK
   }
   subscriptions {
     text public_id PK
@@ -1077,9 +1093,21 @@ See seed `plan_studio_monthly` in §5.
 
 ---
 
-### 3.12 `subscriptions`
+### 3.12 `billing_accounts`
 
-**Purpose.** Normalized commercial agreement for **one organization** (unique `organization_id`). Provider is Stripe or the local `fake` adapter. **No card data.** Checkout completion does not grant access — this row, updated from verified webhooks, does (`BIL-002`).
+**Purpose.** Subscriber for billing. A **user** owns a personal account (`owner_type=user`) and an **organization** owns a separate company account (`owner_type=organization`). `owner_id` is polymorphic (usr_… or org_…); **no FK** to `users`/`organizations`. Stripe customer id lives on `provider_customer_id` (nullable until live Stripe). Unique `(owner_type, owner_id)`.
+
+**PK.** `public_id TEXT PRIMARY KEY` (`ba_`).
+
+Register writes a personal row. Create-org writes a **new** organization-owned row and does **not** convert the personal account.
+
+Greenfield DDL: [`schema-v1.sql`](./schema-v1.sql). Existing installs: [`schema-v1.migrate-billing-accounts.sql`](./schema-v1.migrate-billing-accounts.sql).
+
+---
+
+### 3.13 `subscriptions`
+
+**Purpose.** Normalized commercial agreement for **one billing account** (unique `billing_account_id`). `organization_id` is a denormalized tenant hint (set for org-owned accounts, NULL for personal) and is **not** unique. Provider is Stripe or the local `fake` adapter. **No card data.** Checkout completion does not grant access — this row, updated from verified webhooks, does (`BIL-002`).
 
 **PK.** `public_id TEXT PRIMARY KEY` (`sub_`).
 
@@ -1088,7 +1116,8 @@ See seed `plan_studio_monthly` in §5.
 | Name | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
 | `public_id` | `TEXT` | NO | `sub_` | API `subscription.id` |
-| `organization_id` | `TEXT` | NO | — | Unique FK → `organizations.public_id` |
+| `billing_account_id` | `TEXT` | NO | — | Unique FK → `billing_accounts.public_id` |
+| `organization_id` | `TEXT` | YES | `NULL` | Denorm tenant hint. NULL for personal. Not unique. |
 | `plan_id` | `TEXT` | NO | — | → `plans.public_id` |
 | `plan_code` | `TEXT` | NO | — | Denormalized `trial` \| `studio` \| `team` \| `enterprise` |
 | `status` | `TEXT` | NO | `'trialing'` | CHECK `trialing` \| `active` \| `past_due` \| `grace` \| `suspended` \| `canceled` |
@@ -1106,13 +1135,14 @@ See seed `plan_studio_monthly` in §5.
 
 Stripe `unpaid` / `incomplete` / `incomplete_expired` are **normalized** into this six-value set (`past_due` / `suspended` / `canceled`) before write. Never persist raw provider enums as `status`.
 
-Org create writes a `trialing` row with `provider='fake'` (or `stripe` later) and **no** `provider_subscription_id`. Paid conversion fills the provider id from a verified webhook, not from checkout return (`BIL-002`).
+Register writes a personal `trialing` row; org create writes a **separate** org-owned `trialing` row. `provider='fake'` (or `stripe` later) and **no** `provider_subscription_id` until a verified webhook (`BIL-002`).
 
 #### Foreign keys
 
 | Constraint | Field | References | ON DELETE |
 | --- | --- | --- | --- |
-| `fk_subscriptions_organization_id` | `organization_id` | `organizations(public_id)` | RESTRICT (UNIQUE) |
+| `fk_subscriptions_billing_account_id` | `billing_account_id` | `billing_accounts(public_id)` | RESTRICT (UNIQUE) |
+| `fk_subscriptions_organization_id` | `organization_id` | `organizations(public_id)` | RESTRICT (nullable) |
 | `fk_subscriptions_plan_id` | `plan_id` | `plans(public_id)` | RESTRICT |
 
 #### Unique / indexes
@@ -1120,7 +1150,7 @@ Org create writes a `trialing` row with `provider='fake'` (or `stripe` later) an
 | Name | Kind | Keys |
 | --- | --- | --- |
 | `subscriptions_pkey` | PK unique | `public_id` |
-| `uniq_subscriptions_organization_id` | UNIQUE | `organization_id` |
+| `uniq_subscriptions_billing_account_id` | UNIQUE | `billing_account_id` |
 | `uniq_subscriptions_provider_subscription_id` | partial unique | `provider_subscription_id` WHERE NOT NULL |
 | `idx_subscriptions_status_period_end` | index | `(status, current_period_end)` |
 | `idx_subscriptions_plan_id` | index | `plan_id` |
@@ -1157,7 +1187,7 @@ Org create writes a `trialing` row with `provider='fake'` (or `stripe` later) an
 
 ---
 
-### 3.13 `invoices`
+### 3.14 `invoices`
 
 **Purpose.** Local projection of provider invoices for the org billing UI. Provider remains system of record for tax/PDF; we store the summary the desktop needs. No PAN/CVC.
 
@@ -1168,7 +1198,8 @@ Org create writes a `trialing` row with `provider='fake'` (or `stripe` later) an
 | Name | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
 | `public_id` | `TEXT` | NO | `invc_` | API `invoice.id` |
-| `organization_id` | `TEXT` | NO | — | → `organizations.public_id` |
+| `billing_account_id` | `TEXT` | NO | — | → `billing_accounts.public_id` |
+| `organization_id` | `TEXT` | YES | `NULL` | Denorm. NULL for personal. |
 | `subscription_id` | `TEXT` | YES | `NULL` | → `subscriptions.public_id` |
 | `provider` | `TEXT` | NO | — | CHECK `stripe` \| `fake` |
 | `provider_invoice_id` | `TEXT` | NO | — | Unique. Stripe `in_…` |
@@ -1191,7 +1222,8 @@ Never store the raw Stripe invoice object.
 
 | Constraint | Field | References | ON DELETE |
 | --- | --- | --- | --- |
-| `fk_invoices_organization_id` | `organization_id` | `organizations(public_id)` | RESTRICT |
+| `fk_invoices_billing_account_id` | `billing_account_id` | `billing_accounts(public_id)` | RESTRICT |
+| `fk_invoices_organization_id` | `organization_id` | `organizations(public_id)` | RESTRICT (nullable) |
 | `fk_invoices_subscription_id` | `subscription_id` | `subscriptions(public_id)` | SET NULL |
 
 #### Unique / indexes
@@ -1236,7 +1268,7 @@ Never store the raw Stripe invoice object.
 
 ---
 
-### 3.14 `billing_events`
+### 3.15 `billing_events`
 
 **Purpose.** Provider webhook inbox and dedupe log (`BIL-003`). Unique `(provider, provider_event_id)` makes replays 200 no-ops. Payload is **redacted / digested**, never a raw card-bearing object.
 
@@ -1250,7 +1282,8 @@ Never store the raw Stripe invoice object.
 | `provider` | `TEXT` | NO | — | CHECK `stripe` \| `fake` |
 | `provider_event_id` | `TEXT` | NO | — | Stripe `evt_…` |
 | `type` | `TEXT` | NO | — | Provider type, e.g. `invoice.paid` |
-| `organization_id` | `TEXT` | YES | `NULL` | Filled when mapping is known |
+| `billing_account_id` | `TEXT` | YES | `NULL` | Filled when mapping is known |
+| `organization_id` | `TEXT` | YES | `NULL` | Denorm. Filled when mapping is known |
 | `subscription_id` | `TEXT` | YES | `NULL` | |
 | `status` | `TEXT` | NO | `'received'` | CHECK `received` \| `processed` \| `ignored` \| `failed` |
 | `payload_digest` | `TEXT` | NO | — | SHA-256 of **raw** body bytes |
@@ -1265,6 +1298,7 @@ HMAC is verified on the raw body **before** insert. Duplicate key on `(provider,
 
 | Constraint | Field | References | ON DELETE |
 | --- | --- | --- | --- |
+| `fk_billing_events_billing_account_id` | `billing_account_id` | `billing_accounts(public_id)` | SET NULL (nullable) |
 | `fk_billing_events_organization_id` | `organization_id` | `organizations(public_id)` | SET NULL (nullable) |
 | `fk_billing_events_subscription_id` | `subscription_id` | `subscriptions(public_id)` | SET NULL |
 
@@ -1308,7 +1342,7 @@ HMAC is verified on the raw body **before** insert. Duplicate key on `(provider,
 
 ---
 
-### 3.15 `entitlements`
+### 3.16 `entitlements`
 
 **Purpose.** Issued, signed capability snapshots for a user (+ org + optional device). Desktop verifies `signature` and caches the latest valid snapshot (`LIC-001`). Rows are immutable after insert (issue a new row to refresh).
 
@@ -1399,7 +1433,7 @@ Canonical signed payload fields: `user_id`, `organization_id`, `plan`, `subscrip
 
 ---
 
-### 3.16 `audit_events`
+### 3.17 `audit_events`
 
 **Purpose.** Append-only security and commercial audit trail. **No updates. No deletes** (except legal hold / retention jobs outside v1 app code). Metadata is redacted: never credentials, tokens, raw IPs, or provider payloads (`AUT-006`, `BIL-005`).
 
@@ -1472,7 +1506,7 @@ Typical `action` values: `auth.login`, `org.created`, `org.deleted`, `org.owners
 
 ---
 
-### 3.17 `outbox`
+### 3.18 `outbox`
 
 **Purpose.** Transactional outbox. HTTP/webhook handlers insert a row in the **same PostgreSQL transaction** as domain writes. A publisher worker sends to Kafka (or equivalent) and sets `published_at` after ack. Kafka is not the source of truth.
 
@@ -1531,7 +1565,7 @@ No direct HTTP. Written by mutating handlers (org create, invite accept, webhook
 
 ---
 
-### 3.18 `idempotency_keys`
+### 3.19 `idempotency_keys`
 
 **Purpose.** 24-hour replay cache for retryable mutations. Same principal + key + body hash returns the stored response. Same key + different body → `409 idempotency_conflict`.
 
@@ -1596,7 +1630,7 @@ Read/write middleware on every route whose contract marks `Idempotency-Key` requ
 
 ---
 
-### 3.19 `data_exports`
+### 3.20 `data_exports`
 
 **Purpose.** Asynchronous personal-data export jobs (`POST /v1/me/export`). Contains profile, memberships, session **metadata** — not org-owned projects. Archive bytes live in object storage; Postgres stores job state. User-owned.
 
@@ -1671,7 +1705,7 @@ Isolation: `REPEATABLE READ` or `SERIALIZABLE` for refresh-family rotation and l
 | Name | Writes in one txn | Trigger |
 | --- | --- | --- |
 | **Register** | `users` insert + `email_tokens` insert + `idempotency_keys` upsert + optional `outbox` `user.created` | `POST /v1/auth/register` |
-| **Register + org + trial** | Today this is **org-create**, not register. `organizations` insert + `memberships` owner insert + `subscriptions` trialing insert + `audit_events` (`org.created`, `membership.created`, `billing.trial_started`) + `outbox` (same three topics) + `idempotency_keys`. Do **not** call Kafka in-handler. Creator must already exist and be email-verified. Insert **organization first, then membership** (deferred `owner_user_id` FK). If a future combined register+org handler is added, add `users` + `email_tokens` to this same txn. | `POST /v1/organizations` |
+| **Register + org + trial** | Register writes personal `billing_accounts` + trial sub. Org-create writes a **new** org-owned account + trial; it does not convert the personal account. `organizations` insert + `memberships` owner insert + `subscriptions` trialing insert + `audit_events` (`org.created`, `membership.created`, `billing.trial_started`) + `outbox` (same three topics) + `idempotency_keys`. Do **not** call Kafka in-handler. Creator must already exist and be email-verified. Insert **organization first, then membership** (deferred `owner_user_id` FK). If a future combined register+org handler is added, add `users` + `email_tokens` to this same txn. | `POST /v1/organizations` |
 | **Accept invite** | `invitations` → `accepted` + `memberships` upsert `active` + `audit_events` `invitation.accepted` / `membership.created` + `outbox` + `idempotency_keys`. Seat check is a transactional read of memberships + subscription (`SELECT … FOR UPDATE`). | `POST /v1/invitations/{token}/accept` |
 | **Transfer ownership** | `organizations.owner_user_id` + old membership `role=admin` + new membership `role=owner` + `audit_events` `org.ownership_transferred` + `outbox`. Recent-auth check is outside the write set. | `POST /v1/organizations/{id}/transfer-ownership` |
 | **Refresh rotation** | Insert new `sessions` row (same `family_id`) + update presented row (`revoked_at`, `replaced_by_session_id`). **Reuse path:** set `reuse_detected_at` on presented row + `revoked_at=now()` on **all** family members + `audit_events` + `outbox` `auth.refresh_reuse`. Must be serializable vs concurrent refresh. | `POST /v1/auth/refresh` |
@@ -1838,9 +1872,10 @@ Counts **include** primary-key unique indexes (Postgres creates one per `PRIMARY
 | oauth_states | 3 | 2 | 1 |
 | device_codes | 4 | 3 | 1 |
 | plans | 3 | 2 | 0 |
-| subscriptions | 5 | 3 | 0 |
-| invoices | 4 | 2 | 0 |
-| billing_events | 4 | 2 | 0 |
+| billing_accounts | 3 | 0 | 0 |
+| subscriptions | 6 | 3 | 0 |
+| invoices | 5 | 3 | 0 |
+| billing_events | 5 | 3 | 0 |
 | entitlements | 4 | 1 | 0 |
 | audit_events | 5 | 1 | 0 |
 | outbox | 4 | 2 | 0 |
@@ -1848,7 +1883,7 @@ Counts **include** primary-key unique indexes (Postgres creates one per `PRIMARY
 | data_exports | 4 | 2 | 1 |
 | **Total** | **77** | **39** | **5** |
 
-Foreign keys: **28**. Partial uniques added vs the former unique set: `uniq_invitations_org_email_pending`, `uniq_data_exports_user_in_progress`. FK-covering indexes: `idx_invitations_invited_by_user_id`, `idx_sessions_device_id`, `idx_subscriptions_plan_id`, `idx_invoices_subscription_id`.
+Foreign keys: **31**. Partial uniques added vs the former unique set: `uniq_invitations_org_email_pending`, `uniq_data_exports_user_in_progress`. FK-covering indexes: `idx_invitations_invited_by_user_id`, `idx_sessions_device_id`, `idx_subscriptions_plan_id`, `idx_invoices_subscription_id`.
 
 Required-by-contract indexes (must exist; named above):
 
@@ -1860,7 +1895,8 @@ Required-by-contract indexes (must exist; named above):
 - `email_tokens`: `uniq_email_tokens_token_hash`; `idx_email_tokens_expires_at`
 - `oauth_states`: `uniq_oauth_states_state`; `idx_oauth_states_expires_at`
 - `device_codes`: `uniq_device_codes_device_code`, `uniq_device_codes_user_code`; `idx_device_codes_expires_at`
-- `subscriptions`: `uniq_subscriptions_organization_id`; `uniq_subscriptions_provider_subscription_id` (partial)
+- `billing_accounts`: `uniq_billing_accounts_owner`; `uniq_billing_accounts_provider_customer_id` (partial)
+- `subscriptions`: `uniq_subscriptions_billing_account_id`; `uniq_subscriptions_provider_subscription_id` (partial)
 - `billing_events`: `uniq_billing_events_provider_event` `(provider, provider_event_id)`
 - `invoices`: `uniq_invoices_provider_invoice_id`; `idx_invoices_org_created_at`
 - `entitlements`: `idx_entitlements_org_user_issued_at`
@@ -1888,7 +1924,7 @@ Required-by-contract indexes (must exist; named above):
 | Password plaintext or reversible encryption | argon2id only |
 | Stripe webhook raw bodies | `payload_digest` + redacted `summary` |
 | Checkout / portal session secrets | Provider-hosted; API returns URL only, not stored as a table |
-| Cloud project documents / GLB bytes | Local-first files + LATER object storage. Not these 19 tables |
+| Cloud project documents / GLB bytes | Local-first files + LATER object storage. Not these 20 tables |
 | Document-store `_id` ObjectId | Gone. `public_id` is the only row identity |
 
 ---
@@ -1941,12 +1977,12 @@ Ops/public with no durable write: `GET /healthz` (none), `GET /readyz` (connecti
 | 26 | `POST /v1/me/export` | data_exports W, outbox W, idempotency_keys W |
 | 27 | `POST /v1/me/email/change` | users RW, email_tokens W |
 | 28 | `POST /v1/me/email/change/confirm` | email_tokens W, users W, sessions W |
-| 29 | `GET /v1/me/capabilities` | memberships R, subscriptions R, plans R (compute; entitlements optional) |
+| 29 | `GET /v1/me/capabilities` | billing_accounts R, subscriptions R, memberships R, plans R (personal ∪ org; entitlements optional) |
 | 30 | `GET /v1/devices` | devices R |
 | 31 | `POST /v1/devices/activate` | devices W, entitlements W, memberships R, subscriptions R, plans R |
 | 32 | `PATCH /v1/devices/{id}` | devices W |
 | 33 | `DELETE /v1/devices/{id}` | devices W |
-| 34 | `POST /v1/organizations` | organizations W, memberships W, subscriptions W, plans R, audit_events W, outbox W |
+| 34 | `POST /v1/organizations` | organizations W, memberships W, billing_accounts W, subscriptions W, plans R, audit_events W, outbox W |
 | 35 | `GET /v1/organizations` | memberships R, organizations R |
 | 36 | `GET /v1/organizations/{id}` | organizations R, memberships R |
 | 37 | `PATCH /v1/organizations/{id}` | organizations W |
@@ -1993,4 +2029,4 @@ Every org-scoped route also **reads** `memberships` for `API-001`.
 - Backup: Neon PITR / RDS PITR on `cabinet_studio`. `audit_events` and `outbox` are high-value.
 - **Scale:** one primary on managed Postgres (Neon or RDS) is enough for v1. Add a **read replica** later for `GET` heavy paths (plans, invoices list, audit). **Citus is not required** for v1.
 
-_End of schema. Tables documented: **19**. Foreign keys: **28**. Indexes: **77** (unique **39**). Baseline: **2026-09-01**. Matches API_CONTRACTS_V1.md **64** routes._
+_End of schema. Tables documented: **19**. Foreign keys: **31**. Indexes: **77** (unique **39**). Baseline: **2026-09-01**. Matches API_CONTRACTS_V1.md **64** routes._

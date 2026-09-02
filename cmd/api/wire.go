@@ -90,6 +90,7 @@ func wire(ctx context.Context, cfg config.Config, gdb *gorm.DB) wired {
 	}
 	bills := billing.NewService(
 		billingpg.NewPlanRepo(gdb),
+		billingpg.NewAccountRepo(gdb),
 		billingpg.NewSubscriptionRepo(gdb),
 		billingpg.NewInvoiceRepo(gdb),
 		billingpg.NewEventRepo(gdb),

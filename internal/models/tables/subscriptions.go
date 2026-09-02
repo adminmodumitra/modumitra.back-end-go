@@ -4,7 +4,8 @@ import "time"
 
 type Subscription struct {
 	PublicID               string     `gorm:"column:public_id;primaryKey"`
-	OrganizationID         string     `gorm:"column:organization_id"`
+	BillingAccountID       string     `gorm:"column:billing_account_id"`
+	OrganizationID         *string    `gorm:"column:organization_id"`
 	PlanID                 string     `gorm:"column:plan_id"`
 	PlanCode               string     `gorm:"column:plan_code"`
 	Status                 string     `gorm:"column:status"`

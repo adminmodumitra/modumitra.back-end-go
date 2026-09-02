@@ -12,17 +12,18 @@ import (
 )
 
 type Service struct {
-	orgs      OrgRepo
-	members   MemberRepo
-	invites   InvitationRepo
-	users     identity.UserRepo
-	tx        TxRunner
-	mailer    Mailer
-	clock     Clock
-	ids       IDGen
-	tokens    Tokens
-	trialDays int
-	outbox    outbox.Writer
+	orgs        OrgRepo
+	members     MemberRepo
+	invites     InvitationRepo
+	users       identity.UserRepo
+	tx          TxRunner
+	mailer      Mailer
+	clock       Clock
+	ids         IDGen
+	tokens      Tokens
+	trialDays   int
+	outbox      outbox.Writer
+	provisioner OrgProvisioner
 }
 
 func NewService(
@@ -66,6 +67,8 @@ func NewService(
 }
 
 func (s *Service) Outbox() outbox.Writer { return s.outbox }
+
+func (s *Service) SetOrgProvisioner(p OrgProvisioner) { s.provisioner = p }
 
 func NewMemoryService(users identity.UserRepo, trialDays int) (*Service, *RecordingMailer, *Memory) {
 	mem := NewMemory()

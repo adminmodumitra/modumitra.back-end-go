@@ -11,14 +11,15 @@ import (
 )
 
 type Service struct {
-	devices DeviceRepo
-	ents    EntitlementRepo
-	tx      TxRunner
-	orgs    OrgLookup
-	signer  Signer
-	clock   Clock
-	ids     IDGen
-	outbox  outbox.Writer
+	devices    DeviceRepo
+	ents       EntitlementRepo
+	tx         TxRunner
+	orgs       OrgLookup
+	signer     Signer
+	clock      Clock
+	ids        IDGen
+	outbox     outbox.Writer
+	planLookup PlanLookup
 }
 
 func NewService(
@@ -52,6 +53,8 @@ func NewService(
 		outbox:  ob,
 	}
 }
+
+func (s *Service) SetPlanLookup(p PlanLookup) { s.planLookup = p }
 
 func NewMemoryService(orgs OrgLookup, signingKey string) (*Service, *Memory) {
 	mem := NewMemory()

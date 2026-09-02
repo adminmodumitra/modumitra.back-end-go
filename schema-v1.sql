@@ -3,7 +3,7 @@
 -- Canonical DDL for database cabinet_studio, schema public
 -- Engine: PostgreSQL 16+
 -- Baseline: 2026-09-01
--- Tables: 19 (no extras in v1)
+-- Tables: 20 (no extras in v1)
 -- API twin: API_CONTRACTS_V1.md (64 unique method+path pairs)
 --
 -- Apply:
@@ -15,9 +15,10 @@
 -- Conventions:
 --   * public_id TEXT PRIMARY KEY with opaque prefixed ids (usr_ org_ …).
 --     Never serial integers as public API ids. FKs reference public_id.
+--     Prefixes: usr_ org_ ba_ sub_ invc_ bev_ …
 --   * TIMESTAMPTZ stored in UTC. DEFAULT now(). Connection timezone UTC.
 --   * Enumerations are TEXT + named CHECK constraints (easier migrations than
---     PostgreSQL ENUM types). Choice is consistent across all 19 tables.
+--     PostgreSQL ENUM types). Choice is consistent across all 20 tables.
 --   * Soft-delete tenant rows via status/state columns. Physical DELETE is
 --     reserved for TTL-like cleanup jobs (tokens, oauth states, device codes,
 --     idempotency_keys 24h, expired data_exports) and never for tenants.
@@ -429,11 +430,45 @@ CREATE INDEX idx_device_codes_expires_at ON device_codes (expires_at);
 COMMENT ON TABLE device_codes IS 'RFC 8628-style device authorization. device_code equals public_id in v1. user_code is uppercase XXXX-XXXX. Cleanup after 600s.';
 
 -- -----------------------------------------------------------------------------
--- 12. subscriptions  (one per organization — UNIQUE FK)
+-- 12. billing_accounts
+-- Subscriber is a billing account, not the org row.
+-- owner_id is polymorphic (usr_… or org_… per owner_type). No FK to users or
+-- organizations: a polymorphic column cannot reference two parent tables.
+-- UNIQUE (owner_type, owner_id) is the ownership invariant.
+-- Stripe customer id lives on provider_customer_id (nullable until live Stripe).
+-- -----------------------------------------------------------------------------
+CREATE TABLE billing_accounts (
+    public_id              TEXT        PRIMARY KEY,
+    owner_type             TEXT        NOT NULL,
+    owner_id               TEXT        NOT NULL,
+    provider               TEXT        NOT NULL DEFAULT 'fake',
+    provider_customer_id   TEXT,
+    created_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT chk_billing_accounts_public_id CHECK (public_id ~ '^ba_'),
+    CONSTRAINT chk_billing_accounts_owner_type CHECK (owner_type IN ('user', 'organization')),
+    CONSTRAINT chk_billing_accounts_provider CHECK (provider IN ('stripe', 'fake')),
+    CONSTRAINT uniq_billing_accounts_owner UNIQUE (owner_type, owner_id)
+);
+
+CREATE UNIQUE INDEX uniq_billing_accounts_provider_customer_id
+    ON billing_accounts (provider_customer_id)
+    WHERE provider_customer_id IS NOT NULL;
+
+COMMENT ON TABLE billing_accounts IS 'Billing subscriber. One personal account per user (owner_type=user) and one company account per organization (owner_type=organization). owner_id is polymorphic; no FK to users/organizations.';
+COMMENT ON COLUMN billing_accounts.owner_id IS 'Polymorphic: users.public_id when owner_type=user, organizations.public_id when owner_type=organization. No FK.';
+COMMENT ON COLUMN billing_accounts.provider_customer_id IS 'Stripe cus_… / fake id. Unique when present. Nullable until live Stripe.';
+
+-- -----------------------------------------------------------------------------
+-- 13. subscriptions  (one live sub per billing account — UNIQUE billing_account_id)
+-- organization_id is a denormalized tenant hint: set for org-owned accounts,
+-- NULL for personal. Not unique. One live subscription per billing account,
+-- not per org.
 -- -----------------------------------------------------------------------------
 CREATE TABLE subscriptions (
     public_id                   TEXT        PRIMARY KEY,
-    organization_id             TEXT        NOT NULL,
+    billing_account_id          TEXT        NOT NULL,
+    organization_id             TEXT,
     plan_id                     TEXT        NOT NULL,
     plan_code                   TEXT        NOT NULL,
     status                      TEXT        NOT NULL DEFAULT 'trialing',
@@ -455,7 +490,10 @@ CREATE TABLE subscriptions (
     )),
     CONSTRAINT chk_subscriptions_provider CHECK (provider IN ('stripe', 'fake')),
     CONSTRAINT chk_subscriptions_seats CHECK (seats_included >= 0),
-    CONSTRAINT uniq_subscriptions_organization_id UNIQUE (organization_id),
+    CONSTRAINT uniq_subscriptions_billing_account_id UNIQUE (billing_account_id),
+    CONSTRAINT fk_subscriptions_billing_account_id
+        FOREIGN KEY (billing_account_id) REFERENCES billing_accounts (public_id)
+        ON DELETE RESTRICT,
     CONSTRAINT fk_subscriptions_organization_id
         FOREIGN KEY (organization_id) REFERENCES organizations (public_id)
         ON DELETE RESTRICT,
@@ -469,16 +507,20 @@ CREATE UNIQUE INDEX uniq_subscriptions_provider_subscription_id
     WHERE provider_subscription_id IS NOT NULL;
 CREATE INDEX idx_subscriptions_status_period_end ON subscriptions (status, current_period_end);
 CREATE INDEX idx_subscriptions_plan_id ON subscriptions (plan_id);
+CREATE INDEX idx_subscriptions_organization_id ON subscriptions (organization_id) WHERE organization_id IS NOT NULL;
 
-COMMENT ON TABLE subscriptions IS 'Normalized commercial agreement: one organization, one subscription. No card data. Webhook-verified state is source of truth (BIL-002).';
+COMMENT ON TABLE subscriptions IS 'Normalized commercial agreement: one live subscription per billing account (not per org). organization_id is a denormalized tenant hint (NULL for personal). No card data. Webhook-verified state is source of truth (BIL-002).';
 COMMENT ON COLUMN subscriptions.status IS 'Normalized six-value set. Never persist raw Stripe unpaid/incomplete enums.';
+COMMENT ON COLUMN subscriptions.billing_account_id IS 'Subscriber. UNIQUE: one live sub per billing account.';
+COMMENT ON COLUMN subscriptions.organization_id IS 'Denormalized tenant hint. Set for org-owned accounts, NULL for personal. Not unique.';
 
 -- -----------------------------------------------------------------------------
--- 13. invoices
+-- 14. invoices
 -- -----------------------------------------------------------------------------
 CREATE TABLE invoices (
     public_id              TEXT        PRIMARY KEY,
-    organization_id        TEXT        NOT NULL,
+    billing_account_id     TEXT        NOT NULL,
+    organization_id        TEXT,
     subscription_id        TEXT,
     provider               TEXT        NOT NULL,
     provider_invoice_id    TEXT        NOT NULL,
@@ -499,6 +541,9 @@ CREATE TABLE invoices (
     CONSTRAINT chk_invoices_status CHECK (status IN ('draft', 'open', 'paid', 'void', 'uncollectible')),
     CONSTRAINT chk_invoices_currency CHECK (currency = lower(currency) AND char_length(currency) = 3),
     CONSTRAINT uniq_invoices_provider_invoice_id UNIQUE (provider_invoice_id),
+    CONSTRAINT fk_invoices_billing_account_id
+        FOREIGN KEY (billing_account_id) REFERENCES billing_accounts (public_id)
+        ON DELETE RESTRICT,
     CONSTRAINT fk_invoices_organization_id
         FOREIGN KEY (organization_id) REFERENCES organizations (public_id)
         ON DELETE RESTRICT,
@@ -507,20 +552,24 @@ CREATE TABLE invoices (
         ON DELETE SET NULL
 );
 
+CREATE INDEX idx_invoices_account_created_at ON invoices (billing_account_id, created_at DESC);
 CREATE INDEX idx_invoices_org_created_at ON invoices (organization_id, created_at DESC);
 CREATE INDEX idx_invoices_subscription_id ON invoices (subscription_id) WHERE subscription_id IS NOT NULL;
 
-COMMENT ON TABLE invoices IS 'Local projection of provider invoices for the org billing UI. Provider remains system of record for tax/PDF. No PAN/CVC. Never store the raw Stripe invoice object.';
+COMMENT ON TABLE invoices IS 'Local projection of provider invoices for the billing-account UI. organization_id is a denormalized tenant hint (NULL for personal). Provider remains system of record for tax/PDF. No PAN/CVC. Never store the raw Stripe invoice object.';
+COMMENT ON COLUMN invoices.organization_id IS 'Denormalized tenant hint. NULL for personal invoices.';
 
 -- -----------------------------------------------------------------------------
--- 14. billing_events
--- organization_id is nullable: provider event may arrive before org mapping.
+-- 15. billing_events
+-- organization_id and billing_account_id are nullable: provider event may
+-- arrive before account/org mapping.
 -- -----------------------------------------------------------------------------
 CREATE TABLE billing_events (
     public_id            TEXT        PRIMARY KEY,
     provider             TEXT        NOT NULL,
     provider_event_id    TEXT        NOT NULL,
     type                 TEXT        NOT NULL,
+    billing_account_id   TEXT,
     organization_id      TEXT,
     subscription_id      TEXT,
     status               TEXT        NOT NULL DEFAULT 'received',
@@ -533,6 +582,9 @@ CREATE TABLE billing_events (
     CONSTRAINT chk_billing_events_provider CHECK (provider IN ('stripe', 'fake')),
     CONSTRAINT chk_billing_events_status CHECK (status IN ('received', 'processed', 'ignored', 'failed')),
     CONSTRAINT uniq_billing_events_provider_event UNIQUE (provider, provider_event_id),
+    CONSTRAINT fk_billing_events_billing_account_id
+        FOREIGN KEY (billing_account_id) REFERENCES billing_accounts (public_id)
+        ON DELETE SET NULL,
     CONSTRAINT fk_billing_events_organization_id
         FOREIGN KEY (organization_id) REFERENCES organizations (public_id)
         ON DELETE SET NULL,
@@ -541,6 +593,7 @@ CREATE TABLE billing_events (
         ON DELETE SET NULL
 );
 
+CREATE INDEX idx_billing_events_account_created_at ON billing_events (billing_account_id, created_at DESC);
 CREATE INDEX idx_billing_events_org_created_at ON billing_events (organization_id, created_at DESC);
 CREATE INDEX idx_billing_events_status_created_at ON billing_events (status, created_at);
 
@@ -549,7 +602,7 @@ COMMENT ON COLUMN billing_events.payload_digest IS 'SHA-256 of raw body bytes. H
 COMMENT ON COLUMN billing_events.summary IS 'JSONB redacted ids/amounts only.';
 
 -- -----------------------------------------------------------------------------
--- 15. entitlements
+-- 16. entitlements
 -- -----------------------------------------------------------------------------
 CREATE TABLE entitlements (
     public_id              TEXT        PRIMARY KEY,
@@ -597,7 +650,7 @@ COMMENT ON COLUMN entitlements.capabilities IS 'JSONB role ∩ plan ∩ subscrip
 COMMENT ON COLUMN entitlements.signature IS 'Base64 over canonical snapshot excluding signature.';
 
 -- -----------------------------------------------------------------------------
--- 16. audit_events  (append-only)
+-- 17. audit_events  (append-only)
 -- organization_id and actor_user_id are nullable FKs.
 -- API field actor_id maps to actor_user_id.
 -- -----------------------------------------------------------------------------
@@ -640,7 +693,7 @@ COMMENT ON COLUMN audit_events.metadata IS 'JSONB small redacted object.';
 REVOKE UPDATE, DELETE ON audit_events FROM PUBLIC;
 
 -- -----------------------------------------------------------------------------
--- 17. outbox
+-- 18. outbox
 -- No FK: partition_key is typically an org or user public_id string; the org
 -- may be deleted after enqueue. Kafka is downstream, not source of truth.
 -- -----------------------------------------------------------------------------
@@ -669,7 +722,7 @@ COMMENT ON COLUMN outbox.partition_key IS 'Usually organization public_id string
 COMMENT ON COLUMN outbox.payload IS 'Marshaled cabinet.v1.Envelope protobuf bytes (public ids, no secrets). Never JSON.';
 
 -- -----------------------------------------------------------------------------
--- 18. idempotency_keys
+-- 19. idempotency_keys
 -- Cleanup job: DELETE WHERE created_at < now() - interval '24 hours'.
 -- principal is usr_… when authenticated, else ip:<sha256> or wh:stripe.
 -- No FK: principal is not always a user id.
@@ -696,7 +749,7 @@ CREATE INDEX idx_idempotency_keys_created_at ON idempotency_keys (created_at);
 COMMENT ON TABLE idempotency_keys IS '24-hour replay cache for retryable mutations. Same principal+key+body hash returns stored response. Same key + different body → 409 idempotency_conflict. Never persist raw refresh tokens in response_body.';
 
 -- -----------------------------------------------------------------------------
--- 19. data_exports
+-- 20. data_exports
 -- Cleanup job: DELETE WHERE expires_at IS NOT NULL AND expires_at < now().
 -- -----------------------------------------------------------------------------
 CREATE TABLE data_exports (
@@ -731,7 +784,7 @@ COMMENT ON TABLE data_exports IS 'Asynchronous personal-data export jobs (POST /
 -- =============================================================================
 -- Seed plans (insert-once; public_id values are stable)
 -- GET /v1/billing/plans returns sellable=true AND active=true (studio + team).
--- Trial is used internally when creating an organization (not in public catalog).
+-- Trial is used internally when registering a user (personal) or creating an organization (not in public catalog).
 -- Enterprise is sales-led and is NOT seeded.
 -- =============================================================================
 INSERT INTO plans (

@@ -41,7 +41,13 @@ func (s *Service) CreateUser(ctx context.Context, u *User) error {
 		if err := s.users.Insert(ctx, u); err != nil {
 			return err
 		}
-		return outbox.Enqueue(ctx, s.outbox, outbox.UserCreated(ctx, u.ID, now))
+		if err := outbox.Enqueue(ctx, s.outbox, outbox.UserCreated(ctx, u.ID, now)); err != nil {
+			return err
+		}
+		if s.personal != nil {
+			return s.personal.EnsurePersonal(ctx, u.ID)
+		}
+		return nil
 	})
 	if err != nil {
 		return mapRepoErr(err)

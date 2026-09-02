@@ -77,7 +77,12 @@ func (s *Service) Create(ctx context.Context, actorID, name string) (*Organizati
 			return err
 		}
 		if o.TrialEndsAt != nil {
-			return outbox.Enqueue(ctx, s.outbox, outbox.BillingTrialStarted(ctx, o.ID, actorID, *o.TrialEndsAt, now))
+			if err := outbox.Enqueue(ctx, s.outbox, outbox.BillingTrialStarted(ctx, o.ID, actorID, *o.TrialEndsAt, now)); err != nil {
+				return err
+			}
+		}
+		if s.provisioner != nil {
+			return s.provisioner.EnsureOrganization(ctx, o.ID)
 		}
 		return nil
 	})

@@ -53,3 +53,21 @@ func Intersect(role, plan string) Capabilities {
 	}
 	return c
 }
+
+func Union(a, b Capabilities) Capabilities {
+	max := func(x, y int) int {
+		if x > y {
+			return x
+		}
+		return y
+	}
+	return Capabilities{
+		CloudProjects:      a.CloudProjects || b.CloudProjects,
+		OrganizationAssets: a.OrganizationAssets || b.OrganizationAssets,
+		ProposalBranding:   a.ProposalBranding || b.ProposalBranding,
+		EngineeringHandoff: a.EngineeringHandoff || b.EngineeringHandoff,
+		MaxSeats:           max(a.MaxSeats, b.MaxSeats),
+		MaxDevices:         max(a.MaxDevices, b.MaxDevices),
+		MaxCloudProjects:   max(a.MaxCloudProjects, b.MaxCloudProjects),
+	}
+}

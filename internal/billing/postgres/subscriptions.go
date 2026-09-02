@@ -24,6 +24,14 @@ func (r *SubscriptionRepo) GetByOrg(ctx context.Context, orgID string) (*billing
 	return subFromModel(&m), nil
 }
 
+func (r *SubscriptionRepo) GetByAccountID(ctx context.Context, accountID string) (*billing.Subscription, error) {
+	var m tables.Subscription
+	if err := use(ctx, r.db).Where("billing_account_id = ?", accountID).Take(&m).Error; err != nil {
+		return nil, mapGorm(err)
+	}
+	return subFromModel(&m), nil
+}
+
 func (r *SubscriptionRepo) GetByID(ctx context.Context, id string) (*billing.Subscription, error) {
 	var m tables.Subscription
 	if err := use(ctx, r.db).Where("public_id = ?", id).Take(&m).Error; err != nil {

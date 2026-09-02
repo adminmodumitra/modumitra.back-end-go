@@ -3,16 +3,17 @@ package billing
 import "context"
 
 type CheckoutInput struct {
-	OrganizationID string
-	PlanID         string
-	SuccessURL     string
-	CancelURL      string
-	CustomerID     string
-	Email          string
-	Currency       string
-	AmountMinor    int
-	Seats          int
-	PlanCode       string
+	BillingAccountID string
+	OrganizationID   string
+	PlanID           string
+	SuccessURL       string
+	CancelURL        string
+	CustomerID       string
+	Email            string
+	Currency         string
+	AmountMinor      int
+	Seats            int
+	PlanCode         string
 }
 
 type PortalInput struct {

@@ -28,7 +28,7 @@ func (m *MemEvents) GetByProviderEvent(_ context.Context, provider, providerEven
 	return cloneEvent(e), nil
 }
 
-func (m *MemEvents) MarkProcessed(_ context.Context, id string, orgID, subID *string, at time.Time) error {
+func (m *MemEvents) MarkProcessed(_ context.Context, id string, orgID, subID, accountID *string, at time.Time) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	e, ok := m.events[id]
@@ -45,6 +45,10 @@ func (m *MemEvents) MarkProcessed(_ context.Context, id string, orgID, subID *st
 	if subID != nil {
 		s := *subID
 		e.SubscriptionID = &s
+	}
+	if accountID != nil {
+		s := *accountID
+		e.BillingAccountID = &s
 	}
 	return nil
 }

@@ -63,3 +63,8 @@ type OrgLookup interface {
 	PrimaryForUser(ctx context.Context, userID string) (*OrgRef, error)
 	MembershipOf(ctx context.Context, orgID, userID string) (*OrgRef, *MemberRef, error)
 }
+
+// PlanLookup reads the live plan/status for a billing owner (user or organization).
+type PlanLookup interface {
+	PlanForOwner(ctx context.Context, ownerType, ownerID string) (plan, status string, err error)
+}

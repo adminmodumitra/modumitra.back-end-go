@@ -17,8 +17,16 @@ type PlanRepo interface {
 	GetByID(ctx context.Context, id string) (*Plan, error)
 }
 
+type AccountRepo interface {
+	GetByID(ctx context.Context, id string) (*BillingAccount, error)
+	GetByOwner(ctx context.Context, ownerType, ownerID string) (*BillingAccount, error)
+	Insert(ctx context.Context, a *BillingAccount) error
+	SetProviderCustomer(ctx context.Context, id, customerID string, at time.Time) error
+}
+
 type SubscriptionRepo interface {
 	GetByOrg(ctx context.Context, orgID string) (*Subscription, error)
+	GetByAccountID(ctx context.Context, accountID string) (*Subscription, error)
 	GetByID(ctx context.Context, id string) (*Subscription, error)
 	Insert(ctx context.Context, s *Subscription) error
 	Update(ctx context.Context, s *Subscription) error
@@ -29,12 +37,13 @@ type InvoiceRepo interface {
 	GetByID(ctx context.Context, id string) (*Invoice, error)
 	GetByProviderInvoiceID(ctx context.Context, providerInvoiceID string) (*Invoice, error)
 	ListByOrg(ctx context.Context, orgID, status, cursor string, limit int) ([]Invoice, string, error)
+	ListByAccount(ctx context.Context, accountID, status, cursor string, limit int) ([]Invoice, string, error)
 }
 
 type EventRepo interface {
 	Insert(ctx context.Context, e *Event) error
 	GetByProviderEvent(ctx context.Context, provider, providerEventID string) (*Event, error)
-	MarkProcessed(ctx context.Context, id string, orgID, subID *string, at time.Time) error
+	MarkProcessed(ctx context.Context, id string, orgID, subID, accountID *string, at time.Time) error
 	MarkFailed(ctx context.Context, id, errMsg string, at time.Time) error
 }
 
@@ -47,6 +56,7 @@ type Clock interface {
 }
 
 type IDGen interface {
+	Account() string
 	Subscription() string
 	Invoice() string
 	Event() string

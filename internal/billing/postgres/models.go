@@ -18,7 +18,7 @@ func planFromModel(m *tables.Plan) *billing.Plan {
 
 func subToModel(s *billing.Subscription) tables.Subscription {
 	return tables.Subscription{
-		PublicID: s.ID, OrganizationID: s.OrganizationID, PlanID: s.PlanID, PlanCode: s.PlanCode,
+		PublicID: s.ID, BillingAccountID: s.BillingAccountID, OrganizationID: emptyToNil(s.OrganizationID), PlanID: s.PlanID, PlanCode: s.PlanCode,
 		Status: s.Status, Provider: s.Provider, ProviderSubscriptionID: emptyToNil(s.ProviderSubscriptionID),
 		SeatsIncluded: s.SeatsIncluded, TrialEndsAt: utcPtr(s.TrialEndsAt),
 		CurrentPeriodStart: s.CurrentPeriodStart.UTC(), CurrentPeriodEnd: s.CurrentPeriodEnd.UTC(),
@@ -29,7 +29,7 @@ func subToModel(s *billing.Subscription) tables.Subscription {
 
 func subFromModel(m *tables.Subscription) *billing.Subscription {
 	return &billing.Subscription{
-		ID: m.PublicID, OrganizationID: m.OrganizationID, PlanID: m.PlanID, PlanCode: m.PlanCode,
+		ID: m.PublicID, BillingAccountID: m.BillingAccountID, OrganizationID: deref(m.OrganizationID), PlanID: m.PlanID, PlanCode: m.PlanCode,
 		Status: m.Status, Provider: m.Provider, ProviderSubscriptionID: deref(m.ProviderSubscriptionID),
 		SeatsIncluded: m.SeatsIncluded, TrialEndsAt: utcPtr(m.TrialEndsAt),
 		CurrentPeriodStart: m.CurrentPeriodStart.UTC(), CurrentPeriodEnd: m.CurrentPeriodEnd.UTC(),
@@ -40,7 +40,7 @@ func subFromModel(m *tables.Subscription) *billing.Subscription {
 
 func invToModel(inv *billing.Invoice) tables.Invoice {
 	return tables.Invoice{
-		PublicID: inv.ID, OrganizationID: inv.OrganizationID, SubscriptionID: inv.SubscriptionID,
+		PublicID: inv.ID, BillingAccountID: inv.BillingAccountID, OrganizationID: emptyToNil(inv.OrganizationID), SubscriptionID: inv.SubscriptionID,
 		Provider: inv.Provider, ProviderInvoiceID: inv.ProviderInvoiceID, Number: inv.Number,
 		Status: inv.Status, Currency: inv.Currency, TotalMinor: inv.TotalMinor, AmountDueMinor: inv.AmountDueMinor,
 		HostedInvoiceURL: inv.HostedInvoiceURL, InvoicePDFURL: inv.InvoicePDFURL,
@@ -51,7 +51,7 @@ func invToModel(inv *billing.Invoice) tables.Invoice {
 
 func invFromModel(m *tables.Invoice) *billing.Invoice {
 	return &billing.Invoice{
-		ID: m.PublicID, OrganizationID: m.OrganizationID, SubscriptionID: m.SubscriptionID,
+		ID: m.PublicID, BillingAccountID: m.BillingAccountID, OrganizationID: deref(m.OrganizationID), SubscriptionID: m.SubscriptionID,
 		Provider: m.Provider, ProviderInvoiceID: m.ProviderInvoiceID, Number: m.Number,
 		Status: m.Status, Currency: m.Currency, TotalMinor: m.TotalMinor, AmountDueMinor: m.AmountDueMinor,
 		HostedInvoiceURL: m.HostedInvoiceURL, InvoicePDFURL: m.InvoicePDFURL,
@@ -67,7 +67,7 @@ func eventToModel(e *billing.Event) tables.BillingEvent {
 	}
 	return tables.BillingEvent{
 		PublicID: e.ID, Provider: e.Provider, ProviderEventID: e.ProviderEventID, Type: e.Type,
-		OrganizationID: e.OrganizationID, SubscriptionID: e.SubscriptionID, Status: e.Status,
+		BillingAccountID: e.BillingAccountID, OrganizationID: e.OrganizationID, SubscriptionID: e.SubscriptionID, Status: e.Status,
 		PayloadDigest: e.PayloadDigest, Summary: sum, Error: emptyToNil(e.Error),
 		ProcessedAt: utcPtr(e.ProcessedAt), CreatedAt: e.CreatedAt.UTC(),
 	}
@@ -80,7 +80,7 @@ func eventFromModel(m *tables.BillingEvent) *billing.Event {
 	}
 	return &billing.Event{
 		ID: m.PublicID, Provider: m.Provider, ProviderEventID: m.ProviderEventID, Type: m.Type,
-		OrganizationID: m.OrganizationID, SubscriptionID: m.SubscriptionID, Status: m.Status,
+		BillingAccountID: m.BillingAccountID, OrganizationID: m.OrganizationID, SubscriptionID: m.SubscriptionID, Status: m.Status,
 		PayloadDigest: m.PayloadDigest, Summary: sum, Error: deref(m.Error),
 		ProcessedAt: utcPtr(m.ProcessedAt), CreatedAt: m.CreatedAt.UTC(),
 	}

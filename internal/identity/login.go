@@ -57,6 +57,12 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (*User, *TokenPair, 
 	if err != nil {
 		return nil, nil, mapRepoErr(err)
 	}
+	if s.personal != nil {
+		if perr := s.personal.EnsurePersonal(ctx, u.ID); perr != nil {
+			l := obs.FromCtx(ctx)
+			l.Error().Err(perr).Str("user_id", u.ID).Msg("billing.ensure_personal")
+		}
+	}
 	l := obs.FromCtx(ctx)
 	l.Info().Str("user_id", u.ID).Msg("auth.login")
 	u.PasswordHash = ""

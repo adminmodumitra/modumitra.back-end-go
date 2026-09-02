@@ -7,17 +7,17 @@ import (
 )
 
 func (s *Service) Cancel(ctx context.Context, actorID, orgID string, atPeriodEnd bool) (*Subscription, error) {
-	_, m, err := s.loadVisible(ctx, actorID, orgID)
+	a, err := s.resolveAccess(ctx, actorID, orgID)
 	if err != nil {
 		return nil, err
 	}
-	if err := requireWrite(m); err != nil {
+	if err := requireWrite(a); err != nil {
 		return nil, err
 	}
 	if !atPeriodEnd {
 		return nil, utils.E(utils.CodeValidation).WithDetails(map[string]any{"field": "at_period_end", "reason": "must be true"})
 	}
-	sub, err := s.subs.GetByOrg(ctx, orgID)
+	sub, err := s.subs.GetByAccountID(ctx, a.Account.ID)
 	if err != nil {
 		return nil, mapRepoErr(err)
 	}
@@ -43,14 +43,14 @@ func (s *Service) Cancel(ctx context.Context, actorID, orgID string, atPeriodEnd
 }
 
 func (s *Service) Resume(ctx context.Context, actorID, orgID string) (*Subscription, error) {
-	_, m, err := s.loadVisible(ctx, actorID, orgID)
+	a, err := s.resolveAccess(ctx, actorID, orgID)
 	if err != nil {
 		return nil, err
 	}
-	if err := requireWrite(m); err != nil {
+	if err := requireWrite(a); err != nil {
 		return nil, err
 	}
-	sub, err := s.subs.GetByOrg(ctx, orgID)
+	sub, err := s.subs.GetByAccountID(ctx, a.Account.ID)
 	if err != nil {
 		return nil, mapRepoErr(err)
 	}

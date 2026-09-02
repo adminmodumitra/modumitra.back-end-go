@@ -33,12 +33,13 @@ func (r *EventRepo) GetByProviderEvent(ctx context.Context, provider, providerEv
 	return eventFromModel(&m), nil
 }
 
-func (r *EventRepo) MarkProcessed(ctx context.Context, id string, orgID, subID *string, at time.Time) error {
+func (r *EventRepo) MarkProcessed(ctx context.Context, id string, orgID, subID, accountID *string, at time.Time) error {
 	res := use(ctx, r.db).Model(&tables.BillingEvent{}).Where("public_id = ?", id).Updates(map[string]any{
-		"status":          billing.EventProcessed,
-		"organization_id": orgID,
-		"subscription_id": subID,
-		"processed_at":    at,
+		"status":             billing.EventProcessed,
+		"organization_id":    orgID,
+		"subscription_id":    subID,
+		"billing_account_id": accountID,
+		"processed_at":       at,
 	})
 	if res.Error != nil {
 		return mapGorm(res.Error)

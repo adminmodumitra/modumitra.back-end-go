@@ -36,3 +36,12 @@ func (s *Service) seatSnapshot(ctx context.Context, orgID string, purchased int)
 	out.Available = purchased - out.Used
 	return out, nil
 }
+
+func personalSeats(userID string, purchased int) *Seats {
+	used := 1
+	avail := purchased - used
+	return &Seats{
+		Purchased: purchased, Used: used, PendingInvitations: 0, Available: avail,
+		Members: []SeatMember{{UserID: userID, Role: "owner", Status: "active", ConsumesSeat: true}},
+	}
+}

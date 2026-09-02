@@ -37,7 +37,15 @@ func (m *MemInvoices) GetByProviderInvoiceID(_ context.Context, providerInvoiceI
 	return cloneInvoice(inv), nil
 }
 
+func (m *MemInvoices) ListByAccount(_ context.Context, accountID, status, cursor string, limit int) ([]Invoice, string, error) {
+	return m.list(func(inv *Invoice) bool { return inv.BillingAccountID == accountID }, status, cursor, limit)
+}
+
 func (m *MemInvoices) ListByOrg(_ context.Context, orgID, status, cursor string, limit int) ([]Invoice, string, error) {
+	return m.list(func(inv *Invoice) bool { return orgID != "" && inv.OrganizationID == orgID }, status, cursor, limit)
+}
+
+func (m *MemInvoices) list(match func(*Invoice) bool, status, cursor string, limit int) ([]Invoice, string, error) {
 	ct, cid, err := DecodeCursor(cursor)
 	if err != nil {
 		return nil, "", err
@@ -46,7 +54,7 @@ func (m *MemInvoices) ListByOrg(_ context.Context, orgID, status, cursor string,
 	defer m.mu.Unlock()
 	var out []Invoice
 	for _, inv := range m.invoices {
-		if inv.OrganizationID != orgID {
+		if !match(inv) {
 			continue
 		}
 		if status != "" && inv.Status != status {

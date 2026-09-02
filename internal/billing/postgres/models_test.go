@@ -13,6 +13,9 @@ import (
 )
 
 func TestTableNames(t *testing.T) {
+	if (tables.BillingAccount{}).TableName() != "billing_accounts" {
+		t.Fatal("billing_accounts")
+	}
 	if (tables.Plan{}).TableName() != "plans" {
 		t.Fatal("plans")
 	}
@@ -30,7 +33,7 @@ func TestTableNames(t *testing.T) {
 func TestSubModelRoundTrip(t *testing.T) {
 	now := time.Date(2026, 9, 1, 12, 0, 0, 0, time.FixedZone("IST", 19800))
 	s := &billing.Subscription{
-		ID: "sub_1", OrganizationID: "org_1", PlanID: billing.PlanIDTeam, PlanCode: billing.PlanTeam,
+		ID: "sub_1", BillingAccountID: "ba_1", OrganizationID: "org_1", PlanID: billing.PlanIDTeam, PlanCode: billing.PlanTeam,
 		Status: billing.StatusActive, Provider: billing.ProviderFake, ProviderSubscriptionID: "sub_fake_1",
 		SeatsIncluded: 5, CurrentPeriodStart: now, CurrentPeriodEnd: now.AddDate(0, 1, 0),
 		CreatedAt: now, UpdatedAt: now,

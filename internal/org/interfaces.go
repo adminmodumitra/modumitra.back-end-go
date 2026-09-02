@@ -63,3 +63,8 @@ type TxRunner interface {
 // UserLookup is identity.UserRepo; named here so org does not force every
 // caller to think in identity-repo terms.
 type UserLookup = identity.UserRepo
+
+// OrgProvisioner creates an organization-owned billing account + trial. Implemented by billing.
+type OrgProvisioner interface {
+	EnsureOrganization(ctx context.Context, orgID string) error
+}

@@ -9,31 +9,34 @@ import (
 )
 
 func (s *Service) Seats(ctx context.Context, actorID, orgID string) (*Seats, error) {
-	o, m, err := s.loadVisible(ctx, actorID, orgID)
+	a, err := s.resolveAccess(ctx, actorID, orgID)
 	if err != nil {
 		return nil, err
 	}
-	if err := requireRead(m); err != nil {
+	if err := requireRead(a); err != nil {
 		return nil, err
 	}
-	sub, err := s.getOrCreateTrial(ctx, o)
+	sub, err := s.subs.GetByAccountID(ctx, a.Account.ID)
 	if err != nil {
-		return nil, err
+		return nil, mapRepoErr(err)
 	}
-	return s.seatSnapshot(ctx, orgID, sub.SeatsIncluded)
+	if a.Account.Personal() {
+		return personalSeats(actorID, sub.SeatsIncluded), nil
+	}
+	return s.seatSnapshot(ctx, a.Account.OwnerID, sub.SeatsIncluded)
 }
 
 func (s *Service) PreviewDowngrade(ctx context.Context, actorID, orgID, planID string, seats *int) (*Preview, error) {
-	o, m, err := s.loadVisible(ctx, actorID, orgID)
+	a, err := s.resolveAccess(ctx, actorID, orgID)
 	if err != nil {
 		return nil, err
 	}
-	if err := requireWrite(m); err != nil {
+	if err := requireWrite(a); err != nil {
 		return nil, err
 	}
-	sub, err := s.getOrCreateTrial(ctx, o)
+	sub, err := s.subs.GetByAccountID(ctx, a.Account.ID)
 	if err != nil {
-		return nil, err
+		return nil, mapRepoErr(err)
 	}
 	targetSeats := 0
 	planCode := ""
@@ -56,9 +59,14 @@ func (s *Service) PreviewDowngrade(ctx context.Context, actorID, orgID, planID s
 	} else {
 		return nil, utils.E(utils.CodeValidation).WithDetails(map[string]any{"field": "plan_id"})
 	}
-	snap, err := s.seatSnapshot(ctx, orgID, sub.SeatsIncluded)
-	if err != nil {
-		return nil, err
+	var snap *Seats
+	if a.Account.Personal() {
+		snap = personalSeats(actorID, sub.SeatsIncluded)
+	} else {
+		snap, err = s.seatSnapshot(ctx, a.Account.OwnerID, sub.SeatsIncluded)
+		if err != nil {
+			return nil, err
+		}
 	}
 	shortfall := snap.Used - targetSeats
 	if shortfall < 0 {
