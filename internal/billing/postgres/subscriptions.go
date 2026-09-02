@@ -3,6 +3,8 @@ package postgres
 import (
 	"context"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/tables"
+
 	"gorm.io/gorm"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/billing"
@@ -15,7 +17,7 @@ type SubscriptionRepo struct {
 func NewSubscriptionRepo(db *gorm.DB) *SubscriptionRepo { return &SubscriptionRepo{db: db} }
 
 func (r *SubscriptionRepo) GetByOrg(ctx context.Context, orgID string) (*billing.Subscription, error) {
-	var m SubscriptionModel
+	var m tables.Subscription
 	if err := use(ctx, r.db).Where("organization_id = ?", orgID).Take(&m).Error; err != nil {
 		return nil, mapGorm(err)
 	}
@@ -23,7 +25,7 @@ func (r *SubscriptionRepo) GetByOrg(ctx context.Context, orgID string) (*billing
 }
 
 func (r *SubscriptionRepo) GetByID(ctx context.Context, id string) (*billing.Subscription, error) {
-	var m SubscriptionModel
+	var m tables.Subscription
 	if err := use(ctx, r.db).Where("public_id = ?", id).Take(&m).Error; err != nil {
 		return nil, mapGorm(err)
 	}
@@ -40,7 +42,7 @@ func (r *SubscriptionRepo) Insert(ctx context.Context, s *billing.Subscription) 
 
 func (r *SubscriptionRepo) Update(ctx context.Context, s *billing.Subscription) error {
 	m := subToModel(s)
-	res := use(ctx, r.db).Model(&SubscriptionModel{}).Where("public_id = ?", s.ID).Updates(map[string]any{
+	res := use(ctx, r.db).Model(&tables.Subscription{}).Where("public_id = ?", s.ID).Updates(map[string]any{
 		"plan_id":                  m.PlanID,
 		"plan_code":                m.PlanCode,
 		"status":                   m.Status,

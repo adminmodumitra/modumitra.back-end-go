@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/tables"
+
 	"gorm.io/gorm"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/billing"
@@ -24,7 +26,7 @@ func (r *EventRepo) Insert(ctx context.Context, e *billing.Event) error {
 }
 
 func (r *EventRepo) GetByProviderEvent(ctx context.Context, provider, providerEventID string) (*billing.Event, error) {
-	var m EventModel
+	var m tables.BillingEvent
 	if err := use(ctx, r.db).Where("provider = ? AND provider_event_id = ?", provider, providerEventID).Take(&m).Error; err != nil {
 		return nil, mapGorm(err)
 	}
@@ -32,7 +34,7 @@ func (r *EventRepo) GetByProviderEvent(ctx context.Context, provider, providerEv
 }
 
 func (r *EventRepo) MarkProcessed(ctx context.Context, id string, orgID, subID *string, at time.Time) error {
-	res := use(ctx, r.db).Model(&EventModel{}).Where("public_id = ?", id).Updates(map[string]any{
+	res := use(ctx, r.db).Model(&tables.BillingEvent{}).Where("public_id = ?", id).Updates(map[string]any{
 		"status":          billing.EventProcessed,
 		"organization_id": orgID,
 		"subscription_id": subID,
@@ -48,7 +50,7 @@ func (r *EventRepo) MarkProcessed(ctx context.Context, id string, orgID, subID *
 }
 
 func (r *EventRepo) MarkFailed(ctx context.Context, id, errMsg string, at time.Time) error {
-	res := use(ctx, r.db).Model(&EventModel{}).Where("public_id = ?", id).Updates(map[string]any{
+	res := use(ctx, r.db).Model(&tables.BillingEvent{}).Where("public_id = ?", id).Updates(map[string]any{
 		"status":       billing.EventFailed,
 		"error":        errMsg,
 		"processed_at": at,

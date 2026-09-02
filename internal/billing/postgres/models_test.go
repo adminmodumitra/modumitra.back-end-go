@@ -5,22 +5,24 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/tables"
+
 	"gorm.io/gorm"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/billing"
 )
 
 func TestTableNames(t *testing.T) {
-	if (PlanModel{}).TableName() != "plans" {
+	if (tables.Plan{}).TableName() != "plans" {
 		t.Fatal("plans")
 	}
-	if (SubscriptionModel{}).TableName() != "subscriptions" {
+	if (tables.Subscription{}).TableName() != "subscriptions" {
 		t.Fatal("subscriptions")
 	}
-	if (InvoiceModel{}).TableName() != "invoices" {
+	if (tables.Invoice{}).TableName() != "invoices" {
 		t.Fatal("invoices")
 	}
-	if (EventModel{}).TableName() != "billing_events" {
+	if (tables.BillingEvent{}).TableName() != "billing_events" {
 		t.Fatal("billing_events")
 	}
 }

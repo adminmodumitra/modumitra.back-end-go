@@ -1,67 +1,23 @@
 package postgres
 
 import (
-	"time"
-
 	"github.com/Danish-13-Khan/backend-cabinet/internal/billing"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/tables"
 )
 
-type PlanModel struct {
-	PublicID          string               `gorm:"column:public_id;primaryKey"`
-	Code              string               `gorm:"column:code"`
-	Name              string               `gorm:"column:name"`
-	Interval          string               `gorm:"column:interval"`
-	Currency          string               `gorm:"column:currency"`
-	UnitAmountMinor   int                  `gorm:"column:unit_amount_minor"`
-	SeatsIncluded     int                  `gorm:"column:seats_included"`
-	MaxDevicesPerUser int                  `gorm:"column:max_devices_per_user"`
-	TrialDays         int                  `gorm:"column:trial_days"`
-	Sellable          bool                 `gorm:"column:sellable"`
-	Active            bool                 `gorm:"column:active"`
-	Capabilities      billing.Capabilities `gorm:"column:capabilities;serializer:json"`
-	Provider          *string              `gorm:"column:provider"`
-	ProviderPriceID   *string              `gorm:"column:provider_price_id"`
-	SortOrder         int                  `gorm:"column:sort_order"`
-	CreatedAt         time.Time            `gorm:"column:created_at;autoCreateTime:false"`
-	UpdatedAt         time.Time            `gorm:"column:updated_at;autoUpdateTime:false"`
-}
-
-func (PlanModel) TableName() string { return "plans" }
-
-func planFromModel(m *PlanModel) *billing.Plan {
+func planFromModel(m *tables.Plan) *billing.Plan {
 	return &billing.Plan{
 		ID: m.PublicID, Code: m.Code, Name: m.Name, Interval: m.Interval,
 		Currency: m.Currency, UnitAmountMinor: m.UnitAmountMinor, SeatsIncluded: m.SeatsIncluded,
 		MaxDevicesPerUser: m.MaxDevicesPerUser, TrialDays: m.TrialDays, Sellable: m.Sellable,
-		Active: m.Active, Capabilities: m.Capabilities, Provider: deref(m.Provider),
+		Active: m.Active, Capabilities: planCapsFrom(m.Capabilities), Provider: deref(m.Provider),
 		ProviderPriceID: deref(m.ProviderPriceID), SortOrder: m.SortOrder,
 		CreatedAt: m.CreatedAt.UTC(), UpdatedAt: m.UpdatedAt.UTC(),
 	}
 }
 
-type SubscriptionModel struct {
-	PublicID               string     `gorm:"column:public_id;primaryKey"`
-	OrganizationID         string     `gorm:"column:organization_id"`
-	PlanID                 string     `gorm:"column:plan_id"`
-	PlanCode               string     `gorm:"column:plan_code"`
-	Status                 string     `gorm:"column:status"`
-	Provider               string     `gorm:"column:provider"`
-	ProviderSubscriptionID *string    `gorm:"column:provider_subscription_id"`
-	SeatsIncluded          int        `gorm:"column:seats_included"`
-	TrialEndsAt            *time.Time `gorm:"column:trial_ends_at"`
-	CurrentPeriodStart     time.Time  `gorm:"column:current_period_start"`
-	CurrentPeriodEnd       time.Time  `gorm:"column:current_period_end"`
-	CancelAtPeriodEnd      bool       `gorm:"column:cancel_at_period_end"`
-	CanceledAt             *time.Time `gorm:"column:canceled_at"`
-	GraceUntil             *time.Time `gorm:"column:grace_until"`
-	CreatedAt              time.Time  `gorm:"column:created_at;autoCreateTime:false"`
-	UpdatedAt              time.Time  `gorm:"column:updated_at;autoUpdateTime:false"`
-}
-
-func (SubscriptionModel) TableName() string { return "subscriptions" }
-
-func subToModel(s *billing.Subscription) SubscriptionModel {
-	return SubscriptionModel{
+func subToModel(s *billing.Subscription) tables.Subscription {
+	return tables.Subscription{
 		PublicID: s.ID, OrganizationID: s.OrganizationID, PlanID: s.PlanID, PlanCode: s.PlanCode,
 		Status: s.Status, Provider: s.Provider, ProviderSubscriptionID: emptyToNil(s.ProviderSubscriptionID),
 		SeatsIncluded: s.SeatsIncluded, TrialEndsAt: utcPtr(s.TrialEndsAt),
@@ -71,7 +27,7 @@ func subToModel(s *billing.Subscription) SubscriptionModel {
 	}
 }
 
-func subFromModel(m *SubscriptionModel) *billing.Subscription {
+func subFromModel(m *tables.Subscription) *billing.Subscription {
 	return &billing.Subscription{
 		ID: m.PublicID, OrganizationID: m.OrganizationID, PlanID: m.PlanID, PlanCode: m.PlanCode,
 		Status: m.Status, Provider: m.Provider, ProviderSubscriptionID: deref(m.ProviderSubscriptionID),
@@ -82,30 +38,8 @@ func subFromModel(m *SubscriptionModel) *billing.Subscription {
 	}
 }
 
-type InvoiceModel struct {
-	PublicID          string     `gorm:"column:public_id;primaryKey"`
-	OrganizationID    string     `gorm:"column:organization_id"`
-	SubscriptionID    *string    `gorm:"column:subscription_id"`
-	Provider          string     `gorm:"column:provider"`
-	ProviderInvoiceID string     `gorm:"column:provider_invoice_id"`
-	Number            *string    `gorm:"column:number"`
-	Status            string     `gorm:"column:status"`
-	Currency          string     `gorm:"column:currency"`
-	TotalMinor        int        `gorm:"column:total_minor"`
-	AmountDueMinor    int        `gorm:"column:amount_due_minor"`
-	HostedInvoiceURL  *string    `gorm:"column:hosted_invoice_url"`
-	InvoicePDFURL     *string    `gorm:"column:invoice_pdf_url"`
-	PeriodStart       *time.Time `gorm:"column:period_start"`
-	PeriodEnd         *time.Time `gorm:"column:period_end"`
-	PaidAt            *time.Time `gorm:"column:paid_at"`
-	CreatedAt         time.Time  `gorm:"column:created_at;autoCreateTime:false"`
-	UpdatedAt         time.Time  `gorm:"column:updated_at;autoUpdateTime:false"`
-}
-
-func (InvoiceModel) TableName() string { return "invoices" }
-
-func invToModel(inv *billing.Invoice) InvoiceModel {
-	return InvoiceModel{
+func invToModel(inv *billing.Invoice) tables.Invoice {
+	return tables.Invoice{
 		PublicID: inv.ID, OrganizationID: inv.OrganizationID, SubscriptionID: inv.SubscriptionID,
 		Provider: inv.Provider, ProviderInvoiceID: inv.ProviderInvoiceID, Number: inv.Number,
 		Status: inv.Status, Currency: inv.Currency, TotalMinor: inv.TotalMinor, AmountDueMinor: inv.AmountDueMinor,
@@ -115,7 +49,7 @@ func invToModel(inv *billing.Invoice) InvoiceModel {
 	}
 }
 
-func invFromModel(m *InvoiceModel) *billing.Invoice {
+func invFromModel(m *tables.Invoice) *billing.Invoice {
 	return &billing.Invoice{
 		ID: m.PublicID, OrganizationID: m.OrganizationID, SubscriptionID: m.SubscriptionID,
 		Provider: m.Provider, ProviderInvoiceID: m.ProviderInvoiceID, Number: m.Number,
@@ -126,29 +60,12 @@ func invFromModel(m *InvoiceModel) *billing.Invoice {
 	}
 }
 
-type EventModel struct {
-	PublicID        string         `gorm:"column:public_id;primaryKey"`
-	Provider        string         `gorm:"column:provider"`
-	ProviderEventID string         `gorm:"column:provider_event_id"`
-	Type            string         `gorm:"column:type"`
-	OrganizationID  *string        `gorm:"column:organization_id"`
-	SubscriptionID  *string        `gorm:"column:subscription_id"`
-	Status          string         `gorm:"column:status"`
-	PayloadDigest   string         `gorm:"column:payload_digest"`
-	Summary         map[string]any `gorm:"column:summary;serializer:json"`
-	Error           *string        `gorm:"column:error"`
-	ProcessedAt     *time.Time     `gorm:"column:processed_at"`
-	CreatedAt       time.Time      `gorm:"column:created_at;autoCreateTime:false"`
-}
-
-func (EventModel) TableName() string { return "billing_events" }
-
-func eventToModel(e *billing.Event) EventModel {
+func eventToModel(e *billing.Event) tables.BillingEvent {
 	sum := e.Summary
 	if sum == nil {
 		sum = map[string]any{}
 	}
-	return EventModel{
+	return tables.BillingEvent{
 		PublicID: e.ID, Provider: e.Provider, ProviderEventID: e.ProviderEventID, Type: e.Type,
 		OrganizationID: e.OrganizationID, SubscriptionID: e.SubscriptionID, Status: e.Status,
 		PayloadDigest: e.PayloadDigest, Summary: sum, Error: emptyToNil(e.Error),
@@ -156,7 +73,7 @@ func eventToModel(e *billing.Event) EventModel {
 	}
 }
 
-func eventFromModel(m *EventModel) *billing.Event {
+func eventFromModel(m *tables.BillingEvent) *billing.Event {
 	sum := m.Summary
 	if sum == nil {
 		sum = map[string]any{}
@@ -166,5 +83,13 @@ func eventFromModel(m *EventModel) *billing.Event {
 		OrganizationID: m.OrganizationID, SubscriptionID: m.SubscriptionID, Status: m.Status,
 		PayloadDigest: m.PayloadDigest, Summary: sum, Error: deref(m.Error),
 		ProcessedAt: utcPtr(m.ProcessedAt), CreatedAt: m.CreatedAt.UTC(),
+	}
+}
+
+func planCapsFrom(c tables.PlanCapabilities) billing.Capabilities {
+	return billing.Capabilities{
+		CloudProjects: c.CloudProjects, OrganizationAssets: c.OrganizationAssets,
+		ProposalBranding: c.ProposalBranding, EngineeringHandoff: c.EngineeringHandoff,
+		MaxSeats: c.MaxSeats, MaxDevices: c.MaxDevices, MaxCloudProjects: c.MaxCloudProjects,
 	}
 }

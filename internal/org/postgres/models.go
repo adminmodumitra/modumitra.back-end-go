@@ -1,29 +1,12 @@
 package postgres
 
 import (
-	"time"
-
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/tables"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
 )
 
-// OrganizationModel maps schema-v1 organizations.
-type OrganizationModel struct {
-	PublicID           string     `gorm:"column:public_id;primaryKey"`
-	Name               string     `gorm:"column:name"`
-	OwnerUserID        string     `gorm:"column:owner_user_id"`
-	Status             string     `gorm:"column:status"`
-	TrialEndsAt        *time.Time `gorm:"column:trial_ends_at"`
-	Provider           *string    `gorm:"column:provider"`
-	ProviderCustomerID *string    `gorm:"column:provider_customer_id"`
-	DeletedAt          *time.Time `gorm:"column:deleted_at"`
-	CreatedAt          time.Time  `gorm:"column:created_at;autoCreateTime:false"`
-	UpdatedAt          time.Time  `gorm:"column:updated_at;autoUpdateTime:false"`
-}
-
-func (OrganizationModel) TableName() string { return "organizations" }
-
-func orgToModel(o *org.Organization) OrganizationModel {
-	return OrganizationModel{
+func orgToModel(o *org.Organization) tables.Organization {
+	return tables.Organization{
 		PublicID:           o.ID,
 		Name:               o.Name,
 		OwnerUserID:        o.OwnerUserID,
@@ -37,7 +20,7 @@ func orgToModel(o *org.Organization) OrganizationModel {
 	}
 }
 
-func orgFromModel(m *OrganizationModel) *org.Organization {
+func orgFromModel(m *tables.Organization) *org.Organization {
 	return &org.Organization{
 		ID:                 m.PublicID,
 		Name:               m.Name,
@@ -52,25 +35,8 @@ func orgFromModel(m *OrganizationModel) *org.Organization {
 	}
 }
 
-// MembershipModel maps schema-v1 memberships. Column "state" is API "status".
-type MembershipModel struct {
-	PublicID       string     `gorm:"column:public_id;primaryKey"`
-	OrganizationID string     `gorm:"column:organization_id"`
-	UserID         string     `gorm:"column:user_id"`
-	Role           string     `gorm:"column:role"`
-	State          string     `gorm:"column:state"`
-	InvitedAt      *time.Time `gorm:"column:invited_at"`
-	ActivatedAt    *time.Time `gorm:"column:activated_at"`
-	SuspendedAt    *time.Time `gorm:"column:suspended_at"`
-	RemovedAt      *time.Time `gorm:"column:removed_at"`
-	CreatedAt      time.Time  `gorm:"column:created_at;autoCreateTime:false"`
-	UpdatedAt      time.Time  `gorm:"column:updated_at;autoUpdateTime:false"`
-}
-
-func (MembershipModel) TableName() string { return "memberships" }
-
-func memberToModel(m *org.Membership) MembershipModel {
-	return MembershipModel{
+func memberToModel(m *org.Membership) tables.Membership {
+	return tables.Membership{
 		PublicID:       m.ID,
 		OrganizationID: m.OrganizationID,
 		UserID:         m.UserID,
@@ -85,7 +51,7 @@ func memberToModel(m *org.Membership) MembershipModel {
 	}
 }
 
-func memberFromModel(m *MembershipModel) *org.Membership {
+func memberFromModel(m *tables.Membership) *org.Membership {
 	return &org.Membership{
 		ID:             m.PublicID,
 		OrganizationID: m.OrganizationID,
@@ -101,29 +67,8 @@ func memberFromModel(m *MembershipModel) *org.Membership {
 	}
 }
 
-// InvitationModel maps schema-v1 invitations.
-type InvitationModel struct {
-	PublicID         string     `gorm:"column:public_id;primaryKey"`
-	OrganizationID   string     `gorm:"column:organization_id"`
-	Email            string     `gorm:"column:email"`
-	Role             string     `gorm:"column:role"`
-	Status           string     `gorm:"column:status"`
-	TokenHash        string     `gorm:"column:token_hash"`
-	InvitedByUserID  string     `gorm:"column:invited_by_user_id"`
-	ExpiresAt        time.Time  `gorm:"column:expires_at"`
-	AcceptedAt       *time.Time `gorm:"column:accepted_at"`
-	AcceptedByUserID *string    `gorm:"column:accepted_by_user_id"`
-	RevokedAt        *time.Time `gorm:"column:revoked_at"`
-	RevokedByUserID  *string    `gorm:"column:revoked_by_user_id"`
-	ResentAt         *time.Time `gorm:"column:resent_at"`
-	CreatedAt        time.Time  `gorm:"column:created_at;autoCreateTime:false"`
-	UpdatedAt        time.Time  `gorm:"column:updated_at;autoUpdateTime:false"`
-}
-
-func (InvitationModel) TableName() string { return "invitations" }
-
-func inviteToModel(inv *org.Invitation) InvitationModel {
-	return InvitationModel{
+func inviteToModel(inv *org.Invitation) tables.Invitation {
+	return tables.Invitation{
 		PublicID:         inv.ID,
 		OrganizationID:   inv.OrganizationID,
 		Email:            inv.Email,
@@ -142,7 +87,7 @@ func inviteToModel(inv *org.Invitation) InvitationModel {
 	}
 }
 
-func inviteFromModel(m *InvitationModel) *org.Invitation {
+func inviteFromModel(m *tables.Invitation) *org.Invitation {
 	return &org.Invitation{
 		ID:               m.PublicID,
 		OrganizationID:   m.OrganizationID,

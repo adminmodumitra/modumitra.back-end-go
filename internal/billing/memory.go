@@ -2,9 +2,7 @@ package billing
 
 import (
 	"context"
-	"sort"
 	"sync"
-	"time"
 )
 
 type Memory struct {
@@ -49,32 +47,6 @@ type MemSubs struct{ *Memory }
 type MemInvoices struct{ *Memory }
 type MemEvents struct{ *Memory }
 
-func (m *MemPlans) ListSellable(_ context.Context) ([]Plan, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	var out []Plan
-	for _, p := range m.plans {
-		if p.Sellable && p.Active {
-			out = append(out, *clonePlan(p))
-		}
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].SortOrder < out[j].SortOrder })
-	if out == nil {
-		out = []Plan{}
-	}
-	return out, nil
-}
-
-func (m *MemPlans) GetByID(_ context.Context, id string) (*Plan, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	p, ok := m.plans[id]
-	if !ok {
-		return nil, ErrNotFound
-	}
-	return clonePlan(p), nil
-}
-
 func cloneSub(s *Subscription) *Subscription {
 	if s == nil {
 		return nil
@@ -93,50 +65,6 @@ func cloneSub(s *Subscription) *Subscription {
 		cp.GraceUntil = &t
 	}
 	return &cp
-}
-
-func (m *MemSubs) GetByOrg(_ context.Context, orgID string) (*Subscription, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	s, ok := m.subsOrg[orgID]
-	if !ok {
-		return nil, ErrNotFound
-	}
-	return cloneSub(s), nil
-}
-
-func (m *MemSubs) GetByID(_ context.Context, id string) (*Subscription, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	s, ok := m.subs[id]
-	if !ok {
-		return nil, ErrNotFound
-	}
-	return cloneSub(s), nil
-}
-
-func (m *MemSubs) Insert(_ context.Context, s *Subscription) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if _, ok := m.subsOrg[s.OrganizationID]; ok {
-		return ErrDuplicate
-	}
-	stored := cloneSub(s)
-	m.subs[s.ID] = stored
-	m.subsOrg[s.OrganizationID] = stored
-	return nil
-}
-
-func (m *MemSubs) Update(_ context.Context, s *Subscription) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if _, ok := m.subs[s.ID]; !ok {
-		return ErrNotFound
-	}
-	stored := cloneSub(s)
-	m.subs[s.ID] = stored
-	m.subsOrg[s.OrganizationID] = stored
-	return nil
 }
 
 func cloneInvoice(inv *Invoice) *Invoice {
@@ -175,76 +103,6 @@ func cloneInvoice(inv *Invoice) *Invoice {
 	return &cp
 }
 
-func (m *MemInvoices) Insert(_ context.Context, inv *Invoice) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if _, ok := m.invProv[inv.ProviderInvoiceID]; ok {
-		return ErrDuplicate
-	}
-	stored := cloneInvoice(inv)
-	m.invoices[inv.ID] = stored
-	m.invProv[inv.ProviderInvoiceID] = stored
-	return nil
-}
-
-func (m *MemInvoices) GetByID(_ context.Context, id string) (*Invoice, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	inv, ok := m.invoices[id]
-	if !ok {
-		return nil, ErrNotFound
-	}
-	return cloneInvoice(inv), nil
-}
-
-func (m *MemInvoices) GetByProviderInvoiceID(_ context.Context, providerInvoiceID string) (*Invoice, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	inv, ok := m.invProv[providerInvoiceID]
-	if !ok {
-		return nil, ErrNotFound
-	}
-	return cloneInvoice(inv), nil
-}
-
-func (m *MemInvoices) ListByOrg(_ context.Context, orgID, status, cursor string, limit int) ([]Invoice, string, error) {
-	ct, cid, err := DecodeCursor(cursor)
-	if err != nil {
-		return nil, "", err
-	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	var out []Invoice
-	for _, inv := range m.invoices {
-		if inv.OrganizationID != orgID {
-			continue
-		}
-		if status != "" && inv.Status != status {
-			continue
-		}
-		if !BeforeCursor(inv.CreatedAt, inv.ID, ct, cid) {
-			continue
-		}
-		out = append(out, *cloneInvoice(inv))
-	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].CreatedAt.Equal(out[j].CreatedAt) {
-			return out[i].ID > out[j].ID
-		}
-		return out[i].CreatedAt.After(out[j].CreatedAt)
-	})
-	next := ""
-	if limit > 0 && len(out) > limit {
-		last := out[limit-1]
-		next = EncodeCursor(last.CreatedAt, last.ID)
-		out = out[:limit]
-	}
-	if out == nil {
-		out = []Invoice{}
-	}
-	return out, next, nil
-}
-
 func cloneEvent(e *Event) *Event {
 	if e == nil {
 		return nil
@@ -272,61 +130,3 @@ func cloneEvent(e *Event) *Event {
 }
 
 func eventKey(provider, id string) string { return provider + "\x00" + id }
-
-func (m *MemEvents) Insert(_ context.Context, e *Event) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	key := eventKey(e.Provider, e.ProviderEventID)
-	if _, ok := m.evtProv[key]; ok {
-		return ErrDuplicate
-	}
-	stored := cloneEvent(e)
-	m.events[e.ID] = stored
-	m.evtProv[key] = stored
-	return nil
-}
-
-func (m *MemEvents) GetByProviderEvent(_ context.Context, provider, providerEventID string) (*Event, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	e, ok := m.evtProv[eventKey(provider, providerEventID)]
-	if !ok {
-		return nil, ErrNotFound
-	}
-	return cloneEvent(e), nil
-}
-
-func (m *MemEvents) MarkProcessed(_ context.Context, id string, orgID, subID *string, at time.Time) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	e, ok := m.events[id]
-	if !ok {
-		return ErrNotFound
-	}
-	e.Status = EventProcessed
-	t := at
-	e.ProcessedAt = &t
-	if orgID != nil {
-		s := *orgID
-		e.OrganizationID = &s
-	}
-	if subID != nil {
-		s := *subID
-		e.SubscriptionID = &s
-	}
-	return nil
-}
-
-func (m *MemEvents) MarkFailed(_ context.Context, id, errMsg string, at time.Time) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	e, ok := m.events[id]
-	if !ok {
-		return ErrNotFound
-	}
-	e.Status = EventFailed
-	e.Error = errMsg
-	t := at
-	e.ProcessedAt = &t
-	return nil
-}

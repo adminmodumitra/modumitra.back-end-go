@@ -1,27 +1,12 @@
 package postgres
 
 import (
-	"time"
-
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/tables"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/sso"
 )
 
-type IdentityModel struct {
-	PublicID                string    `gorm:"column:public_id;primaryKey"`
-	UserID                  string    `gorm:"column:user_id"`
-	Provider                string    `gorm:"column:provider"`
-	ProviderUserID          string    `gorm:"column:provider_user_id"`
-	Email                   *string   `gorm:"column:email"`
-	EmailVerifiedByProvider bool      `gorm:"column:email_verified_by_provider"`
-	LinkedAt                time.Time `gorm:"column:linked_at"`
-	CreatedAt               time.Time `gorm:"column:created_at;autoCreateTime:false"`
-	UpdatedAt               time.Time `gorm:"column:updated_at;autoUpdateTime:false"`
-}
-
-func (IdentityModel) TableName() string { return "oauth_identities" }
-
-func identityToModel(i *sso.Identity) IdentityModel {
-	return IdentityModel{
+func identityToModel(i *sso.Identity) tables.OAuthIdentity {
+	return tables.OAuthIdentity{
 		PublicID:                i.ID,
 		UserID:                  i.UserID,
 		Provider:                i.Provider,
@@ -34,7 +19,7 @@ func identityToModel(i *sso.Identity) IdentityModel {
 	}
 }
 
-func identityFromModel(m *IdentityModel) *sso.Identity {
+func identityFromModel(m *tables.OAuthIdentity) *sso.Identity {
 	return &sso.Identity{
 		ID:             m.PublicID,
 		UserID:         m.UserID,
@@ -48,24 +33,8 @@ func identityFromModel(m *IdentityModel) *sso.Identity {
 	}
 }
 
-type StateModel struct {
-	PublicID         string     `gorm:"column:public_id;primaryKey"`
-	State            string     `gorm:"column:state"`
-	Provider         string     `gorm:"column:provider"`
-	Intent           string     `gorm:"column:intent"`
-	RedirectURI      string     `gorm:"column:redirect_uri"`
-	CodeChallenge    *string    `gorm:"column:code_challenge"`
-	CodeVerifierHash *string    `gorm:"column:code_verifier_hash"`
-	UserID           *string    `gorm:"column:user_id"`
-	ConsumedAt       *time.Time `gorm:"column:consumed_at"`
-	ExpiresAt        time.Time  `gorm:"column:expires_at"`
-	CreatedAt        time.Time  `gorm:"column:created_at;autoCreateTime:false"`
-}
-
-func (StateModel) TableName() string { return "oauth_states" }
-
-func stateToModel(s *sso.State) StateModel {
-	return StateModel{
+func stateToModel(s *sso.State) tables.OAuthState {
+	return tables.OAuthState{
 		PublicID:         s.ID,
 		State:            s.State,
 		Provider:         s.Provider,
@@ -80,7 +49,7 @@ func stateToModel(s *sso.State) StateModel {
 	}
 }
 
-func stateFromModel(m *StateModel) *sso.State {
+func stateFromModel(m *tables.OAuthState) *sso.State {
 	return &sso.State{
 		ID:               m.PublicID,
 		State:            m.State,
@@ -96,27 +65,8 @@ func stateFromModel(m *StateModel) *sso.State {
 	}
 }
 
-type DeviceCodeModel struct {
-	PublicID        string     `gorm:"column:public_id;primaryKey"`
-	DeviceCode      string     `gorm:"column:device_code"`
-	UserCode        string     `gorm:"column:user_code"`
-	ClientID        string     `gorm:"column:client_id"`
-	Provider        string     `gorm:"column:provider"`
-	Status          string     `gorm:"column:status"`
-	UserID          *string    `gorm:"column:user_id"`
-	IntervalSeconds int        `gorm:"column:interval_seconds"`
-	LastPollAt      *time.Time `gorm:"column:last_poll_at"`
-	AuthorizedAt    *time.Time `gorm:"column:authorized_at"`
-	ConsumedAt      *time.Time `gorm:"column:consumed_at"`
-	ExpiresAt       time.Time  `gorm:"column:expires_at"`
-	CreatedAt       time.Time  `gorm:"column:created_at;autoCreateTime:false"`
-	UpdatedAt       time.Time  `gorm:"column:updated_at;autoUpdateTime:false"`
-}
-
-func (DeviceCodeModel) TableName() string { return "device_codes" }
-
-func deviceToModel(d *sso.DeviceCode) DeviceCodeModel {
-	return DeviceCodeModel{
+func deviceToModel(d *sso.DeviceCode) tables.DeviceCode {
+	return tables.DeviceCode{
 		PublicID:        d.ID,
 		DeviceCode:      d.DeviceCode,
 		UserCode:        d.UserCode,
@@ -134,7 +84,7 @@ func deviceToModel(d *sso.DeviceCode) DeviceCodeModel {
 	}
 }
 
-func deviceFromModel(m *DeviceCodeModel) *sso.DeviceCode {
+func deviceFromModel(m *tables.DeviceCode) *sso.DeviceCode {
 	return &sso.DeviceCode{
 		ID:              m.PublicID,
 		DeviceCode:      m.DeviceCode,

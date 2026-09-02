@@ -1,33 +1,12 @@
 package postgres
 
 import (
-	"time"
-
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/tables"
 )
 
-// UserModel maps schema-v1 users. Not a domain type; no AutoMigrate.
-type UserModel struct {
-	PublicID          string     `gorm:"column:public_id;primaryKey"`
-	Email             string     `gorm:"column:email"`
-	EmailNormalized   string     `gorm:"column:email_normalized"`
-	EmailVerifiedAt   *time.Time `gorm:"column:email_verified_at"`
-	PasswordHash      string     `gorm:"column:password_hash"`
-	PasswordUpdatedAt *time.Time `gorm:"column:password_updated_at"`
-	DisplayName       string     `gorm:"column:display_name"`
-	TermsVersion      string     `gorm:"column:terms_version"`
-	PrivacyVersion    string     `gorm:"column:privacy_version"`
-	TermsAcceptedAt   time.Time  `gorm:"column:terms_accepted_at"`
-	Status            string     `gorm:"column:status"`
-	LastLoginAt       *time.Time `gorm:"column:last_login_at"`
-	CreatedAt         time.Time  `gorm:"column:created_at;autoCreateTime:false"`
-	UpdatedAt         time.Time  `gorm:"column:updated_at;autoUpdateTime:false"`
-}
-
-func (UserModel) TableName() string { return "users" }
-
-func userToModel(u *identity.User) UserModel {
-	return UserModel{
+func userToModel(u *identity.User) tables.User {
+	return tables.User{
 		PublicID:        u.ID,
 		Email:           u.Email,
 		EmailNormalized: u.EmailNormalized,
@@ -43,7 +22,7 @@ func userToModel(u *identity.User) UserModel {
 	}
 }
 
-func userFromModel(m *UserModel) *identity.User {
+func userFromModel(m *tables.User) *identity.User {
 	return &identity.User{
 		ID:              m.PublicID,
 		Email:           m.Email,
@@ -60,27 +39,8 @@ func userFromModel(m *UserModel) *identity.User {
 	}
 }
 
-// SessionModel maps schema-v1 sessions.
-type SessionModel struct {
-	PublicID        string     `gorm:"column:public_id;primaryKey"`
-	UserID          string     `gorm:"column:user_id"`
-	DeviceID        *string    `gorm:"column:device_id"`
-	RefreshHash     string     `gorm:"column:refresh_token_hash"`
-	FamilyID        string     `gorm:"column:family_id"`
-	ExpiresAt       time.Time  `gorm:"column:expires_at"`
-	RevokedAt       *time.Time `gorm:"column:revoked_at"`
-	ReuseDetectedAt *time.Time `gorm:"column:reuse_detected_at"`
-	ReplacedBy      *string    `gorm:"column:replaced_by_session_id"`
-	DeviceName      *string    `gorm:"column:device_name"`
-	CreatedAt       time.Time  `gorm:"column:created_at;autoCreateTime:false"`
-	UpdatedAt       time.Time  `gorm:"column:updated_at;autoUpdateTime:false"`
-	LastSeenAt      time.Time  `gorm:"column:last_seen_at"`
-}
-
-func (SessionModel) TableName() string { return "sessions" }
-
-func sessionToModel(s *identity.Session) SessionModel {
-	return SessionModel{
+func sessionToModel(s *identity.Session) tables.Session {
+	return tables.Session{
 		PublicID:    s.ID,
 		UserID:      s.UserID,
 		DeviceID:    nil, // insert path historically never writes device_id
@@ -94,7 +54,7 @@ func sessionToModel(s *identity.Session) SessionModel {
 	}
 }
 
-func sessionFromModel(m *SessionModel) *identity.Session {
+func sessionFromModel(m *tables.Session) *identity.Session {
 	return &identity.Session{
 		ID:              m.PublicID,
 		UserID:          m.UserID,
@@ -112,21 +72,8 @@ func sessionFromModel(m *SessionModel) *identity.Session {
 	}
 }
 
-// EmailTokenModel maps schema-v1 email_tokens.
-type EmailTokenModel struct {
-	PublicID   string     `gorm:"column:public_id;primaryKey"`
-	UserID     string     `gorm:"column:user_id"`
-	Purpose    string     `gorm:"column:purpose"`
-	TokenHash  string     `gorm:"column:token_hash"`
-	ExpiresAt  time.Time  `gorm:"column:expires_at"`
-	ConsumedAt *time.Time `gorm:"column:consumed_at"`
-	CreatedAt  time.Time  `gorm:"column:created_at;autoCreateTime:false"`
-}
-
-func (EmailTokenModel) TableName() string { return "email_tokens" }
-
-func tokenToModel(t *identity.EmailToken) EmailTokenModel {
-	return EmailTokenModel{
+func tokenToModel(t *identity.EmailToken) tables.EmailToken {
+	return tables.EmailToken{
 		PublicID:  t.ID,
 		UserID:    t.UserID,
 		Purpose:   t.Purpose,
@@ -136,7 +83,7 @@ func tokenToModel(t *identity.EmailToken) EmailTokenModel {
 	}
 }
 
-func tokenFromModel(m *EmailTokenModel) *identity.EmailToken {
+func tokenFromModel(m *tables.EmailToken) *identity.EmailToken {
 	return &identity.EmailToken{
 		ID:         m.PublicID,
 		UserID:     m.UserID,

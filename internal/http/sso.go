@@ -3,6 +3,8 @@ package httpapi
 import (
 	"strings"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/dto"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/http/middleware"
@@ -25,19 +27,14 @@ func (h *handlers) oauthProviders(c *gin.Context) {
 		return
 	}
 	items := h.sso.ListProviders()
-	views := make([]OAuthProviderView, 0, len(items))
+	views := make([]dto.OAuthProviderView, 0, len(items))
 	for _, p := range items {
-		views = append(views, OAuthProviderView{ID: p.ID, Label: p.Label, DeviceCodeSupported: p.DeviceCodeSupported})
+		views = append(views, dto.OAuthProviderView{ID: p.ID, Label: p.Label, DeviceCodeSupported: p.DeviceCodeSupported})
 	}
-	middleware.WriteJSON(c, utils.StatusOK, OAuthProvidersOK{
+	middleware.WriteJSON(c, utils.StatusOK, dto.OAuthProvidersOK{
 		Meta:      metaFrom(c),
 		Providers: views,
 	})
-}
-
-type oauthStartBody struct {
-	RedirectURI string `json:"redirect_uri"`
-	Intent      string `json:"intent"`
 }
 
 func (h *handlers) oauthStart(c *gin.Context) {
@@ -45,7 +42,7 @@ func (h *handlers) oauthStart(c *gin.Context) {
 	if !h.requireSSO(c) {
 		return
 	}
-	var body oauthStartBody
+	var body dto.OAuthStartBody
 	if err := c.ShouldBindJSON(&body); err != nil {
 		middleware.Abort(c, utils.E(utils.CodeValidation))
 		return
@@ -79,7 +76,7 @@ func (h *handlers) oauthStart(c *gin.Context) {
 		middleware.Abort(c, err)
 		return
 	}
-	middleware.WriteJSON(c, utils.StatusOK, OAuthStartOK{
+	middleware.WriteJSON(c, utils.StatusOK, dto.OAuthStartOK{
 		Meta:             metaFrom(c),
 		AuthorizationURL: res.AuthorizationURL,
 		State:            res.State,
@@ -106,9 +103,9 @@ func (h *handlers) writeOAuthLogin(c *gin.Context, u *identity.User, pair *ident
 	if u != nil {
 		c.Set(utils.CtxUserID, u.ID)
 	}
-	middleware.WriteJSON(c, utils.StatusOK, OAuthLoginOK{
-		LoginOK: LoginOK{
-			TokenOK: TokenOK{
+	middleware.WriteJSON(c, utils.StatusOK, dto.OAuthLoginOK{
+		LoginOK: dto.LoginOK{
+			TokenOK: dto.TokenOK{
 				Meta:         metaFrom(c),
 				AccessToken:  pair.AccessToken,
 				RefreshToken: pair.RefreshToken,
@@ -119,136 +116,5 @@ func (h *handlers) writeOAuthLogin(c *gin.Context, u *identity.User, pair *ident
 			Organization: h.primaryOrgView(c, u.ID),
 		},
 		LinkedProvider: provider,
-	})
-}
-
-func (h *handlers) listIdentities(c *gin.Context) {
-	logEnter(c, "list_identities")
-	if !h.requireSSO(c) {
-		return
-	}
-	items, err := h.sso.ListIdentities(c.Request.Context(), middleware.UserIDFrom(c))
-	if err != nil {
-		middleware.Abort(c, err)
-		return
-	}
-	views := make([]IdentityView, 0, len(items))
-	for i := range items {
-		views = append(views, identityView(&items[i]))
-	}
-	middleware.WriteJSON(c, utils.StatusOK, IdentityListOK{
-		Meta:       metaFrom(c),
-		Items:      views,
-		NextCursor: nil,
-	})
-}
-
-type oauthLinkBody struct {
-	AuthorizationCode string `json:"authorization_code"`
-	State             string `json:"state"`
-}
-
-func (h *handlers) linkIdentity(c *gin.Context) {
-	logEnter(c, "link_identity")
-	if !h.requireSSO(c) {
-		return
-	}
-	if !requireIdempotencyKey(c) {
-		return
-	}
-	var body oauthLinkBody
-	if err := c.ShouldBindJSON(&body); err != nil {
-		middleware.Abort(c, utils.E(utils.CodeValidation))
-		return
-	}
-	id, err := h.sso.Link(c.Request.Context(), middleware.UserIDFrom(c), c.Param("provider"), body.AuthorizationCode, body.State)
-	if err != nil {
-		middleware.Abort(c, err)
-		return
-	}
-	middleware.WriteJSON(c, utils.StatusOK, IdentityOK{
-		Meta:     metaFrom(c),
-		Identity: identityView(id),
-	})
-}
-
-func (h *handlers) unlinkIdentity(c *gin.Context) {
-	logEnter(c, "unlink_identity")
-	if !h.requireSSO(c) {
-		return
-	}
-	provider := c.Param("provider")
-	if err := h.sso.Unlink(c.Request.Context(), middleware.UserIDFrom(c), provider); err != nil {
-		middleware.Abort(c, err)
-		return
-	}
-	middleware.WriteJSON(c, utils.StatusOK, UnlinkOK{
-		Meta:     metaFrom(c),
-		Status:   "unlinked",
-		Provider: provider,
-	})
-}
-
-type deviceCodeBody struct {
-	ClientID string `json:"client_id"`
-	Provider string `json:"provider"`
-}
-
-func (h *handlers) deviceCode(c *gin.Context) {
-	logEnter(c, "device_code")
-	if !h.requireSSO(c) {
-		return
-	}
-	var body deviceCodeBody
-	if err := c.ShouldBindJSON(&body); err != nil {
-		middleware.Abort(c, utils.E(utils.CodeValidation))
-		return
-	}
-	res, err := h.sso.CreateDeviceCode(c.Request.Context(), body.ClientID, body.Provider)
-	if err != nil {
-		middleware.Abort(c, err)
-		return
-	}
-	middleware.WriteJSON(c, utils.StatusOK, DeviceCodeOK{
-		Meta:                    metaFrom(c),
-		DeviceCode:              res.DeviceCode,
-		UserCode:                res.UserCode,
-		VerificationURI:         res.VerificationURI,
-		VerificationURIComplete: res.VerificationURIComplete,
-		ExpiresIn:               res.ExpiresIn,
-		Interval:                res.Interval,
-	})
-}
-
-type deviceTokenBody struct {
-	DeviceCode string `json:"device_code"`
-}
-
-func (h *handlers) deviceToken(c *gin.Context) {
-	logEnter(c, "device_token")
-	if !h.requireSSO(c) {
-		return
-	}
-	var body deviceTokenBody
-	if err := c.ShouldBindJSON(&body); err != nil {
-		middleware.Abort(c, utils.E(utils.CodeValidation))
-		return
-	}
-	u, pair, err := h.sso.PollDeviceToken(c.Request.Context(), body.DeviceCode)
-	if err != nil {
-		middleware.Abort(c, err)
-		return
-	}
-	c.Set(utils.CtxUserID, u.ID)
-	middleware.WriteJSON(c, utils.StatusOK, LoginOK{
-		TokenOK: TokenOK{
-			Meta:         metaFrom(c),
-			AccessToken:  pair.AccessToken,
-			RefreshToken: pair.RefreshToken,
-			ExpiresIn:    pair.ExpiresIn,
-			TokenType:    pair.TokenType,
-		},
-		User:         userView(u),
-		Organization: h.primaryOrgView(c, u.ID),
 	})
 }

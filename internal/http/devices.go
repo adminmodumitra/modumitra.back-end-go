@@ -3,6 +3,8 @@ package httpapi
 import (
 	"strings"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/dto"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/device"
@@ -32,15 +34,6 @@ func parseBoolQuery(raw string, fallback bool) (bool, error) {
 	}
 }
 
-type activateDeviceBody struct {
-	Name     string `json:"name"`
-	Platform string `json:"platform"`
-}
-
-type patchDeviceBody struct {
-	Name *string `json:"name"`
-}
-
 func (h *handlers) listDevices(c *gin.Context) {
 	logEnter(c, "list_devices")
 	if !h.requireDevices(c) {
@@ -61,11 +54,11 @@ func (h *handlers) listDevices(c *gin.Context) {
 		middleware.Abort(c, err)
 		return
 	}
-	views := make([]DeviceView, 0, len(items))
+	views := make([]dto.DeviceView, 0, len(items))
 	for i := range items {
 		views = append(views, deviceView(&items[i]))
 	}
-	middleware.WriteJSON(c, utils.StatusOK, DeviceListOK{
+	middleware.WriteJSON(c, utils.StatusOK, dto.DeviceListOK{
 		Meta:        metaFrom(c),
 		Items:       views,
 		NextCursor:  cursorPtr(next),
@@ -82,7 +75,7 @@ func (h *handlers) activateDevice(c *gin.Context) {
 	if !requireIdempotencyKey(c) {
 		return
 	}
-	var body activateDeviceBody
+	var body dto.ActivateDeviceBody
 	if err := c.ShouldBindJSON(&body); err != nil {
 		middleware.Abort(c, utils.E(utils.CodeValidation))
 		return
@@ -92,7 +85,7 @@ func (h *handlers) activateDevice(c *gin.Context) {
 		middleware.Abort(c, err)
 		return
 	}
-	middleware.WriteJSON(c, utils.StatusCreated, ActivateOK{
+	middleware.WriteJSON(c, utils.StatusCreated, dto.ActivateOK{
 		Meta:                metaFrom(c),
 		Device:              deviceView(d),
 		EntitlementSnapshot: snapshotView(snap),
@@ -104,7 +97,7 @@ func (h *handlers) patchDevice(c *gin.Context) {
 	if !h.requireDevices(c) {
 		return
 	}
-	var body patchDeviceBody
+	var body dto.PatchDeviceBody
 	if err := c.ShouldBindJSON(&body); err != nil {
 		middleware.Abort(c, utils.E(utils.CodeValidation))
 		return
@@ -118,7 +111,7 @@ func (h *handlers) patchDevice(c *gin.Context) {
 		middleware.Abort(c, err)
 		return
 	}
-	middleware.WriteJSON(c, utils.StatusOK, DeviceOK{
+	middleware.WriteJSON(c, utils.StatusOK, dto.DeviceOK{
 		Meta:   metaFrom(c),
 		Device: deviceView(d),
 	})
@@ -134,48 +127,9 @@ func (h *handlers) deleteDevice(c *gin.Context) {
 		middleware.Abort(c, err)
 		return
 	}
-	middleware.WriteJSON(c, utils.StatusOK, DeviceDeactivatedOK{
+	middleware.WriteJSON(c, utils.StatusOK, dto.DeviceDeactivatedOK{
 		Meta:   metaFrom(c),
 		Status: "deactivated",
 		ID:     d.ID,
-	})
-}
-
-func (h *handlers) orgEntitlements(c *gin.Context) {
-	logEnter(c, "org_entitlements")
-	if !h.requireDevices(c) {
-		return
-	}
-	snap, err := h.devices.Issue(c.Request.Context(), middleware.UserIDFrom(c), c.Param("id"), strings.TrimSpace(c.Query("device_id")))
-	if err != nil {
-		middleware.Abort(c, err)
-		return
-	}
-	middleware.WriteJSON(c, utils.StatusOK, EntitlementsOK{
-		Meta:                metaFrom(c),
-		EntitlementSnapshot: snapshotView(snap),
-	})
-}
-
-func (h *handlers) meCapabilities(c *gin.Context) {
-	logEnter(c, "me_capabilities")
-	if !h.requireDevices(c) {
-		return
-	}
-	res, err := h.devices.Capabilities(c.Request.Context(), middleware.UserIDFrom(c), strings.TrimSpace(c.Query("organization_id")))
-	if err != nil {
-		middleware.Abort(c, err)
-		return
-	}
-	middleware.WriteJSON(c, utils.StatusOK, CapabilitiesOK{
-		Meta:               metaFrom(c),
-		UserID:             res.UserID,
-		OrganizationID:     res.OrganizationID,
-		Role:               res.Role,
-		MembershipStatus:   res.MembershipStatus,
-		Plan:               res.Plan,
-		SubscriptionStatus: res.SubscriptionStatus,
-		Capabilities:       res.Capabilities,
-		IssuedAt:           rfcTime(res.IssuedAt),
 	})
 }

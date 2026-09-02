@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/tables"
+
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -17,7 +19,7 @@ type SessionRepo struct {
 func NewSessionRepo(db *gorm.DB) *SessionRepo { return &SessionRepo{db: db} }
 
 func (r *SessionRepo) GetByID(ctx context.Context, id string) (*identity.Session, error) {
-	var m SessionModel
+	var m tables.Session
 	if err := use(ctx, r.db).Where("public_id = ?", id).Take(&m).Error; err != nil {
 		return nil, mapGorm(err)
 	}
@@ -25,7 +27,7 @@ func (r *SessionRepo) GetByID(ctx context.Context, id string) (*identity.Session
 }
 
 func (r *SessionRepo) GetByRefreshHash(ctx context.Context, hash string) (*identity.Session, error) {
-	var m SessionModel
+	var m tables.Session
 	if err := use(ctx, r.db).Where("refresh_token_hash = ?", hash).Take(&m).Error; err != nil {
 		return nil, mapGorm(err)
 	}
@@ -33,7 +35,7 @@ func (r *SessionRepo) GetByRefreshHash(ctx context.Context, hash string) (*ident
 }
 
 func (r *SessionRepo) GetByRefreshHashForUpdate(ctx context.Context, hash string) (*identity.Session, error) {
-	var m SessionModel
+	var m tables.Session
 	if err := use(ctx, r.db).Clauses(clause.Locking{Strength: "UPDATE"}).
 		Where("refresh_token_hash = ?", hash).Take(&m).Error; err != nil {
 		return nil, mapGorm(err)
@@ -50,7 +52,7 @@ func (r *SessionRepo) Insert(ctx context.Context, s *identity.Session) error {
 }
 
 func (r *SessionRepo) RevokeAndReplace(ctx context.Context, oldID, newID string, at time.Time) error {
-	res := use(ctx, r.db).Model(&SessionModel{}).Where("public_id = ?", oldID).Updates(map[string]any{
+	res := use(ctx, r.db).Model(&tables.Session{}).Where("public_id = ?", oldID).Updates(map[string]any{
 		"revoked_at":             at,
 		"replaced_by_session_id": newID,
 		"updated_at":             at,
@@ -65,14 +67,14 @@ func (r *SessionRepo) RevokeAndReplace(ctx context.Context, oldID, newID string,
 }
 
 func (r *SessionRepo) MarkReuseAndRevokeFamily(ctx context.Context, sessionID, familyID string, at time.Time) error {
-	if err := use(ctx, r.db).Model(&SessionModel{}).Where("public_id = ?", sessionID).Updates(map[string]any{
+	if err := use(ctx, r.db).Model(&tables.Session{}).Where("public_id = ?", sessionID).Updates(map[string]any{
 		"reuse_detected_at": at,
 		"revoked_at":        gorm.Expr("COALESCE(revoked_at, ?)", at),
 		"updated_at":        at,
 	}).Error; err != nil {
 		return mapGorm(err)
 	}
-	if err := use(ctx, r.db).Model(&SessionModel{}).
+	if err := use(ctx, r.db).Model(&tables.Session{}).
 		Where("family_id = ? AND revoked_at IS NULL", familyID).
 		Updates(map[string]any{
 			"revoked_at": at,
@@ -84,7 +86,7 @@ func (r *SessionRepo) MarkReuseAndRevokeFamily(ctx context.Context, sessionID, f
 }
 
 func (r *SessionRepo) Revoke(ctx context.Context, id string, at time.Time) error {
-	if err := use(ctx, r.db).Model(&SessionModel{}).
+	if err := use(ctx, r.db).Model(&tables.Session{}).
 		Where("public_id = ? AND revoked_at IS NULL", id).
 		Updates(map[string]any{
 			"revoked_at": at,
@@ -96,7 +98,7 @@ func (r *SessionRepo) Revoke(ctx context.Context, id string, at time.Time) error
 }
 
 func (r *SessionRepo) RevokeAllForUser(ctx context.Context, userID string, at time.Time) (int, error) {
-	res := use(ctx, r.db).Model(&SessionModel{}).
+	res := use(ctx, r.db).Model(&tables.Session{}).
 		Where("user_id = ? AND revoked_at IS NULL", userID).
 		Updates(map[string]any{
 			"revoked_at": at,

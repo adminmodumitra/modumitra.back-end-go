@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/tables"
+
 	"gorm.io/gorm"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/sso"
@@ -24,7 +26,7 @@ func (r *DeviceCodeRepo) Insert(ctx context.Context, d *sso.DeviceCode) error {
 }
 
 func (r *DeviceCodeRepo) GetByDeviceCode(ctx context.Context, deviceCode string) (*sso.DeviceCode, error) {
-	var m DeviceCodeModel
+	var m tables.DeviceCode
 	if err := use(ctx, r.db).Where("device_code = ?", deviceCode).Take(&m).Error; err != nil {
 		return nil, mapGorm(err)
 	}
@@ -32,7 +34,7 @@ func (r *DeviceCodeRepo) GetByDeviceCode(ctx context.Context, deviceCode string)
 }
 
 func (r *DeviceCodeRepo) GetByUserCode(ctx context.Context, userCode string) (*sso.DeviceCode, error) {
-	var m DeviceCodeModel
+	var m tables.DeviceCode
 	if err := use(ctx, r.db).Where("user_code = ?", strings.ToUpper(userCode)).Take(&m).Error; err != nil {
 		return nil, mapGorm(err)
 	}
@@ -41,7 +43,7 @@ func (r *DeviceCodeRepo) GetByUserCode(ctx context.Context, userCode string) (*s
 
 func (r *DeviceCodeRepo) Update(ctx context.Context, d *sso.DeviceCode) error {
 	m := deviceToModel(d)
-	res := use(ctx, r.db).Model(&DeviceCodeModel{}).Where("public_id = ?", d.ID).Updates(map[string]any{
+	res := use(ctx, r.db).Model(&tables.DeviceCode{}).Where("public_id = ?", d.ID).Updates(map[string]any{
 		"status":        m.Status,
 		"user_id":       m.UserID,
 		"last_poll_at":  m.LastPollAt,

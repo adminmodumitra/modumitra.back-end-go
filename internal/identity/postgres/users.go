@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/tables"
+
 	"gorm.io/gorm"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
@@ -17,7 +19,7 @@ type UserRepo struct {
 func NewUserRepo(db *gorm.DB) *UserRepo { return &UserRepo{db: db} }
 
 func (r *UserRepo) GetByID(ctx context.Context, id string) (*identity.User, error) {
-	var m UserModel
+	var m tables.User
 	if err := use(ctx, r.db).Where("public_id = ?", id).Take(&m).Error; err != nil {
 		return nil, mapGorm(err)
 	}
@@ -25,7 +27,7 @@ func (r *UserRepo) GetByID(ctx context.Context, id string) (*identity.User, erro
 }
 
 func (r *UserRepo) GetByEmailNormalized(ctx context.Context, email string) (*identity.User, error) {
-	var m UserModel
+	var m tables.User
 	if err := use(ctx, r.db).Where("email_normalized = ?", email).Take(&m).Error; err != nil {
 		return nil, mapGorm(err)
 	}
@@ -47,7 +49,7 @@ func (r *UserRepo) Insert(ctx context.Context, u *identity.User) error {
 }
 
 func (r *UserRepo) UpdatePassword(ctx context.Context, id, hash string, at time.Time) error {
-	res := use(ctx, r.db).Model(&UserModel{}).Where("public_id = ?", id).Updates(map[string]any{
+	res := use(ctx, r.db).Model(&tables.User{}).Where("public_id = ?", id).Updates(map[string]any{
 		"password_hash":       hash,
 		"password_updated_at": at,
 		"updated_at":          at,
@@ -62,7 +64,7 @@ func (r *UserRepo) UpdatePassword(ctx context.Context, id, hash string, at time.
 }
 
 func (r *UserRepo) SetEmailVerified(ctx context.Context, id string, at time.Time) error {
-	res := use(ctx, r.db).Model(&UserModel{}).Where("public_id = ?", id).Updates(map[string]any{
+	res := use(ctx, r.db).Model(&tables.User{}).Where("public_id = ?", id).Updates(map[string]any{
 		"email_verified_at": at,
 		"updated_at":        at,
 	})
@@ -76,7 +78,7 @@ func (r *UserRepo) SetEmailVerified(ctx context.Context, id string, at time.Time
 }
 
 func (r *UserRepo) SetLastLogin(ctx context.Context, id string, at time.Time) error {
-	res := use(ctx, r.db).Model(&UserModel{}).Where("public_id = ?", id).Updates(map[string]any{
+	res := use(ctx, r.db).Model(&tables.User{}).Where("public_id = ?", id).Updates(map[string]any{
 		"last_login_at": at,
 		"updated_at":    at,
 	})

@@ -3,6 +3,8 @@ package postgres
 import (
 	"context"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/tables"
+
 	"gorm.io/gorm"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
@@ -27,7 +29,7 @@ func (r *InvitationRepo) Insert(ctx context.Context, inv *org.Invitation) error 
 }
 
 func (r *InvitationRepo) GetByID(ctx context.Context, id string) (*org.Invitation, error) {
-	var m InvitationModel
+	var m tables.Invitation
 	if err := use(ctx, r.db).Where("public_id = ?", id).Take(&m).Error; err != nil {
 		return nil, mapGorm(err)
 	}
@@ -35,7 +37,7 @@ func (r *InvitationRepo) GetByID(ctx context.Context, id string) (*org.Invitatio
 }
 
 func (r *InvitationRepo) GetByTokenHash(ctx context.Context, hash string) (*org.Invitation, error) {
-	var m InvitationModel
+	var m tables.Invitation
 	if err := use(ctx, r.db).Where("token_hash = ?", hash).Take(&m).Error; err != nil {
 		return nil, mapGorm(err)
 	}
@@ -43,7 +45,7 @@ func (r *InvitationRepo) GetByTokenHash(ctx context.Context, hash string) (*org.
 }
 
 func (r *InvitationRepo) GetPendingByOrgEmail(ctx context.Context, orgID, email string) (*org.Invitation, error) {
-	var m InvitationModel
+	var m tables.Invitation
 	if err := use(ctx, r.db).
 		Where("organization_id = ? AND email = ? AND status = ?", orgID, email, org.InvitePending).
 		Take(&m).Error; err != nil {
@@ -57,14 +59,14 @@ func (r *InvitationRepo) ListByOrg(ctx context.Context, orgID, status, cursor st
 	if err != nil {
 		return nil, "", err
 	}
-	q := use(ctx, r.db).Model(&InvitationModel{}).Where("organization_id = ?", orgID)
+	q := use(ctx, r.db).Model(&tables.Invitation{}).Where("organization_id = ?", orgID)
 	if status != "" {
 		q = q.Where("status = ?", status)
 	}
 	if cid != "" {
 		q = q.Where("(created_at, public_id) < (?, ?)", ct, cid)
 	}
-	var rows []InvitationModel
+	var rows []tables.Invitation
 	if err := q.Order("created_at DESC, public_id DESC").Limit(limit + 1).Find(&rows).Error; err != nil {
 		return nil, "", mapGorm(err)
 	}
@@ -82,7 +84,7 @@ func (r *InvitationRepo) ListByOrg(ctx context.Context, orgID, status, cursor st
 }
 
 func (r *InvitationRepo) Update(ctx context.Context, inv *org.Invitation) error {
-	res := use(ctx, r.db).Model(&InvitationModel{}).Where("public_id = ?", inv.ID).Updates(map[string]any{
+	res := use(ctx, r.db).Model(&tables.Invitation{}).Where("public_id = ?", inv.ID).Updates(map[string]any{
 		"status":              inv.Status,
 		"token_hash":          inv.TokenHash,
 		"expires_at":          inv.ExpiresAt,

@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/tables"
+
 	"gorm.io/gorm"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
@@ -24,7 +26,7 @@ func (r *EmailTokenRepo) Insert(ctx context.Context, t *identity.EmailToken) err
 }
 
 func (r *EmailTokenRepo) GetByHash(ctx context.Context, hash string) (*identity.EmailToken, error) {
-	var m EmailTokenModel
+	var m tables.EmailToken
 	if err := use(ctx, r.db).Where("token_hash = ?", hash).Take(&m).Error; err != nil {
 		return nil, mapGorm(err)
 	}
@@ -32,7 +34,7 @@ func (r *EmailTokenRepo) GetByHash(ctx context.Context, hash string) (*identity.
 }
 
 func (r *EmailTokenRepo) Consume(ctx context.Context, id string, at time.Time) error {
-	res := use(ctx, r.db).Model(&EmailTokenModel{}).
+	res := use(ctx, r.db).Model(&tables.EmailToken{}).
 		Where("public_id = ? AND consumed_at IS NULL", id).
 		Update("consumed_at", at)
 	if res.Error != nil {
@@ -45,7 +47,7 @@ func (r *EmailTokenRepo) Consume(ctx context.Context, id string, at time.Time) e
 }
 
 func (r *EmailTokenRepo) InvalidateOpen(ctx context.Context, userID, purpose string, at time.Time) error {
-	if err := use(ctx, r.db).Model(&EmailTokenModel{}).
+	if err := use(ctx, r.db).Model(&tables.EmailToken{}).
 		Where("user_id = ? AND purpose = ? AND consumed_at IS NULL", userID, purpose).
 		Update("consumed_at", at).Error; err != nil {
 		return mapGorm(err)

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/tables"
+
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -26,7 +28,7 @@ func (r *StateRepo) Insert(ctx context.Context, st *sso.State) error {
 }
 
 func (r *StateRepo) Consume(ctx context.Context, state, provider string, now time.Time) (*sso.State, error) {
-	var m StateModel
+	var m tables.OAuthState
 	db := use(ctx, r.db)
 	if err := db.Clauses(clause.Locking{Strength: "UPDATE"}).
 		Where("state = ? AND provider = ?", state, provider).Take(&m).Error; err != nil {
@@ -44,7 +46,7 @@ func (r *StateRepo) Consume(ctx context.Context, state, provider string, now tim
 	}
 	t := now.UTC()
 	m.ConsumedAt = &t
-	if err := db.Model(&StateModel{}).Where("public_id = ?", m.PublicID).Update("consumed_at", t).Error; err != nil {
+	if err := db.Model(&tables.OAuthState{}).Where("public_id = ?", m.PublicID).Update("consumed_at", t).Error; err != nil {
 		return nil, mapGorm(err)
 	}
 	return stateFromModel(&m), nil

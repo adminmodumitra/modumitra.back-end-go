@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/tables"
+
 	"gorm.io/gorm"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
@@ -12,13 +14,13 @@ import (
 )
 
 func TestTableNames(t *testing.T) {
-	if (OrganizationModel{}).TableName() != "organizations" {
+	if (tables.Organization{}).TableName() != "organizations" {
 		t.Fatal("organizations")
 	}
-	if (MembershipModel{}).TableName() != "memberships" {
+	if (tables.Membership{}).TableName() != "memberships" {
 		t.Fatal("memberships")
 	}
-	if (InvitationModel{}).TableName() != "invitations" {
+	if (tables.Invitation{}).TableName() != "invitations" {
 		t.Fatal("invitations")
 	}
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/tables"
+
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -23,7 +25,7 @@ func (s *SQLStore) ClaimDue(ctx context.Context, now time.Time, limit int) ([]Ro
 	if limit <= 0 {
 		limit = DefaultBatch
 	}
-	var models []Model
+	var models []tables.Outbox
 	err := store.GormDB(ctx, s.db).
 		Clauses(clause.Locking{Strength: "UPDATE", Options: "SKIP LOCKED"}).
 		Where("published_at IS NULL AND available_at <= ?", now.UTC()).
@@ -35,13 +37,13 @@ func (s *SQLStore) ClaimDue(ctx context.Context, now time.Time, limit int) ([]Ro
 	}
 	out := make([]Row, 0, len(models))
 	for _, m := range models {
-		out = append(out, m.toRow())
+		out = append(out, rowFrom(m))
 	}
 	return out, nil
 }
 
 func (s *SQLStore) MarkPublished(ctx context.Context, publicID string, at time.Time) error {
-	return store.GormDB(ctx, s.db).Model(&Model{}).
+	return store.GormDB(ctx, s.db).Model(&tables.Outbox{}).
 		Where("public_id = ?", publicID).
 		Updates(map[string]any{
 			"published_at": at.UTC(),
@@ -53,7 +55,7 @@ func (s *SQLStore) MarkFailed(ctx context.Context, publicID string, attempts int
 	if len(lastErr) > 2000 {
 		lastErr = lastErr[:2000]
 	}
-	return store.GormDB(ctx, s.db).Model(&Model{}).
+	return store.GormDB(ctx, s.db).Model(&tables.Outbox{}).
 		Where("public_id = ?", publicID).
 		Updates(map[string]any{
 			"attempts":     attempts,

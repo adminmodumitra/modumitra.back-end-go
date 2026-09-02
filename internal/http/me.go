@@ -1,16 +1,12 @@
 package httpapi
 
 import (
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/dto"
 	"github.com/gin-gonic/gin"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/http/middleware"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
-
-type changePasswordBody struct {
-	CurrentPassword string `json:"current_password"`
-	NewPassword     string `json:"new_password"`
-}
 
 func (h *handlers) me(c *gin.Context) {
 	logEnter(c, "me")
@@ -22,7 +18,7 @@ func (h *handlers) me(c *gin.Context) {
 		middleware.Abort(c, err)
 		return
 	}
-	middleware.WriteJSON(c, utils.StatusOK, UserOK{
+	middleware.WriteJSON(c, utils.StatusOK, dto.UserOK{
 		Meta: metaFrom(c),
 		User: userView(u),
 	})
@@ -40,7 +36,7 @@ func (h *handlers) changePassword(c *gin.Context) {
 		}))
 		return
 	}
-	var body changePasswordBody
+	var body dto.ChangePasswordBody
 	if err := c.ShouldBindJSON(&body); err != nil {
 		middleware.Abort(c, utils.E(utils.CodeValidation))
 		return
@@ -50,7 +46,7 @@ func (h *handlers) changePassword(c *gin.Context) {
 		middleware.Abort(c, err)
 		return
 	}
-	middleware.WriteJSON(c, utils.StatusOK, StatusOK{
+	middleware.WriteJSON(c, utils.StatusOK, dto.StatusOK{
 		Meta:   metaFrom(c),
 		Status: "password_changed",
 	})

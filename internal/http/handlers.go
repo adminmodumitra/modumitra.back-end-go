@@ -3,6 +3,8 @@ package httpapi
 import (
 	"context"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/dto"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/billing"
@@ -28,7 +30,7 @@ type handlers struct {
 
 func (h *handlers) healthz(c *gin.Context) {
 	logEnter(c, "healthz")
-	middleware.WriteJSON(c, utils.StatusOK, HealthOK{
+	middleware.WriteJSON(c, utils.StatusOK, dto.HealthOK{
 		Meta:   metaFrom(c),
 		Status: "ok",
 	})
@@ -58,7 +60,7 @@ func (h *handlers) readyz(c *gin.Context) {
 	} else {
 		checks["store"] = "ok"
 	}
-	middleware.WriteJSON(c, utils.StatusOK, ReadyOK{
+	middleware.WriteJSON(c, utils.StatusOK, dto.ReadyOK{
 		Meta:   metaFrom(c),
 		Status: "ready",
 		Checks: checks,
@@ -67,7 +69,7 @@ func (h *handlers) readyz(c *gin.Context) {
 
 func (h *handlers) publicConfig(c *gin.Context) {
 	logEnter(c, "public_config")
-	middleware.WriteJSON(c, utils.StatusOK, PublicConfigOK{
+	middleware.WriteJSON(c, utils.StatusOK, dto.PublicConfigOK{
 		Meta:           metaFrom(c),
 		TermsVersion:   h.cfg.TermsVersion,
 		PrivacyVersion: h.cfg.PrivacyVersion,

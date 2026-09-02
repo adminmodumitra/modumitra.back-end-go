@@ -4,17 +4,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/tables"
+
 	"github.com/Danish-13-Khan/backend-cabinet/internal/sso"
 )
 
 func TestTableNames(t *testing.T) {
-	if (IdentityModel{}).TableName() != "oauth_identities" {
+	if (tables.OAuthIdentity{}).TableName() != "oauth_identities" {
 		t.Fatal("oauth_identities")
 	}
-	if (StateModel{}).TableName() != "oauth_states" {
+	if (tables.OAuthState{}).TableName() != "oauth_states" {
 		t.Fatal("oauth_states")
 	}
-	if (DeviceCodeModel{}).TableName() != "device_codes" {
+	if (tables.DeviceCode{}).TableName() != "device_codes" {
 		t.Fatal("device_codes")
 	}
 }

@@ -3,6 +3,8 @@ package postgres
 import (
 	"context"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/tables"
+
 	"gorm.io/gorm"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/billing"
@@ -15,7 +17,7 @@ type PlanRepo struct {
 func NewPlanRepo(db *gorm.DB) *PlanRepo { return &PlanRepo{db: db} }
 
 func (r *PlanRepo) ListSellable(ctx context.Context) ([]billing.Plan, error) {
-	var rows []PlanModel
+	var rows []tables.Plan
 	if err := use(ctx, r.db).Where("sellable = ? AND active = ?", true, true).
 		Order("sort_order ASC").Find(&rows).Error; err != nil {
 		return nil, mapGorm(err)
@@ -28,7 +30,7 @@ func (r *PlanRepo) ListSellable(ctx context.Context) ([]billing.Plan, error) {
 }
 
 func (r *PlanRepo) GetByID(ctx context.Context, id string) (*billing.Plan, error) {
-	var m PlanModel
+	var m tables.Plan
 	if err := use(ctx, r.db).Where("public_id = ?", id).Take(&m).Error; err != nil {
 		return nil, mapGorm(err)
 	}

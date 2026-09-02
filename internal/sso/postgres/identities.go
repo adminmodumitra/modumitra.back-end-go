@@ -3,6 +3,8 @@ package postgres
 import (
 	"context"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/tables"
+
 	"gorm.io/gorm"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/sso"
@@ -32,7 +34,7 @@ func (r *IdentityRepo) Insert(ctx context.Context, id *sso.Identity) error {
 }
 
 func (r *IdentityRepo) GetByProviderSubject(ctx context.Context, provider, subject string) (*sso.Identity, error) {
-	var m IdentityModel
+	var m tables.OAuthIdentity
 	if err := use(ctx, r.db).Where("provider = ? AND provider_user_id = ?", provider, subject).Take(&m).Error; err != nil {
 		return nil, mapGorm(err)
 	}
@@ -40,7 +42,7 @@ func (r *IdentityRepo) GetByProviderSubject(ctx context.Context, provider, subje
 }
 
 func (r *IdentityRepo) GetByUserProvider(ctx context.Context, userID, provider string) (*sso.Identity, error) {
-	var m IdentityModel
+	var m tables.OAuthIdentity
 	if err := use(ctx, r.db).Where("user_id = ? AND provider = ?", userID, provider).Take(&m).Error; err != nil {
 		return nil, mapGorm(err)
 	}
@@ -48,7 +50,7 @@ func (r *IdentityRepo) GetByUserProvider(ctx context.Context, userID, provider s
 }
 
 func (r *IdentityRepo) ListByUser(ctx context.Context, userID string) ([]sso.Identity, error) {
-	var rows []IdentityModel
+	var rows []tables.OAuthIdentity
 	if err := use(ctx, r.db).Where("user_id = ?", userID).Order("linked_at ASC").Find(&rows).Error; err != nil {
 		return nil, mapGorm(err)
 	}
@@ -60,7 +62,7 @@ func (r *IdentityRepo) ListByUser(ctx context.Context, userID string) ([]sso.Ide
 }
 
 func (r *IdentityRepo) DeleteByUserProvider(ctx context.Context, userID, provider string) error {
-	res := use(ctx, r.db).Where("user_id = ? AND provider = ?", userID, provider).Delete(&IdentityModel{})
+	res := use(ctx, r.db).Where("user_id = ? AND provider = ?", userID, provider).Delete(&tables.OAuthIdentity{})
 	if res.Error != nil {
 		return mapGorm(res.Error)
 	}

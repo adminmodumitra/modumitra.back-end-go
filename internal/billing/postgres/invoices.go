@@ -3,6 +3,8 @@ package postgres
 import (
 	"context"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/tables"
+
 	"gorm.io/gorm"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/billing"
@@ -23,7 +25,7 @@ func (r *InvoiceRepo) Insert(ctx context.Context, inv *billing.Invoice) error {
 }
 
 func (r *InvoiceRepo) GetByID(ctx context.Context, id string) (*billing.Invoice, error) {
-	var m InvoiceModel
+	var m tables.Invoice
 	if err := use(ctx, r.db).Where("public_id = ?", id).Take(&m).Error; err != nil {
 		return nil, mapGorm(err)
 	}
@@ -31,7 +33,7 @@ func (r *InvoiceRepo) GetByID(ctx context.Context, id string) (*billing.Invoice,
 }
 
 func (r *InvoiceRepo) GetByProviderInvoiceID(ctx context.Context, providerInvoiceID string) (*billing.Invoice, error) {
-	var m InvoiceModel
+	var m tables.Invoice
 	if err := use(ctx, r.db).Where("provider_invoice_id = ?", providerInvoiceID).Take(&m).Error; err != nil {
 		return nil, mapGorm(err)
 	}
@@ -43,14 +45,14 @@ func (r *InvoiceRepo) ListByOrg(ctx context.Context, orgID, status, cursor strin
 	if err != nil {
 		return nil, "", err
 	}
-	q := use(ctx, r.db).Model(&InvoiceModel{}).Where("organization_id = ?", orgID)
+	q := use(ctx, r.db).Model(&tables.Invoice{}).Where("organization_id = ?", orgID)
 	if status != "" {
 		q = q.Where("status = ?", status)
 	}
 	if cid != "" {
 		q = q.Where("(created_at, public_id) < (?, ?)", ct, cid)
 	}
-	var rows []InvoiceModel
+	var rows []tables.Invoice
 	if err := q.Order("created_at DESC, public_id DESC").Limit(limit + 1).Find(&rows).Error; err != nil {
 		return nil, "", mapGorm(err)
 	}

@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/tables"
+
 	"gorm.io/gorm"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
@@ -12,13 +14,13 @@ import (
 )
 
 func TestTableNames(t *testing.T) {
-	if (UserModel{}).TableName() != "users" {
+	if (tables.User{}).TableName() != "users" {
 		t.Fatalf("users")
 	}
-	if (SessionModel{}).TableName() != "sessions" {
+	if (tables.Session{}).TableName() != "sessions" {
 		t.Fatalf("sessions")
 	}
-	if (EmailTokenModel{}).TableName() != "email_tokens" {
+	if (tables.EmailToken{}).TableName() != "email_tokens" {
 		t.Fatalf("email_tokens")
 	}
 }

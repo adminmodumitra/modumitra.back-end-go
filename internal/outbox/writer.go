@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/tables"
+
 	"github.com/jackc/pgx/v5/pgconn"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -51,7 +53,7 @@ func (w *SQLWriter) Enqueue(ctx context.Context, env *pb.Envelope) error {
 	if err != nil {
 		return err
 	}
-	row := Model{
+	row := tables.Outbox{
 		PublicID:     id,
 		EventID:      env.EventId,
 		Topic:        TopicFor(env.EventType),

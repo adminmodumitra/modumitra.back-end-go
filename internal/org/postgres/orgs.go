@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/tables"
+
 	"gorm.io/gorm"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
@@ -24,7 +26,7 @@ func (r *OrgRepo) Insert(ctx context.Context, o *org.Organization) error {
 }
 
 func (r *OrgRepo) GetByID(ctx context.Context, id string) (*org.Organization, error) {
-	var m OrganizationModel
+	var m tables.Organization
 	if err := use(ctx, r.db).Where("public_id = ?", id).Take(&m).Error; err != nil {
 		return nil, mapGorm(err)
 	}
@@ -32,7 +34,7 @@ func (r *OrgRepo) GetByID(ctx context.Context, id string) (*org.Organization, er
 }
 
 func (r *OrgRepo) UpdateName(ctx context.Context, id, name string, at time.Time) error {
-	res := use(ctx, r.db).Model(&OrganizationModel{}).
+	res := use(ctx, r.db).Model(&tables.Organization{}).
 		Where("public_id = ? AND status <> ?", id, org.OrgDeleted).
 		Updates(map[string]any{
 			"name":       name,
@@ -48,7 +50,7 @@ func (r *OrgRepo) UpdateName(ctx context.Context, id, name string, at time.Time)
 }
 
 func (r *OrgRepo) SoftDelete(ctx context.Context, id string, at time.Time) error {
-	res := use(ctx, r.db).Model(&OrganizationModel{}).
+	res := use(ctx, r.db).Model(&tables.Organization{}).
 		Where("public_id = ? AND status <> ?", id, org.OrgDeleted).
 		Updates(map[string]any{
 			"status":     org.OrgDeleted,
@@ -65,7 +67,7 @@ func (r *OrgRepo) SoftDelete(ctx context.Context, id string, at time.Time) error
 }
 
 func (r *OrgRepo) SetOwner(ctx context.Context, id, ownerUserID string, at time.Time) error {
-	res := use(ctx, r.db).Model(&OrganizationModel{}).
+	res := use(ctx, r.db).Model(&tables.Organization{}).
 		Where("public_id = ? AND status <> ?", id, org.OrgDeleted).
 		Updates(map[string]any{
 			"owner_user_id": ownerUserID,
@@ -81,7 +83,7 @@ func (r *OrgRepo) SetOwner(ctx context.Context, id, ownerUserID string, at time.
 }
 
 func (r *OrgRepo) SetProviderCustomer(ctx context.Context, id, provider, customerID string, at time.Time) error {
-	res := use(ctx, r.db).Model(&OrganizationModel{}).
+	res := use(ctx, r.db).Model(&tables.Organization{}).
 		Where("public_id = ? AND status <> ?", id, org.OrgDeleted).
 		Updates(map[string]any{
 			"provider":             emptyToNil(provider),

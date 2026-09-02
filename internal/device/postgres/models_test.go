@@ -5,16 +5,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/models/tables"
+
 	"gorm.io/gorm"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/device"
 )
 
 func TestTableNames(t *testing.T) {
-	if (DeviceModel{}).TableName() != "devices" {
+	if (tables.Device{}).TableName() != "devices" {
 		t.Fatal("devices")
 	}
-	if (EntitlementModel{}).TableName() != "entitlements" {
+	if (tables.Entitlement{}).TableName() != "entitlements" {
 		t.Fatal("entitlements")
 	}
 }
