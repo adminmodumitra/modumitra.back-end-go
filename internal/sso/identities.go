@@ -3,9 +3,9 @@ package sso
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"strings"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
@@ -77,7 +77,8 @@ func (s *Service) Link(ctx context.Context, userID, provider, code, state string
 	if err := s.identities.Insert(ctx, id); err != nil {
 		return nil, mapRepoErr(err)
 	}
-	slog.InfoContext(ctx, "auth.oauth_link", "user_id", userID, "provider", provider)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("user_id", userID).Str("provider", provider).Msg("auth.oauth_link")
 	return id, nil
 }
 
@@ -113,6 +114,7 @@ func (s *Service) Unlink(ctx context.Context, userID, provider string) error {
 	if err := s.identities.DeleteByUserProvider(ctx, userID, provider); err != nil {
 		return mapRepoErr(err)
 	}
-	slog.InfoContext(ctx, "auth.oauth_unlink", "user_id", userID, "provider", provider)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("user_id", userID).Str("provider", provider).Msg("auth.oauth_unlink")
 	return nil
 }

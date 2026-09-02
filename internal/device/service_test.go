@@ -1,4 +1,4 @@
-package device
+package device_test
 
 import (
 	"context"
@@ -7,13 +7,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/device"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/orglookup"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/outbox"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
-func setup(t *testing.T) (*Service, *org.Service, *identity.Service, *identity.RecordingMailer, HMACSigner, *Memory) {
+func setup(t *testing.T) (*device.Service, *org.Service, *identity.Service, *identity.RecordingMailer, device.HMACSigner, *device.Memory) {
 	t.Helper()
 	icfg := identity.Settings{
 		TermsVersion:   "2026-06-01",
@@ -26,10 +28,10 @@ func setup(t *testing.T) (*Service, *org.Service, *identity.Service, *identity.R
 	}
 	ident, imail, mem := identity.NewMemoryService(icfg)
 	orgs, _, _ := org.NewMemoryService(mem.Users(), 14)
-	signer := NewHMACSigner("test-entitlement-signing-key", KeyIDV1)
-	clk := &FrozenClock{T: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)}
-	store := NewMemory()
-	svc := NewService(store.Devices(), store.Entitlements(), store, orgs, signer, clk, NewIDGen(), outbox.NewMemoryWriter())
+	signer := device.NewHMACSigner("test-entitlement-signing-key", device.KeyIDV1)
+	clk := &device.FrozenClock{T: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)}
+	store := device.NewMemory()
+	svc := device.NewService(store.Devices(), store.Entitlements(), store, orglookup.Adapter{Service: orgs}, signer, clk, device.NewIDGen(), outbox.NewMemoryWriter())
 	return svc, orgs, ident, imail, signer, store
 }
 
@@ -43,7 +45,7 @@ func codeOf(err error) utils.Code {
 
 func mustUser(t *testing.T, ident *identity.Service, mail *identity.RecordingMailer, email string) *identity.User {
 	t.Helper()
-	u, err := ident.Register(context.Background(), identity.RegisterInput{
+	_, err := ident.Register(context.Background(), identity.RegisterInput{
 		Email:          email,
 		Password:       "correct-horse-battery-staple-19",
 		DisplayName:    "Ada Lovelace",
@@ -57,7 +59,7 @@ func mustUser(t *testing.T, ident *identity.Service, mail *identity.RecordingMai
 	if !ok {
 		t.Fatal("missing verification mail")
 	}
-	u, err = ident.VerifyEmail(context.Background(), call.Token)
+	u, err := ident.VerifyEmail(context.Background(), call.Token)
 	if err != nil {
 		t.Fatalf("verify: %v", err)
 	}
@@ -67,17 +69,17 @@ func mustUser(t *testing.T, ident *identity.Service, mail *identity.RecordingMai
 func TestActivateFirstDeviceSigns(t *testing.T) {
 	svc, _, ident, mail, signer, store := setup(t)
 	u := mustUser(t, ident, mail, "ada@example.com")
-	d, snap, err := svc.Activate(context.Background(), u.ID, "Studio iMac", PlatformMacOS)
+	d, snap, err := svc.Activate(context.Background(), u.ID, "Studio iMac", device.PlatformMacOS)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if d == nil || !strings.HasPrefix(d.ID, PrefixDevice) {
+	if d == nil || !strings.HasPrefix(d.ID, device.PrefixDevice) {
 		t.Fatalf("device=%+v", d)
 	}
 	if snap == nil || snap.Signature == "" {
 		t.Fatal("missing signature")
 	}
-	if snap.Plan != PlanNone || snap.OrganizationID != nil {
+	if snap.Plan != device.PlanNone || snap.OrganizationID != nil {
 		t.Fatalf("snap=%+v", snap)
 	}
 	if !signer.VerifySnapshot(*snap) {
@@ -91,12 +93,12 @@ func TestActivateFirstDeviceSigns(t *testing.T) {
 func TestFourthActiveDeviceLimit(t *testing.T) {
 	svc, _, ident, mail, _, _ := setup(t)
 	u := mustUser(t, ident, mail, "ada@example.com")
-	for i := 0; i < DeviceLimit; i++ {
-		if _, _, err := svc.Activate(context.Background(), u.ID, "Dev", PlatformMacOS); err != nil {
+	for i := 0; i < device.DeviceLimit; i++ {
+		if _, _, err := svc.Activate(context.Background(), u.ID, "Dev", device.PlatformMacOS); err != nil {
 			t.Fatalf("activate %d: %v", i, err)
 		}
 	}
-	_, _, err := svc.Activate(context.Background(), u.ID, "Overflow", PlatformLinux)
+	_, _, err := svc.Activate(context.Background(), u.ID, "Overflow", device.PlatformLinux)
 	if codeOf(err) != utils.CodeDeviceLimit {
 		t.Fatalf("err=%v code=%s", err, codeOf(err))
 	}
@@ -105,9 +107,9 @@ func TestFourthActiveDeviceLimit(t *testing.T) {
 func TestDeactivateFreesSlot(t *testing.T) {
 	svc, _, ident, mail, _, _ := setup(t)
 	u := mustUser(t, ident, mail, "ada@example.com")
-	var first *Device
-	for i := 0; i < DeviceLimit; i++ {
-		d, _, err := svc.Activate(context.Background(), u.ID, "Dev", PlatformMacOS)
+	var first *device.Device
+	for i := 0; i < device.DeviceLimit; i++ {
+		d, _, err := svc.Activate(context.Background(), u.ID, "Dev", device.PlatformMacOS)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -118,7 +120,7 @@ func TestDeactivateFreesSlot(t *testing.T) {
 	if _, err := svc.Deactivate(context.Background(), u.ID, first.ID); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := svc.Activate(context.Background(), u.ID, "Replacement", PlatformWindows); err != nil {
+	if _, _, err := svc.Activate(context.Background(), u.ID, "Replacement", device.PlatformWindows); err != nil {
 		t.Fatalf("expected slot freed: %v", err)
 	}
 }
@@ -127,7 +129,7 @@ func TestPatchDeleteOtherUserNotFound(t *testing.T) {
 	svc, _, ident, mail, _, _ := setup(t)
 	a := mustUser(t, ident, mail, "ada@example.com")
 	b := mustUser(t, ident, mail, "charles@example.com")
-	d, _, err := svc.Activate(context.Background(), a.ID, "Ada Mac", PlatformMacOS)
+	d, _, err := svc.Activate(context.Background(), a.ID, "Ada Mac", device.PlatformMacOS)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,11 +144,11 @@ func TestPatchDeleteOtherUserNotFound(t *testing.T) {
 func TestSnapshotNoOrgPlanNone(t *testing.T) {
 	svc, _, ident, mail, signer, _ := setup(t)
 	u := mustUser(t, ident, mail, "ada@example.com")
-	_, snap, err := svc.Activate(context.Background(), u.ID, "Laptop", PlatformLinux)
+	_, snap, err := svc.Activate(context.Background(), u.ID, "Laptop", device.PlatformLinux)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if snap.Plan != PlanNone || snap.SubscriptionStatus != SubNone {
+	if snap.Plan != device.PlanNone || snap.SubscriptionStatus != device.SubNone {
 		t.Fatalf("plan=%s status=%s", snap.Plan, snap.SubscriptionStatus)
 	}
 	if snap.OrganizationID != nil {
@@ -170,11 +172,11 @@ func TestSnapshotTrialOrg(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, snap, err := svc.Activate(context.Background(), u.ID, "Studio iMac", PlatformMacOS)
+	_, snap, err := svc.Activate(context.Background(), u.ID, "Studio iMac", device.PlatformMacOS)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if snap.Plan != PlanTrial || snap.SubscriptionStatus != SubTrialing {
+	if snap.Plan != device.PlanTrial || snap.SubscriptionStatus != device.SubTrialing {
 		t.Fatalf("plan=%s status=%s", snap.Plan, snap.SubscriptionStatus)
 	}
 	if snap.OrganizationID == nil || *snap.OrganizationID != o.ID {
@@ -199,7 +201,7 @@ func TestIssueDeviceNotOwned(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	other, _, err := svc.Activate(context.Background(), b.ID, "Charles PC", PlatformWindows)
+	other, _, err := svc.Activate(context.Background(), b.ID, "Charles PC", device.PlatformWindows)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,7 +214,7 @@ func TestIssueDeviceNotOwned(t *testing.T) {
 func TestDeactivateIdempotent(t *testing.T) {
 	svc, _, ident, mail, _, _ := setup(t)
 	u := mustUser(t, ident, mail, "ada@example.com")
-	d, _, err := svc.Activate(context.Background(), u.ID, "Mac", PlatformMacOS)
+	d, _, err := svc.Activate(context.Background(), u.ID, "Mac", device.PlatformMacOS)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,7 +225,7 @@ func TestDeactivateIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if again.Status != StatusDeactivated {
+	if again.Status != device.StatusDeactivated {
 		t.Fatalf("status=%s", again.Status)
 	}
 }

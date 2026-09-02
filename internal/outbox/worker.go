@@ -2,13 +2,13 @@ package outbox
 
 import (
 	"context"
-	"log/slog"
 	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/outbox/pb"
 )
 
@@ -59,7 +59,8 @@ func (w *Worker) Run(ctx context.Context) {
 	defer t.Stop()
 	for {
 		if err := w.Tick(ctx); err != nil {
-			slog.ErrorContext(ctx, "outbox.tick", "error", err)
+			l := obs.FromCtx(ctx)
+			l.Error().Err(err).Msg("outbox.tick")
 		}
 		select {
 		case <-ctx.Done():
@@ -86,12 +87,14 @@ func (w *Worker) Tick(ctx context.Context) error {
 			attempts := rows[i].Attempts + 1
 			avail := now.Add(backoff(attempts))
 			if markErr := w.store.MarkFailed(ctx, rows[i].PublicID, attempts, pubErr.Error(), avail); markErr != nil {
-				slog.ErrorContext(ctx, "outbox.mark_failed", "event_id", rows[i].EventID, "error", markErr)
+				l := obs.FromCtx(ctx)
+				l.Error().Err(markErr).Str("event_id", rows[i].EventID).Msg("outbox.mark_failed")
 			}
 			continue
 		}
 		if markErr := w.store.MarkPublished(ctx, rows[i].PublicID, now); markErr != nil {
-			slog.ErrorContext(ctx, "outbox.mark_published", "event_id", rows[i].EventID, "error", markErr)
+			l := obs.FromCtx(ctx)
+			l.Error().Err(markErr).Str("event_id", rows[i].EventID).Msg("outbox.mark_published")
 		}
 	}
 	return nil

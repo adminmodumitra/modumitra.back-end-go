@@ -41,7 +41,7 @@ func codeOf(err error) utils.Code {
 
 func mustUser(t *testing.T, ident *identity.Service, mail *identity.RecordingMailer, email string) *identity.User {
 	t.Helper()
-	u, err := ident.Register(context.Background(), identity.RegisterInput{
+	_, err := ident.Register(context.Background(), identity.RegisterInput{
 		Email:          email,
 		Password:       "correct-horse-battery-staple-19",
 		DisplayName:    "Ada Lovelace",
@@ -55,7 +55,7 @@ func mustUser(t *testing.T, ident *identity.Service, mail *identity.RecordingMai
 	if !ok {
 		t.Fatal("missing verification mail")
 	}
-	u, err = ident.VerifyEmail(context.Background(), call.Token)
+	u, err := ident.VerifyEmail(context.Background(), call.Token)
 	if err != nil {
 		t.Fatalf("verify: %v", err)
 	}

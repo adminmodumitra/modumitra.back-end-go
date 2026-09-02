@@ -36,9 +36,6 @@ func (r *UserRepo) GetByEmailNormalized(ctx context.Context, email string) (*ide
 
 func (r *UserRepo) Insert(ctx context.Context, u *identity.User) error {
 	m := userToModel(u)
-	created := u.CreatedAt.UTC()
-	m.PasswordUpdatedAt = &created
-	m.TermsAcceptedAt = created
 	if err := use(ctx, r.db).Create(&m).Error; err != nil {
 		if isUnique(err) {
 			return utils.E(utils.CodeEmailTaken)

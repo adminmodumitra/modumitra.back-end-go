@@ -3,9 +3,9 @@ package identity
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"strings"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
@@ -34,9 +34,11 @@ func (s *Service) RequestPasswordReset(ctx context.Context, email string) error 
 		return mapRepoErr(err)
 	}
 	if err := s.mailer.SendPasswordReset(ctx, u.Email, rawTok); err != nil {
-		slog.ErrorContext(ctx, "send password reset mail", "user_id", u.ID, "error", err)
+		l := obs.FromCtx(ctx)
+		l.Error().Err(err).Str("user_id", u.ID).Msg("send password reset mail")
 	}
-	slog.InfoContext(ctx, "auth.password_reset_requested", "user_id", u.ID)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("user_id", u.ID).Msg("auth.password_reset_requested")
 	return nil
 }
 
@@ -72,7 +74,8 @@ func (s *Service) ConfirmPasswordReset(ctx context.Context, rawToken, newPasswor
 		}
 		return mapRepoErr(err)
 	}
-	slog.InfoContext(ctx, "auth.password_reset_confirm", "user_id", tok.UserID)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("user_id", tok.UserID).Msg("auth.password_reset_confirm")
 	return nil
 }
 
@@ -119,6 +122,7 @@ func (s *Service) ChangePassword(ctx context.Context, userID, current, newPasswo
 	if err != nil {
 		return mapRepoErr(err)
 	}
-	slog.InfoContext(ctx, "auth.password_change", "user_id", userID)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("user_id", userID).Msg("auth.password_change")
 	return nil
 }

@@ -16,6 +16,7 @@ import (
 	identpg "github.com/Danish-13-Khan/backend-cabinet/internal/identity/postgres"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
 	orgpg "github.com/Danish-13-Khan/backend-cabinet/internal/org/postgres"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/orglookup"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/outbox"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/sso"
 	ssopg "github.com/Danish-13-Khan/backend-cabinet/internal/sso/postgres"
@@ -74,7 +75,7 @@ func wire(ctx context.Context, cfg config.Config, gdb *gorm.DB) wired {
 		devicepg.NewDeviceRepo(gdb),
 		devicepg.NewEntitlementRepo(gdb),
 		devicepg.NewTx(gdb),
-		orgs,
+		orglookup.Adapter{Service: orgs},
 		device.NewHMACSigner(cfg.EntitlementSigningKey, device.KeyIDV1),
 		device.SystemClock{},
 		device.NewIDGen(),

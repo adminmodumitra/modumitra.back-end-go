@@ -2,8 +2,8 @@ package org
 
 import (
 	"context"
-	"log/slog"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
@@ -33,7 +33,8 @@ func (s *Service) RevokeInvitation(ctx context.Context, actorID, orgID, invitati
 	if err := s.invites.Update(ctx, inv); err != nil {
 		return mapRepoErr(err)
 	}
-	slog.InfoContext(ctx, "org.invitation_revoked", "invitation_id", invitationID)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("invitation_id", invitationID).Msg("org.invitation_revoked")
 	return nil
 }
 
@@ -66,9 +67,11 @@ func (s *Service) ResendInvitation(ctx context.Context, actorID, orgID, invitati
 	}
 	if s.mailer != nil {
 		if err := s.mailer.SendInvite(ctx, inv.Email, raw, o.Name); err != nil {
-			slog.ErrorContext(ctx, "resend invite mail", "invitation_id", invitationID, "error", err)
+			l := obs.FromCtx(ctx)
+			l.Error().Err(err).Str("invitation_id", invitationID).Msg("resend invite mail")
 		}
 	}
-	slog.InfoContext(ctx, "org.invitation_resent", "invitation_id", invitationID)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("invitation_id", invitationID).Msg("org.invitation_resent")
 	return inv, nil
 }

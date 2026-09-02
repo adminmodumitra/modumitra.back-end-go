@@ -2,10 +2,10 @@ package org
 
 import (
 	"context"
-	"log/slog"
 	"strings"
 	"time"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/outbox"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
@@ -84,7 +84,8 @@ func (s *Service) Create(ctx context.Context, actorID, name string) (*Organizati
 	if err != nil {
 		return nil, nil, mapRepoErr(err)
 	}
-	slog.InfoContext(ctx, "org.created", "organization_id", o.ID, "user_id", actorID)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("organization_id", o.ID).Str("user_id", actorID).Msg("org.created")
 	return o, m, nil
 }
 
@@ -128,6 +129,7 @@ func (s *Service) UpdateName(ctx context.Context, actorID, orgID, name string) (
 	}
 	o.Name = name
 	o.UpdatedAt = now
-	slog.InfoContext(ctx, "org.updated", "organization_id", orgID, "user_id", actorID)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("organization_id", orgID).Str("user_id", actorID).Msg("org.updated")
 	return o, nil
 }

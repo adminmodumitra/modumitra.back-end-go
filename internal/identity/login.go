@@ -3,9 +3,9 @@ package identity
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"strings"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/outbox"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
@@ -57,7 +57,8 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (*User, *TokenPair, 
 	if err != nil {
 		return nil, nil, mapRepoErr(err)
 	}
-	slog.InfoContext(ctx, "auth.login", "user_id", u.ID)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("user_id", u.ID).Msg("auth.login")
 	u.PasswordHash = ""
 	return u, pair, nil
 }

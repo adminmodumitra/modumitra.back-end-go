@@ -3,9 +3,9 @@ package identity
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"strings"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
@@ -42,9 +42,11 @@ func (s *Service) RequestOTP(ctx context.Context, email string) error {
 		return mapRepoErr(err)
 	}
 	if err := s.mailer.SendOTP(ctx, u.Email, otp); err != nil {
-		slog.ErrorContext(ctx, "send otp mail", "user_id", u.ID, "error", err)
+		l := obs.FromCtx(ctx)
+		l.Error().Err(err).Str("user_id", u.ID).Msg("send otp mail")
 	}
-	slog.InfoContext(ctx, "auth.otp_requested", "user_id", u.ID)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("user_id", u.ID).Msg("auth.otp_requested")
 	return nil
 }
 
@@ -102,9 +104,11 @@ func (s *Service) VerifyOTP(ctx context.Context, email, otp, deviceName string) 
 		return nil, nil, mapRepoErr(err)
 	}
 	if err := s.users.SetLastLogin(ctx, u.ID, now); err != nil {
-		slog.ErrorContext(ctx, "set last_login_at", "user_id", u.ID, "error", err)
+		l := obs.FromCtx(ctx)
+		l.Error().Err(err).Str("user_id", u.ID).Msg("set last_login_at")
 	}
-	slog.InfoContext(ctx, "auth.otp_login", "user_id", u.ID)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("user_id", u.ID).Msg("auth.otp_login")
 	u.PasswordHash = ""
 	return u, pair, nil
 }

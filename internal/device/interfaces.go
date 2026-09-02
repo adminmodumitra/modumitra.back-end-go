@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"time"
-
-	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
 )
 
 var ErrNotFound = errors.New("not found")
@@ -42,8 +40,26 @@ type Signer interface {
 	Verify(canonical []byte, signature string) bool
 }
 
+type OrgRef struct {
+	ID          string
+	TrialEndsAt *time.Time
+}
+
+type MemberRef struct {
+	UserID string
+	Role   string
+	Status string
+}
+
+func (m *MemberRef) Active() bool {
+	return m != nil && m.Status == MemberActive
+}
+
+const MemberActive = "active"
+const MemberSuspended = "suspended"
+
 // OrgLookup is the org-side surface devices need (primary org + membership).
 type OrgLookup interface {
-	PrimaryForUser(ctx context.Context, userID string) (*org.Organization, error)
-	MembershipOf(ctx context.Context, orgID, userID string) (*org.Organization, *org.Membership, error)
+	PrimaryForUser(ctx context.Context, userID string) (*OrgRef, error)
+	MembershipOf(ctx context.Context, orgID, userID string) (*OrgRef, *MemberRef, error)
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/orglookup"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/sso"
 )
 
@@ -65,7 +66,7 @@ func testRouter(t *testing.T, p fakePinger) http.Handler {
 	cfg.ServiceName = "cabinet-studio-api-test"
 	svc, _, mem := identity.NewMemoryService(testSettings(cfg))
 	orgs, _, orgMem := org.NewMemoryService(mem.Users(), cfg.TrialDays)
-	devs, _ := device.NewMemoryService(orgs, cfg.EntitlementSigningKey)
+	devs, _ := device.NewMemoryService(orglookup.Adapter{Service: orgs}, cfg.EntitlementSigningKey)
 	bills, _, _ := billing.NewMemoryService(orgMem.Orgs(), orgMem.Members(), orgMem.Invites(), mem.Users(), billing.Settings{Provider: billing.ProviderFake, WebhookSecret: cfg.BillingWebhookSecret})
 	return NewRouter(cfg, p, svc, orgs, devs, bills, memorySSO(svc, cfg))
 }
@@ -253,7 +254,7 @@ func TestReadyzReportsActiveDriver(t *testing.T) {
 	cfg.ServiceName = "cabinet-studio-api-test"
 	svc, _, mem := identity.NewMemoryService(testSettings(cfg))
 	orgs, _, orgMem := org.NewMemoryService(mem.Users(), cfg.TrialDays)
-	devs, _ := device.NewMemoryService(orgs, cfg.EntitlementSigningKey)
+	devs, _ := device.NewMemoryService(orglookup.Adapter{Service: orgs}, cfg.EntitlementSigningKey)
 	bills, _, _ := billing.NewMemoryService(orgMem.Orgs(), orgMem.Members(), orgMem.Invites(), mem.Users(), billing.Settings{Provider: billing.ProviderFake, WebhookSecret: cfg.BillingWebhookSecret})
 	r := NewRouter(cfg, fakePinger{}, svc, orgs, devs, bills, memorySSO(svc, cfg))
 	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)

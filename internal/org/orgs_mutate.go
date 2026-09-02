@@ -3,8 +3,8 @@ package org
 import (
 	"context"
 	"errors"
-	"log/slog"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
@@ -20,7 +20,8 @@ func (s *Service) Delete(ctx context.Context, actorID, orgID string) error {
 	if err := s.orgs.SoftDelete(ctx, orgID, now); err != nil {
 		return mapRepoErr(err)
 	}
-	slog.InfoContext(ctx, "org.deleted", "organization_id", orgID, "user_id", actorID)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("organization_id", orgID).Str("user_id", actorID).Msg("org.deleted")
 	return nil
 }
 
@@ -45,7 +46,8 @@ func (s *Service) Leave(ctx context.Context, actorID, orgID string) error {
 	if err := s.members.Update(ctx, m); err != nil {
 		return mapRepoErr(err)
 	}
-	slog.InfoContext(ctx, "org.left", "organization_id", orgID, "user_id", actorID)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("organization_id", orgID).Str("user_id", actorID).Msg("org.left")
 	return nil
 }
 
@@ -95,7 +97,8 @@ func (s *Service) TransferOwnership(ctx context.Context, actorID, orgID, targetU
 	}
 	o.OwnerUserID = targetUserID
 	o.UpdatedAt = now
-	slog.InfoContext(ctx, "org.ownership_transferred", "organization_id", orgID, "from", actorID, "to", targetUserID)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("organization_id", orgID).Str("from", actorID).Str("to", targetUserID).Msg("org.ownership_transferred")
 	return o, nil
 }
 

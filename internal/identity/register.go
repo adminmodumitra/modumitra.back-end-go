@@ -3,9 +3,9 @@ package identity
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"strings"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/outbox"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
@@ -30,16 +30,18 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (*User, error)
 
 	now := s.clock.Now()
 	u := &User{
-		ID:              s.ids.User(),
-		Email:           email,
-		EmailNormalized: normalizeEmail(email),
-		PasswordHash:    hash,
-		DisplayName:     display,
-		TermsVersion:    in.TermsVersion,
-		PrivacyVersion:  in.PrivacyVersion,
-		Status:          StatusActive,
-		CreatedAt:       now,
-		UpdatedAt:       now,
+		ID:                s.ids.User(),
+		Email:             email,
+		EmailNormalized:   normalizeEmail(email),
+		PasswordHash:      hash,
+		PasswordUpdatedAt: &now,
+		DisplayName:       display,
+		TermsVersion:      in.TermsVersion,
+		PrivacyVersion:    in.PrivacyVersion,
+		TermsAcceptedAt:   now,
+		Status:            StatusActive,
+		CreatedAt:         now,
+		UpdatedAt:         now,
 	}
 	rawTok, tokHash := s.tokens.NewEmailToken(PrefixVerify)
 	et := &EmailToken{
@@ -65,9 +67,11 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (*User, error)
 	}
 
 	if err := s.mailer.SendVerification(ctx, u.Email, rawTok); err != nil {
-		slog.ErrorContext(ctx, "send verification mail", "user_id", u.ID, "error", err)
+		l := obs.FromCtx(ctx)
+		l.Error().Err(err).Str("user_id", u.ID).Msg("send verification mail")
 	}
-	slog.InfoContext(ctx, "auth.register", "user_id", u.ID)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("user_id", u.ID).Msg("auth.register")
 	out := *u
 	out.PasswordHash = ""
 	return &out, nil
@@ -100,7 +104,8 @@ func (s *Service) VerifyEmail(ctx context.Context, raw string) (*User, error) {
 		}
 		return nil, mapRepoErr(err)
 	}
-	slog.InfoContext(ctx, "auth.email_verified", "user_id", user.ID)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("user_id", user.ID).Msg("auth.email_verified")
 	user.PasswordHash = ""
 	return user, nil
 }
@@ -133,7 +138,8 @@ func (s *Service) ResendVerification(ctx context.Context, email string) error {
 		return mapRepoErr(err)
 	}
 	if err := s.mailer.SendVerification(ctx, u.Email, rawTok); err != nil {
-		slog.ErrorContext(ctx, "send verification mail", "user_id", u.ID, "error", err)
+		l := obs.FromCtx(ctx)
+		l.Error().Err(err).Str("user_id", u.ID).Msg("send verification mail")
 	}
 	return nil
 }

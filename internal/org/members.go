@@ -2,8 +2,8 @@ package org
 
 import (
 	"context"
-	"log/slog"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
@@ -90,6 +90,7 @@ func (s *Service) PatchMember(ctx context.Context, actorID, orgID, targetUserID,
 	if err := s.members.Update(ctx, target); err != nil {
 		return nil, mapRepoErr(err)
 	}
-	slog.InfoContext(ctx, "org.member_patched", "organization_id", orgID, "user_id", targetUserID, "actor", actorID)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("organization_id", orgID).Str("user_id", targetUserID).Str("actor", actorID).Msg("org.member_patched")
 	return target, nil
 }

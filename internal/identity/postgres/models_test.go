@@ -28,17 +28,19 @@ func TestTableNames(t *testing.T) {
 func TestUserModelRoundTrip(t *testing.T) {
 	verified := time.Date(2026, 1, 2, 3, 4, 5, 6, time.FixedZone("IST", 19800))
 	u := &identity.User{
-		ID:              "usr_abc",
-		Email:           "Ada@Example.com",
-		EmailNormalized: "ada@example.com",
-		EmailVerifiedAt: &verified,
-		PasswordHash:    "argon2id$...",
-		DisplayName:     "Ada",
-		TermsVersion:    "1",
-		PrivacyVersion:  "1",
-		Status:          identity.StatusActive,
-		CreatedAt:       verified,
-		UpdatedAt:       verified,
+		ID:                "usr_abc",
+		Email:             "Ada@Example.com",
+		EmailNormalized:   "ada@example.com",
+		EmailVerifiedAt:   &verified,
+		PasswordHash:      "argon2id$...",
+		DisplayName:       "Ada",
+		TermsVersion:      "1",
+		PrivacyVersion:    "1",
+		Status:            identity.StatusActive,
+		PasswordUpdatedAt: &verified,
+		TermsAcceptedAt:   verified,
+		CreatedAt:         verified,
+		UpdatedAt:         verified,
 	}
 	got := userFromModel(ptr(userToModel(u)))
 	if got.ID != u.ID || got.Email != u.Email || got.PasswordHash != u.PasswordHash {
@@ -49,6 +51,12 @@ func TestUserModelRoundTrip(t *testing.T) {
 	}
 	if got.CreatedAt.Location() != time.UTC {
 		t.Fatalf("created tz=%v", got.CreatedAt.Location())
+	}
+	if got.PasswordUpdatedAt == nil || got.PasswordUpdatedAt.Location() != time.UTC {
+		t.Fatalf("password_updated_at=%v", got.PasswordUpdatedAt)
+	}
+	if got.TermsAcceptedAt.IsZero() || got.TermsAcceptedAt.Location() != time.UTC {
+		t.Fatalf("terms_accepted_at=%v", got.TermsAcceptedAt)
 	}
 }
 

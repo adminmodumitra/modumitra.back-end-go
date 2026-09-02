@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log/slog"
 	"strings"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	gormlogger "gorm.io/gorm/logger"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 )
 
 type sqlStore struct {
@@ -26,7 +26,8 @@ type gormLogWriter struct{}
 
 func (gormLogWriter) Printf(format string, args ...any) {
 	// ParameterizedQueries is on; never interpolate secrets/DSN into logs.
-	slog.Warn("gorm", "msg", fmt.Sprintf(format, args...))
+	l := obs.Logger()
+	l.Warn().Str("msg", fmt.Sprintf(format, args...)).Msg("gorm")
 }
 
 func newGormLogger() gormlogger.Interface {

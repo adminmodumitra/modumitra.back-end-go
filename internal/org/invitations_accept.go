@@ -3,8 +3,8 @@ package org
 import (
 	"context"
 	"errors"
-	"log/slog"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/outbox"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
@@ -106,6 +106,7 @@ func (s *Service) AcceptInvitation(ctx context.Context, actorID, rawToken string
 	if err != nil {
 		return nil, nil, mapRepoErr(err)
 	}
-	slog.InfoContext(ctx, "org.invitation_accepted", "organization_id", o.ID, "user_id", actorID)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("organization_id", o.ID).Str("user_id", actorID).Msg("org.invitation_accepted")
 	return o, membership, nil
 }

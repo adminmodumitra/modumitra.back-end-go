@@ -3,9 +3,9 @@ package org
 import (
 	"context"
 	"errors"
-	"log/slog"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
@@ -60,10 +60,12 @@ func (s *Service) CreateInvitation(ctx context.Context, actorID, orgID, email, r
 	}
 	if s.mailer != nil {
 		if err := s.mailer.SendInvite(ctx, email, raw, o.Name); err != nil {
-			slog.ErrorContext(ctx, "send invite mail", "organization_id", orgID, "error", err)
+			l := obs.FromCtx(ctx)
+			l.Error().Err(err).Str("organization_id", orgID).Msg("send invite mail")
 		}
 	}
-	slog.InfoContext(ctx, "org.invitation_created", "organization_id", orgID, "invitation_id", inv.ID)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("organization_id", orgID).Str("invitation_id", inv.ID).Msg("org.invitation_created")
 	return inv, nil
 }
 

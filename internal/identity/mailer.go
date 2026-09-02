@@ -2,9 +2,10 @@ package identity
 
 import (
 	"context"
-	"log/slog"
 	"strings"
 	"sync"
+
+	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 )
 
 // LogMailer logs that a mail was queued. The raw token is included only at debug.
@@ -25,20 +26,22 @@ func (m *LogMailer) SendPasswordReset(ctx context.Context, email, rawToken strin
 }
 
 func (m *LogMailer) SendOTP(ctx context.Context, email, otp string) error {
-	args := []any{"kind", "otp", "email", email}
+	l := obs.FromCtx(ctx)
+	ev := l.Info().Str("kind", "otp").Str("email", email)
 	if m != nil && m.includeToken {
-		args = append(args, "otp", otp)
+		ev = ev.Str("otp", otp)
 	}
-	slog.InfoContext(ctx, "mail queued", args...)
+	ev.Msg("mail queued")
 	return nil
 }
 
 func (m *LogMailer) log(ctx context.Context, kind, email, rawToken string) error {
-	args := []any{"kind", kind, "email", email}
+	l := obs.FromCtx(ctx)
+	ev := l.Info().Str("kind", kind).Str("email", email)
 	if m != nil && m.includeToken {
-		args = append(args, "token", rawToken)
+		ev = ev.Str("token", rawToken)
 	}
-	slog.InfoContext(ctx, "mail queued", args...)
+	ev.Msg("mail queued")
 	return nil
 }
 

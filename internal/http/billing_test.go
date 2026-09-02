@@ -13,6 +13,7 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/device"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/orglookup"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
@@ -25,7 +26,7 @@ func billingRouter(t *testing.T) (http.Handler, *identity.RecordingMailer, confi
 	}
 	svc, mail, mem := identity.NewMemoryService(testSettings(cfg))
 	orgs, _, orgMem := org.NewMemoryService(mem.Users(), cfg.TrialDays)
-	devs, _ := device.NewMemoryService(orgs, cfg.EntitlementSigningKey)
+	devs, _ := device.NewMemoryService(orglookup.Adapter{Service: orgs}, cfg.EntitlementSigningKey)
 	bills, _, _ := billing.NewMemoryService(orgMem.Orgs(), orgMem.Members(), orgMem.Invites(), mem.Users(), billing.Settings{
 		Provider: billing.ProviderFake, WebhookSecret: cfg.BillingWebhookSecret,
 	})

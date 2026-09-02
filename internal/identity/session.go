@@ -3,9 +3,9 @@ package identity
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"strings"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
@@ -69,7 +69,8 @@ func (s *Service) Refresh(ctx context.Context, raw string) (*TokenPair, error) {
 		}
 		return nil, mapRepoErr(err)
 	}
-	slog.InfoContext(ctx, "auth.refresh")
+	l := obs.FromCtx(ctx)
+	l.Info().Msg("auth.refresh")
 	return pair, nil
 }
 
@@ -88,7 +89,8 @@ func (s *Service) Logout(ctx context.Context, raw string) error {
 	if err := s.sessions.Revoke(ctx, sess.ID, s.clock.Now()); err != nil && !errors.Is(err, ErrNotFound) {
 		return mapRepoErr(err)
 	}
-	slog.InfoContext(ctx, "auth.logout", "session_id", sess.ID)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("session_id", sess.ID).Msg("auth.logout")
 	return nil
 }
 
@@ -100,6 +102,7 @@ func (s *Service) LogoutAll(ctx context.Context, userID string) (int, error) {
 	if err != nil {
 		return 0, mapRepoErr(err)
 	}
-	slog.InfoContext(ctx, "auth.logout_all", "user_id", userID, "revoked", n)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("user_id", userID).Int("revoked", n).Msg("auth.logout_all")
 	return n, nil
 }

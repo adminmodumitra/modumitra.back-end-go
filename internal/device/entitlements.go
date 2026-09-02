@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
@@ -39,7 +38,7 @@ func (s *Service) Capabilities(ctx context.Context, userID, orgID string) (*Capa
 	if err != nil {
 		return nil, err
 	}
-	if m.Status == org.MemberSuspended {
+	if m.Status == MemberSuspended {
 		return nil, utils.E(utils.CodeForbidden)
 	}
 	if !m.Active() {

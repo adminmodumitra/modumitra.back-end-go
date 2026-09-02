@@ -2,8 +2,8 @@ package org
 
 import (
 	"context"
-	"log/slog"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
@@ -44,7 +44,8 @@ func (s *Service) SuspendMember(ctx context.Context, actorID, orgID, targetUserI
 	if err := s.members.Update(ctx, target); err != nil {
 		return nil, mapRepoErr(err)
 	}
-	slog.InfoContext(ctx, "org.member_suspended", "organization_id", orgID, "user_id", targetUserID)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("organization_id", orgID).Str("user_id", targetUserID).Msg("org.member_suspended")
 	return target, nil
 }
 
@@ -88,6 +89,7 @@ func (s *Service) RemoveMember(ctx context.Context, actorID, orgID, targetUserID
 	if err := s.members.Update(ctx, target); err != nil {
 		return mapRepoErr(err)
 	}
-	slog.InfoContext(ctx, "org.member_removed", "organization_id", orgID, "user_id", targetUserID)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("organization_id", orgID).Str("user_id", targetUserID).Msg("org.member_removed")
 	return nil
 }

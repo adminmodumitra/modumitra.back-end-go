@@ -23,18 +23,20 @@ const (
 
 // User is the identity record. PasswordHash is never serialized to clients.
 type User struct {
-	ID              string
-	Email           string
-	EmailNormalized string
-	EmailVerifiedAt *time.Time
-	PasswordHash    string
-	DisplayName     string
-	TermsVersion    string
-	PrivacyVersion  string
-	Status          string
-	LastLoginAt     *time.Time
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID                string
+	Email             string
+	EmailNormalized   string
+	EmailVerifiedAt   *time.Time
+	PasswordHash      string
+	PasswordUpdatedAt *time.Time
+	DisplayName       string
+	TermsVersion      string
+	PrivacyVersion    string
+	TermsAcceptedAt   time.Time
+	Status            string
+	LastLoginAt       *time.Time
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 func (u *User) EmailVerified() bool {

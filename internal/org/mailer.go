@@ -2,9 +2,10 @@ package org
 
 import (
 	"context"
-	"log/slog"
 	"strings"
 	"sync"
+
+	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 )
 
 type LogMailer struct {
@@ -16,11 +17,12 @@ func NewLogMailer(logLevel string) *LogMailer {
 }
 
 func (m *LogMailer) SendInvite(ctx context.Context, email, rawToken, orgName string) error {
-	args := []any{"kind", "invite", "email", email, "org", orgName}
+	l := obs.FromCtx(ctx)
+	ev := l.Info().Str("kind", "invite").Str("email", email).Str("org", orgName)
 	if m != nil && m.includeToken {
-		args = append(args, "token", rawToken)
+		ev = ev.Str("token", rawToken)
 	}
-	slog.InfoContext(ctx, "mail queued", args...)
+	ev.Msg("mail queued")
 	return nil
 }
 

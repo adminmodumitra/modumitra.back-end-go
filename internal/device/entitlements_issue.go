@@ -5,14 +5,13 @@ import (
 	"errors"
 	"time"
 
-	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
 func (s *Service) issueLocked(ctx context.Context, userID, orgID, deviceID string, now time.Time) (*Snapshot, error) {
 	var (
-		o   *org.Organization
-		m   *org.Membership
+		o   *OrgRef
+		m   *MemberRef
 		err error
 	)
 	if s.orgs != nil {

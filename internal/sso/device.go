@@ -3,12 +3,12 @@ package sso
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"net/url"
 	"strings"
 	"time"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
@@ -110,7 +110,8 @@ func (s *Service) PollDeviceToken(ctx context.Context, deviceCode string) (*iden
 	if err := s.devices.Update(ctx, d); err != nil {
 		return nil, nil, mapRepoErr(err)
 	}
-	slog.InfoContext(ctx, "auth.device_login", "user_id", user.ID)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("user_id", user.ID).Msg("auth.device_login")
 	return user, pair, nil
 }
 

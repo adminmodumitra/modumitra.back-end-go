@@ -2,10 +2,10 @@ package sso
 
 import (
 	"context"
-	"log/slog"
 	"strings"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
@@ -90,6 +90,7 @@ func (s *Service) Callback(ctx context.Context, provider, code, state, providerE
 	if err != nil {
 		return nil, nil, err
 	}
-	slog.InfoContext(ctx, "auth.oauth_login", "user_id", user.ID, "provider", provider)
+	l := obs.FromCtx(ctx)
+	l.Info().Str("user_id", user.ID).Str("provider", provider).Msg("auth.oauth_login")
 	return user, pair, nil
 }
