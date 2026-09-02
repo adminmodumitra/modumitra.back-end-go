@@ -10,13 +10,14 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/http/middleware"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/sso"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/store"
 )
 
-func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, orgs *org.Service, devices *device.Service, bills *billing.Service) *gin.Engine {
+func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, orgs *org.Service, devices *device.Service, bills *billing.Service, ssoSvc *sso.Service) *gin.Engine {
 	r := gin.New()
 	_ = r.SetTrustedProxies(nil)
-	h := &handlers{cfg: cfg, pinger: pinger, ident: ident, orgs: orgs, devices: devices, billing: bills}
+	h := &handlers{cfg: cfg, pinger: pinger, ident: ident, orgs: orgs, devices: devices, billing: bills, sso: ssoSvc}
 
 	// Process-wide only: not limiters. Needed so healthz still has request_id/trace_id.
 	r.Use(middleware.RequestID())
@@ -41,6 +42,11 @@ func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, 
 		public.POST("/v1/auth/otp/verify", h.otpVerify)
 		public.POST("/v1/auth/otp/resend", h.otpRequest)
 		public.GET("/v1/invitations/:token", h.previewInvitation)
+		public.GET("/v1/auth/oauth/providers", h.oauthProviders)
+		public.POST("/v1/auth/oauth/:provider/start", h.oauthStart)
+		public.GET("/v1/auth/oauth/:provider/callback", h.oauthCallback)
+		public.POST("/v1/auth/device/code", h.deviceCode)
+		public.POST("/v1/auth/device/token", h.deviceToken)
 	}
 
 	authed := r.Group("/")
@@ -62,6 +68,9 @@ func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, 
 		authed.GET("/v1/me", h.me)
 		authed.GET("/v1/me/capabilities", h.meCapabilities)
 		authed.POST("/v1/me/password", h.changePassword)
+		authed.GET("/v1/me/identities", h.listIdentities)
+		authed.POST("/v1/me/identities/:provider/link", h.linkIdentity)
+		authed.DELETE("/v1/me/identities/:provider", h.unlinkIdentity)
 		authed.POST("/v1/organizations", h.createOrg)
 		authed.GET("/v1/organizations", h.listOrgs)
 		authed.GET("/v1/organizations/:id", h.getOrg)

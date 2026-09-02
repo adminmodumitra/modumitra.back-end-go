@@ -12,6 +12,7 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/http/middleware"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/sso"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/store"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
@@ -23,6 +24,7 @@ type handlers struct {
 	orgs    *org.Service
 	devices *device.Service
 	billing *billing.Service
+	sso     *sso.Service
 }
 
 func (h *handlers) healthz(c *gin.Context) {

@@ -22,6 +22,8 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
 	orgpg "github.com/Danish-13-Khan/backend-cabinet/internal/org/postgres"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/outbox"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/sso"
+	ssopg "github.com/Danish-13-Khan/backend-cabinet/internal/sso/postgres"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/store"
 )
 
@@ -159,7 +161,26 @@ func main() {
 	go worker.Run(ctx)
 	slog.Info("outbox worker started", "kafka_enabled", cfg.KafkaEnabled, "brokers", cfg.KafkaBrokers)
 
-	engine := httpapi.NewRouter(cfg, st, ident, orgs, devices, bills)
+	ssoSvc := sso.NewService(
+		ssopg.NewIdentityRepo(gdb),
+		ssopg.NewStateRepo(gdb),
+		ssopg.NewDeviceCodeRepo(gdb),
+		ssopg.NewTx(gdb),
+		ident,
+		sso.LiveProviders(cfg),
+		sso.SystemClock{},
+		sso.NewIDGen(),
+		sso.Settings{
+			TermsVersion:    cfg.TermsVersion,
+			PrivacyVersion:  cfg.PrivacyVersion,
+			PKCESecret:      cfg.JWTSecret,
+			VerificationURI: cfg.OAuthDeviceVerifyURI,
+			DeviceClientID:  sso.DesktopClientID,
+		},
+		obWriter,
+	)
+
+	engine := httpapi.NewRouter(cfg, st, ident, orgs, devices, bills, ssoSvc)
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
 		Handler:           engine,

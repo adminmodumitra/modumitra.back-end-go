@@ -40,6 +40,17 @@ type Config struct {
 	KafkaEnabled          bool
 	KafkaBrokers          []string
 	KafkaClientID         string
+	OAuthGoogle           OAuthApp
+	OAuthFacebook         OAuthApp
+	OAuthX                OAuthApp
+	OAuthRedirectURI      string
+	OAuthDeviceVerifyURI  string
+}
+
+// OAuthApp is a single provider's confidential client credentials.
+type OAuthApp struct {
+	ClientID     string
+	ClientSecret string
 }
 
 // DurationAsString unmarshals JSON durations like "10s".
@@ -293,7 +304,40 @@ func Load() Config {
 		KafkaEnabled:          getenvBool("KAFKA_ENABLED", false),
 		KafkaBrokers:          splitCSV(os.Getenv("KAFKA_BROKERS")),
 		KafkaClientID:         getenv("KAFKA_CLIENT_ID", "cabinet-studio-api"),
+		OAuthGoogle: OAuthApp{
+			ClientID:     getenv("OAUTH_GOOGLE_CLIENT_ID", ""),
+			ClientSecret: getenv("OAUTH_GOOGLE_CLIENT_SECRET", ""),
+		},
+		OAuthFacebook: OAuthApp{
+			ClientID:     getenv("OAUTH_FACEBOOK_CLIENT_ID", ""),
+			ClientSecret: getenv("OAUTH_FACEBOOK_CLIENT_SECRET", ""),
+		},
+		OAuthX: OAuthApp{
+			ClientID:     getenv("OAUTH_X_CLIENT_ID", ""),
+			ClientSecret: getenv("OAUTH_X_CLIENT_SECRET", ""),
+		},
+		OAuthRedirectURI:     getenv("OAUTH_REDIRECT_URI", "cabinetstudio://oauth/callback"),
+		OAuthDeviceVerifyURI: getenv("OAUTH_DEVICE_VERIFICATION_URI", "https://app.cabinetstudio.example/device"),
 	}
+}
+
+func (a OAuthApp) Enabled() bool {
+	return strings.TrimSpace(a.ClientID) != "" && strings.TrimSpace(a.ClientSecret) != ""
+}
+
+// LiveOAuthProviders is the subset of google/facebook/x that have both client id and secret.
+func (c Config) LiveOAuthProviders() []string {
+	var out []string
+	if c.OAuthGoogle.Enabled() {
+		out = append(out, "google")
+	}
+	if c.OAuthFacebook.Enabled() {
+		out = append(out, "facebook")
+	}
+	if c.OAuthX.Enabled() {
+		out = append(out, "x")
+	}
+	return out
 }
 
 func defaultDatastore() Datastore {

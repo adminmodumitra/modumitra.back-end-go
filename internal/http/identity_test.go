@@ -28,7 +28,7 @@ func identRouterWithMailer(t *testing.T) (http.Handler, *identity.RecordingMaile
 	orgs, _, orgMem := org.NewMemoryService(mem.Users(), cfg.TrialDays)
 	devs, _ := device.NewMemoryService(orgs, cfg.EntitlementSigningKey)
 	bills, _, _ := billing.NewMemoryService(orgMem.Orgs(), orgMem.Members(), orgMem.Invites(), mem.Users(), billing.Settings{Provider: billing.ProviderFake, WebhookSecret: cfg.BillingWebhookSecret})
-	return NewRouter(cfg, fakePinger{}, svc, orgs, devs, bills), mail
+	return NewRouter(cfg, fakePinger{}, svc, orgs, devs, bills, memorySSO(svc, cfg)), mail
 }
 
 func doJSON(t *testing.T, h http.Handler, method, path string, body any, headers map[string]string) *httptest.ResponseRecorder {

@@ -20,7 +20,7 @@ func deviceRouter(t *testing.T) (http.Handler, *identity.RecordingMailer) {
 	orgs, _, orgMem := org.NewMemoryService(mem.Users(), cfg.TrialDays)
 	devs, _ := device.NewMemoryService(orgs, cfg.EntitlementSigningKey)
 	bills, _, _ := billing.NewMemoryService(orgMem.Orgs(), orgMem.Members(), orgMem.Invites(), mem.Users(), billing.Settings{Provider: billing.ProviderFake, WebhookSecret: cfg.BillingWebhookSecret})
-	return NewRouter(cfg, fakePinger{}, svc, orgs, devs, bills), mail
+	return NewRouter(cfg, fakePinger{}, svc, orgs, devs, bills, memorySSO(svc, cfg)), mail
 }
 
 func TestActivateDevice201(t *testing.T) {

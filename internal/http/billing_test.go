@@ -29,7 +29,7 @@ func billingRouter(t *testing.T) (http.Handler, *identity.RecordingMailer, confi
 	bills, _, _ := billing.NewMemoryService(orgMem.Orgs(), orgMem.Members(), orgMem.Invites(), mem.Users(), billing.Settings{
 		Provider: billing.ProviderFake, WebhookSecret: cfg.BillingWebhookSecret,
 	})
-	return NewRouter(cfg, fakePinger{}, svc, orgs, devs, bills), mail, cfg
+	return NewRouter(cfg, fakePinger{}, svc, orgs, devs, bills, memorySSO(svc, cfg)), mail, cfg
 }
 
 func TestGetBillingPlansAuthedNoOrg(t *testing.T) {

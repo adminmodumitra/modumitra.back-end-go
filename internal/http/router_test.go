@@ -18,6 +18,7 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/sso"
 )
 
 func TestMain(m *testing.M) {
@@ -34,6 +35,16 @@ func (f fakePinger) Ping(ctx context.Context) error {
 	_, span := otel.Tracer("cabinet.store").Start(ctx, "store.ping")
 	defer span.End()
 	return f.err
+}
+
+func memorySSO(ident *identity.Service, cfg config.Config) *sso.Service {
+	svc, _, _ := sso.NewMemoryService(ident, sso.Settings{
+		TermsVersion:    cfg.TermsVersion,
+		PrivacyVersion:  cfg.PrivacyVersion,
+		PKCESecret:      cfg.JWTSecret,
+		VerificationURI: "https://app.cabinetstudio.example/device",
+	})
+	return svc
 }
 
 func testSettings(cfg config.Config) identity.Settings {
@@ -56,7 +67,7 @@ func testRouter(t *testing.T, p fakePinger) http.Handler {
 	orgs, _, orgMem := org.NewMemoryService(mem.Users(), cfg.TrialDays)
 	devs, _ := device.NewMemoryService(orgs, cfg.EntitlementSigningKey)
 	bills, _, _ := billing.NewMemoryService(orgMem.Orgs(), orgMem.Members(), orgMem.Invites(), mem.Users(), billing.Settings{Provider: billing.ProviderFake, WebhookSecret: cfg.BillingWebhookSecret})
-	return NewRouter(cfg, p, svc, orgs, devs, bills)
+	return NewRouter(cfg, p, svc, orgs, devs, bills, memorySSO(svc, cfg))
 }
 
 func TestHealthzOK(t *testing.T) {
@@ -244,7 +255,7 @@ func TestReadyzReportsActiveDriver(t *testing.T) {
 	orgs, _, orgMem := org.NewMemoryService(mem.Users(), cfg.TrialDays)
 	devs, _ := device.NewMemoryService(orgs, cfg.EntitlementSigningKey)
 	bills, _, _ := billing.NewMemoryService(orgMem.Orgs(), orgMem.Members(), orgMem.Invites(), mem.Users(), billing.Settings{Provider: billing.ProviderFake, WebhookSecret: cfg.BillingWebhookSecret})
-	r := NewRouter(cfg, fakePinger{}, svc, orgs, devs, bills)
+	r := NewRouter(cfg, fakePinger{}, svc, orgs, devs, bills, memorySSO(svc, cfg))
 	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)

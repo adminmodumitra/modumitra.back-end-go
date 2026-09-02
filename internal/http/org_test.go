@@ -24,7 +24,7 @@ func orgRouter(t *testing.T) (http.Handler, *identity.RecordingMailer, *org.Reco
 	orgs, omail, orgMem := org.NewMemoryService(mem.Users(), cfg.TrialDays)
 	devs, _ := device.NewMemoryService(orgs, cfg.EntitlementSigningKey)
 	bills, _, _ := billing.NewMemoryService(orgMem.Orgs(), orgMem.Members(), orgMem.Invites(), mem.Users(), billing.Settings{Provider: billing.ProviderFake, WebhookSecret: cfg.BillingWebhookSecret})
-	return NewRouter(cfg, fakePinger{}, svc, orgs, devs, bills), imail, omail
+	return NewRouter(cfg, fakePinger{}, svc, orgs, devs, bills, memorySSO(svc, cfg)), imail, omail
 }
 
 func registerVerifyLogin(t *testing.T, h http.Handler, mail *identity.RecordingMailer, email, key string) (access, userID string) {
@@ -249,7 +249,7 @@ func TestCreateOrganizationOutboxProto(t *testing.T) {
 	orgs, _, orgMem := org.NewMemoryService(mem.Users(), cfg.TrialDays)
 	devs, _ := device.NewMemoryService(orgs, cfg.EntitlementSigningKey)
 	bills, _, _ := billing.NewMemoryService(orgMem.Orgs(), orgMem.Members(), orgMem.Invites(), mem.Users(), billing.Settings{Provider: billing.ProviderFake, WebhookSecret: cfg.BillingWebhookSecret})
-	h := NewRouter(cfg, fakePinger{}, svc, orgs, devs, bills)
+	h := NewRouter(cfg, fakePinger{}, svc, orgs, devs, bills, memorySSO(svc, cfg))
 	access, _ := registerVerifyLogin(t, h, mail, "ada-outbox@example.com", "reg-org-outbox")
 	w := doJSON(t, h, http.MethodPost, "/v1/organizations", map[string]any{
 		"name": "Outbox Cabinets",

@@ -55,6 +55,18 @@ const (
 	CodeNotCanceling              Code = "not_canceling"
 	CodeSubscriptionNotResumable  Code = "subscription_not_resumable"
 	CodeSeatLimit                 Code = "seat_limit"
+	CodeInvalidState              Code = "invalid_state"
+	CodeIdentityAlreadyLinked     Code = "identity_already_linked"
+	CodeProviderAlreadyLinked     Code = "provider_already_linked"
+	CodeLastLoginMethod           Code = "last_login_method"
+	CodeAuthorizationPending      Code = "authorization_pending"
+	CodeUnsupportedProvider       Code = "unsupported_provider"
+	CodeOAuthDenied               Code = "oauth_denied"
+	CodeInvalidClient             Code = "invalid_client"
+	CodeSlowDown                  Code = "slow_down"
+	CodeExpiredToken              Code = "expired_token"
+	CodeAccessDenied              Code = "access_denied"
+	CodeInvalidGrant              Code = "invalid_grant"
 )
 
 // Error is the non-generic application error. It always has a Code, a
@@ -184,6 +196,18 @@ var catalog = map[Code]def{
 	CodeNotCanceling:              {StatusConflict, "Subscription is not scheduled to cancel"},
 	CodeSubscriptionNotResumable:  {StatusConflict, "Subscription cannot be resumed"},
 	CodeSeatLimit:                 {StatusConflict, "Active members exceed target seats"},
+	CodeInvalidState:              {StatusBadRequest, "OAuth state is invalid, expired, or already used"},
+	CodeIdentityAlreadyLinked:     {StatusConflict, "This identity is already linked to another user"},
+	CodeProviderAlreadyLinked:     {StatusConflict, "This provider is already linked"},
+	CodeLastLoginMethod:           {StatusConflict, "Cannot remove the last login method"},
+	CodeAuthorizationPending:      {StatusPreconditionRequired, "User has not yet approved this device."},
+	CodeUnsupportedProvider:       {StatusBadRequest, "Provider is not enabled"},
+	CodeOAuthDenied:               {StatusBadRequest, "The user denied the authorization request"},
+	CodeInvalidClient:             {StatusUnauthorized, "Unknown client_id"},
+	CodeSlowDown:                  {StatusForbidden, "Polled faster than the required interval"},
+	CodeExpiredToken:              {StatusForbidden, "Device code has expired"},
+	CodeAccessDenied:              {StatusForbidden, "The user denied the device authorization request"},
+	CodeInvalidGrant:              {StatusBadRequest, "Device code is unknown or already consumed"},
 }
 
 // E returns a coded error from the catalog. Unknown codes become Generic.
