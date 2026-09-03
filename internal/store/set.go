@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
@@ -100,6 +101,22 @@ func (s *Set) Gorm() *gorm.DB {
 }
 
 func (s *Set) Redis() Store { return s.find("redis") }
+
+// RedisClient returns the live go-redis client, or nil if Redis is not enabled.
+// Intended for the read-through cache layer only.
+func (s *Set) RedisClient() *redis.Client {
+	st := s.Redis()
+	if st == nil {
+		return nil
+	}
+	type rediser interface{ Client() *redis.Client }
+	r, ok := st.(rediser)
+	if !ok {
+		return nil
+	}
+	return r.Client()
+}
+
 func (s *Set) Mongo() Store { return s.find("mongodb") }
 
 func (s *Set) find(name string) Store {

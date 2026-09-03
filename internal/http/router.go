@@ -5,6 +5,7 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/billing"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/cache"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/device"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/http/middleware"
@@ -17,7 +18,11 @@ import (
 func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, orgs *org.Service, devices *device.Service, bills *billing.Service, ssoSvc *sso.Service) *gin.Engine {
 	r := gin.New()
 	_ = r.SetTrustedProxies(nil)
-	h := &handlers{cfg: cfg, pinger: pinger, ident: ident, orgs: orgs, devices: devices, billing: bills, sso: ssoSvc}
+	var c cache.Cache = cache.Noop{}
+	if set, ok := pinger.(*store.Set); ok {
+		c = cache.FromSet(set)
+	}
+	h := &handlers{cfg: cfg, pinger: pinger, cache: cache.New(c), ident: ident, orgs: orgs, devices: devices, billing: bills, sso: ssoSvc}
 	if ident != nil && bills != nil {
 		ident.SetPersonalProvisioner(billing.Provisioner{Service: bills})
 	}

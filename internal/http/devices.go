@@ -1,8 +1,7 @@
 package httpapi
 
 import (
-	"strings"
-
+	"github.com/Danish-13-Khan/backend-cabinet/internal/cache"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/models/dto"
 
 	"github.com/gin-gonic/gin"
@@ -11,28 +10,6 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/http/middleware"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
-
-func (h *handlers) requireDevices(c *gin.Context) bool {
-	if h.devices == nil {
-		middleware.Abort(c, utils.E(utils.CodeServiceUnavailable))
-		return false
-	}
-	return true
-}
-
-func parseBoolQuery(raw string, fallback bool) (bool, error) {
-	if strings.TrimSpace(raw) == "" {
-		return fallback, nil
-	}
-	switch strings.ToLower(strings.TrimSpace(raw)) {
-	case "true", "1":
-		return true, nil
-	case "false", "0":
-		return false, nil
-	default:
-		return false, utils.E(utils.CodeValidation)
-	}
-}
 
 func (h *handlers) listDevices(c *gin.Context) {
 	logEnter(c, "list_devices")
@@ -49,7 +26,16 @@ func (h *handlers) listDevices(c *gin.Context) {
 		middleware.Abort(c, err)
 		return
 	}
-	items, next, active, err := h.devices.List(c.Request.Context(), middleware.UserIDFrom(c), include, c.Query("cursor"), limit)
+	uid := middleware.UserIDFrom(c)
+	cursor := c.Query("cursor")
+	key := cache.Devices(uid, include, cursor, limit)
+	var cached dto.DeviceListOK
+	if cache.GetJSON(c.Request.Context(), h.cache, key, &cached) {
+		cached.Meta = metaFrom(c)
+		middleware.WriteJSON(c, utils.StatusOK, cached)
+		return
+	}
+	items, next, active, err := h.devices.List(c.Request.Context(), uid, include, cursor, limit)
 	if err != nil {
 		middleware.Abort(c, err)
 		return
@@ -58,13 +44,15 @@ func (h *handlers) listDevices(c *gin.Context) {
 	for i := range items {
 		views = append(views, deviceView(&items[i]))
 	}
-	middleware.WriteJSON(c, utils.StatusOK, dto.DeviceListOK{
+	body := dto.DeviceListOK{
 		Meta:        metaFrom(c),
 		Items:       views,
 		NextCursor:  cursorPtr(next),
 		ActiveCount: active,
 		DeviceLimit: device.DeviceLimit,
-	})
+	}
+	cache.SetJSON(c.Request.Context(), h.cache, key, body, cache.TTLDevices)
+	middleware.WriteJSON(c, utils.StatusOK, body)
 }
 
 func (h *handlers) activateDevice(c *gin.Context) {
@@ -80,11 +68,13 @@ func (h *handlers) activateDevice(c *gin.Context) {
 		middleware.Abort(c, utils.E(utils.CodeValidation))
 		return
 	}
-	d, snap, err := h.devices.Activate(c.Request.Context(), middleware.UserIDFrom(c), body.Name, body.Platform)
+	uid := middleware.UserIDFrom(c)
+	d, snap, err := h.devices.Activate(c.Request.Context(), uid, body.Name, body.Platform)
 	if err != nil {
 		middleware.Abort(c, err)
 		return
 	}
+	h.invalidateDevices(c, uid)
 	middleware.WriteJSON(c, utils.StatusCreated, dto.ActivateOK{
 		Meta:                metaFrom(c),
 		Device:              deviceView(d),
@@ -106,11 +96,13 @@ func (h *handlers) patchDevice(c *gin.Context) {
 	if body.Name != nil {
 		name = *body.Name
 	}
-	d, err := h.devices.Rename(c.Request.Context(), middleware.UserIDFrom(c), c.Param("id"), name)
+	uid := middleware.UserIDFrom(c)
+	d, err := h.devices.Rename(c.Request.Context(), uid, c.Param("id"), name)
 	if err != nil {
 		middleware.Abort(c, err)
 		return
 	}
+	h.invalidateDevices(c, uid)
 	middleware.WriteJSON(c, utils.StatusOK, dto.DeviceOK{
 		Meta:   metaFrom(c),
 		Device: deviceView(d),
@@ -122,11 +114,13 @@ func (h *handlers) deleteDevice(c *gin.Context) {
 	if !h.requireDevices(c) {
 		return
 	}
-	d, err := h.devices.Deactivate(c.Request.Context(), middleware.UserIDFrom(c), c.Param("id"))
+	uid := middleware.UserIDFrom(c)
+	d, err := h.devices.Deactivate(c.Request.Context(), uid, c.Param("id"))
 	if err != nil {
 		middleware.Abort(c, err)
 		return
 	}
+	h.invalidateDevices(c, uid)
 	middleware.WriteJSON(c, utils.StatusOK, dto.DeviceDeactivatedOK{
 		Meta:   metaFrom(c),
 		Status: "deactivated",

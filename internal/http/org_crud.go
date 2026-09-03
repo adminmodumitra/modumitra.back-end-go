@@ -136,10 +136,12 @@ func (h *handlers) leaveOrg(c *gin.Context) {
 		return
 	}
 	id := c.Param("id")
-	if err := h.orgs.Leave(c.Request.Context(), middleware.UserIDFrom(c), id); err != nil {
+	uid := middleware.UserIDFrom(c)
+	if err := h.orgs.Leave(c.Request.Context(), uid, id); err != nil {
 		middleware.Abort(c, err)
 		return
 	}
+	h.invalidateOrgMembers(c, id, uid)
 	middleware.WriteJSON(c, utils.StatusOK, dto.LeaveOK{
 		Meta:           metaFrom(c),
 		Status:         "left",

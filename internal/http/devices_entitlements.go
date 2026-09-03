@@ -3,6 +3,7 @@ package httpapi
 import (
 	"strings"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/cache"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/models/dto"
 
 	"github.com/gin-gonic/gin"
@@ -32,16 +33,24 @@ func (h *handlers) meCapabilities(c *gin.Context) {
 	if !h.requireDevices(c) {
 		return
 	}
+	uid := middleware.UserIDFrom(c)
 	orgID := strings.TrimSpace(c.GetHeader(utils.HeaderOrganization))
 	if orgID == "" {
 		orgID = strings.TrimSpace(c.Query("organization_id"))
 	}
-	res, err := h.devices.Capabilities(c.Request.Context(), middleware.UserIDFrom(c), orgID)
+	key := cache.Capabilities(uid, orgID)
+	var cached dto.CapabilitiesOK
+	if cache.GetJSON(c.Request.Context(), h.cache, key, &cached) {
+		cached.Meta = metaFrom(c)
+		middleware.WriteJSON(c, utils.StatusOK, cached)
+		return
+	}
+	res, err := h.devices.Capabilities(c.Request.Context(), uid, orgID)
 	if err != nil {
 		middleware.Abort(c, err)
 		return
 	}
-	middleware.WriteJSON(c, utils.StatusOK, dto.CapabilitiesOK{
+	body := dto.CapabilitiesOK{
 		Meta:               metaFrom(c),
 		UserID:             res.UserID,
 		OrganizationID:     res.OrganizationID,
@@ -51,5 +60,7 @@ func (h *handlers) meCapabilities(c *gin.Context) {
 		SubscriptionStatus: res.SubscriptionStatus,
 		Capabilities:       capabilitiesView(res.Capabilities),
 		IssuedAt:           rfcTime(res.IssuedAt),
-	})
+	}
+	cache.SetJSON(c.Request.Context(), h.cache, key, body, cache.TTLCaps)
+	middleware.WriteJSON(c, utils.StatusOK, body)
 }

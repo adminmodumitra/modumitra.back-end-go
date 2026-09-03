@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"github.com/Danish-13-Khan/backend-cabinet/internal/cache"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/models/dto"
 	"github.com/gin-gonic/gin"
 
@@ -13,15 +14,22 @@ func (h *handlers) me(c *gin.Context) {
 	if !h.requireIdent(c) {
 		return
 	}
-	u, err := h.ident.Me(c.Request.Context(), middleware.UserIDFrom(c))
+	uid := middleware.UserIDFrom(c)
+	key := cache.Me(uid)
+	var cached dto.UserOK
+	if cache.GetJSON(c.Request.Context(), h.cache, key, &cached) {
+		cached.Meta = metaFrom(c)
+		middleware.WriteJSON(c, utils.StatusOK, cached)
+		return
+	}
+	u, err := h.ident.Me(c.Request.Context(), uid)
 	if err != nil {
 		middleware.Abort(c, err)
 		return
 	}
-	middleware.WriteJSON(c, utils.StatusOK, dto.UserOK{
-		Meta: metaFrom(c),
-		User: userView(u),
-	})
+	body := dto.UserOK{Meta: metaFrom(c), User: userView(u)}
+	cache.SetJSON(c.Request.Context(), h.cache, key, body, cache.TTLMe)
+	middleware.WriteJSON(c, utils.StatusOK, body)
 }
 
 func (h *handlers) changePassword(c *gin.Context) {
@@ -41,11 +49,13 @@ func (h *handlers) changePassword(c *gin.Context) {
 		middleware.Abort(c, utils.E(utils.CodeValidation))
 		return
 	}
-	err := h.ident.ChangePassword(c.Request.Context(), middleware.UserIDFrom(c), body.CurrentPassword, body.NewPassword)
+	uid := middleware.UserIDFrom(c)
+	err := h.ident.ChangePassword(c.Request.Context(), uid, body.CurrentPassword, body.NewPassword)
 	if err != nil {
 		middleware.Abort(c, err)
 		return
 	}
+	h.cache.Delete(c.Request.Context(), cache.Me(uid))
 	middleware.WriteJSON(c, utils.StatusOK, dto.StatusOK{
 		Meta:   metaFrom(c),
 		Status: "password_changed",

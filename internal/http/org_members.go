@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"github.com/Danish-13-Khan/backend-cabinet/internal/cache"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/models/dto"
 	"github.com/gin-gonic/gin"
 
@@ -19,7 +20,16 @@ func (h *handlers) listMembers(c *gin.Context) {
 		middleware.Abort(c, err)
 		return
 	}
-	items, next, err := h.orgs.ListMembers(c.Request.Context(), middleware.UserIDFrom(c), c.Param("id"), c.Query("status"), c.Query("role"), c.Query("cursor"), limit)
+	orgID := c.Param("id")
+	status, role, cursor := c.Query("status"), c.Query("role"), c.Query("cursor")
+	key := cache.OrgMembers(orgID, status, role, cursor, limit)
+	var cached dto.MemberListOK
+	if cache.GetJSON(c.Request.Context(), h.cache, key, &cached) {
+		cached.Meta = metaFrom(c)
+		middleware.WriteJSON(c, utils.StatusOK, cached)
+		return
+	}
+	items, next, err := h.orgs.ListMembers(c.Request.Context(), middleware.UserIDFrom(c), orgID, status, role, cursor, limit)
 	if err != nil {
 		middleware.Abort(c, err)
 		return
@@ -29,11 +39,9 @@ func (h *handlers) listMembers(c *gin.Context) {
 		m := items[i]
 		out = append(out, membershipView(&m, h.memberUserView(c, m.UserID)))
 	}
-	middleware.WriteJSON(c, utils.StatusOK, dto.MemberListOK{
-		Meta:       metaFrom(c),
-		Items:      out,
-		NextCursor: cursorPtr(next),
-	})
+	body := dto.MemberListOK{Meta: metaFrom(c), Items: out, NextCursor: cursorPtr(next)}
+	cache.SetJSON(c.Request.Context(), h.cache, key, body, cache.TTLOrg)
+	middleware.WriteJSON(c, utils.StatusOK, body)
 }
 
 func (h *handlers) patchMember(c *gin.Context) {
@@ -46,11 +54,13 @@ func (h *handlers) patchMember(c *gin.Context) {
 		middleware.Abort(c, utils.E(utils.CodeValidation))
 		return
 	}
-	m, err := h.orgs.PatchMember(c.Request.Context(), middleware.UserIDFrom(c), c.Param("id"), c.Param("userId"), body.Role, body.Status)
+	orgID, uid := c.Param("id"), c.Param("userId")
+	m, err := h.orgs.PatchMember(c.Request.Context(), middleware.UserIDFrom(c), orgID, uid, body.Role, body.Status)
 	if err != nil {
 		middleware.Abort(c, err)
 		return
 	}
+	h.invalidateOrgMembers(c, orgID, uid)
 	middleware.WriteJSON(c, utils.StatusOK, dto.MemberOK{
 		Meta:       metaFrom(c),
 		Membership: membershipView(m, h.memberUserView(c, m.UserID)),
@@ -65,11 +75,13 @@ func (h *handlers) suspendMember(c *gin.Context) {
 	if !requireIdempotencyKey(c) {
 		return
 	}
-	m, err := h.orgs.SuspendMember(c.Request.Context(), middleware.UserIDFrom(c), c.Param("id"), c.Param("userId"))
+	orgID, uid := c.Param("id"), c.Param("userId")
+	m, err := h.orgs.SuspendMember(c.Request.Context(), middleware.UserIDFrom(c), orgID, uid)
 	if err != nil {
 		middleware.Abort(c, err)
 		return
 	}
+	h.invalidateOrgMembers(c, orgID, uid)
 	middleware.WriteJSON(c, utils.StatusOK, dto.MemberOK{
 		Meta:       metaFrom(c),
 		Membership: membershipView(m, h.memberUserView(c, m.UserID)),
@@ -81,12 +93,12 @@ func (h *handlers) removeMember(c *gin.Context) {
 	if !h.requireOrgs(c) {
 		return
 	}
-	id := c.Param("id")
-	uid := c.Param("userId")
+	id, uid := c.Param("id"), c.Param("userId")
 	if err := h.orgs.RemoveMember(c.Request.Context(), middleware.UserIDFrom(c), id, uid); err != nil {
 		middleware.Abort(c, err)
 		return
 	}
+	h.invalidateOrgMembers(c, id, uid)
 	middleware.WriteJSON(c, utils.StatusOK, dto.MemberRemovedOK{
 		Meta:           metaFrom(c),
 		Status:         "removed",

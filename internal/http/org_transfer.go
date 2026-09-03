@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"github.com/Danish-13-Khan/backend-cabinet/internal/cache"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/models/dto"
 	"github.com/gin-gonic/gin"
 
@@ -22,11 +23,13 @@ func (h *handlers) transferOwnership(c *gin.Context) {
 		return
 	}
 	actor := middleware.UserIDFrom(c)
-	o, err := h.orgs.TransferOwnership(c.Request.Context(), actor, c.Param("id"), transferTarget(body))
+	orgID := c.Param("id")
+	o, err := h.orgs.TransferOwnership(c.Request.Context(), actor, orgID, transferTarget(body))
 	if err != nil {
 		middleware.Abort(c, err)
 		return
 	}
+	h.invalidateOrgMembers(c, orgID, actor, o.OwnerUserID)
 	middleware.WriteJSON(c, utils.StatusOK, dto.TransferOK{
 		Meta:                metaFrom(c),
 		Organization:        organizationView(o),
@@ -40,14 +43,20 @@ func (h *handlers) orgRoles(c *gin.Context) {
 	if !h.requireOrgs(c) {
 		return
 	}
-	roles, err := h.orgs.Roles(c.Request.Context(), middleware.UserIDFrom(c), c.Param("id"))
+	orgID := c.Param("id")
+	key := cache.OrgRoles(orgID)
+	var cached dto.RoleCatalogOK
+	if cache.GetJSON(c.Request.Context(), h.cache, key, &cached) {
+		cached.Meta = metaFrom(c)
+		middleware.WriteJSON(c, utils.StatusOK, cached)
+		return
+	}
+	roles, err := h.orgs.Roles(c.Request.Context(), middleware.UserIDFrom(c), orgID)
 	if err != nil {
 		middleware.Abort(c, err)
 		return
 	}
-	middleware.WriteJSON(c, utils.StatusOK, dto.RoleCatalogOK{
-		Meta:          metaFrom(c),
-		SchemaVersion: 1,
-		Roles:         roles,
-	})
+	body := dto.RoleCatalogOK{Meta: metaFrom(c), SchemaVersion: 1, Roles: roles}
+	cache.SetJSON(c.Request.Context(), h.cache, key, body, cache.TTLOrg)
+	middleware.WriteJSON(c, utils.StatusOK, body)
 }

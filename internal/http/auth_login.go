@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"github.com/Danish-13-Khan/backend-cabinet/internal/cache"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/models/dto"
 	"github.com/gin-gonic/gin"
 
@@ -91,11 +92,13 @@ func (h *handlers) logoutAll(c *gin.Context) {
 	if !h.requireIdent(c) {
 		return
 	}
-	n, err := h.ident.LogoutAll(c.Request.Context(), middleware.UserIDFrom(c))
+	uid := middleware.UserIDFrom(c)
+	n, err := h.ident.LogoutAll(c.Request.Context(), uid)
 	if err != nil {
 		middleware.Abort(c, err)
 		return
 	}
+	h.cache.Delete(c.Request.Context(), cache.Me(uid))
 	middleware.WriteJSON(c, utils.StatusOK, dto.LogoutAllOK{
 		Meta:            metaFrom(c),
 		Status:          "logged_out_all",

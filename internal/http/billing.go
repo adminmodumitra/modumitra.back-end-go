@@ -3,6 +3,7 @@ package httpapi
 import (
 	"strings"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/cache"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/models/dto"
 
 	"github.com/gin-gonic/gin"
@@ -31,6 +32,13 @@ func (h *handlers) listPlans(c *gin.Context) {
 	if !h.requireBilling(c) {
 		return
 	}
+	key := cache.BillingPlans()
+	var cached dto.PlanListOK
+	if cache.GetJSON(c.Request.Context(), h.cache, key, &cached) {
+		cached.Meta = metaFrom(c)
+		middleware.WriteJSON(c, utils.StatusOK, cached)
+		return
+	}
 	items, err := h.billing.ListPlans(c.Request.Context())
 	if err != nil {
 		middleware.Abort(c, err)
@@ -40,11 +48,9 @@ func (h *handlers) listPlans(c *gin.Context) {
 	for i := range items {
 		views = append(views, planView(&items[i]))
 	}
-	middleware.WriteJSON(c, utils.StatusOK, dto.PlanListOK{
-		Meta:       metaFrom(c),
-		Items:      views,
-		NextCursor: nil,
-	})
+	body := dto.PlanListOK{Meta: metaFrom(c), Items: views, NextCursor: nil}
+	cache.SetJSON(c.Request.Context(), h.cache, key, body, cache.TTLBilling)
+	middleware.WriteJSON(c, utils.StatusOK, body)
 }
 
 func (h *handlers) getSubscription(c *gin.Context) {
@@ -52,15 +58,26 @@ func (h *handlers) getSubscription(c *gin.Context) {
 	if !h.requireBilling(c) {
 		return
 	}
-	sub, err := h.billing.GetSubscription(c.Request.Context(), middleware.UserIDFrom(c), h.billingTenant(c))
+	uid := middleware.UserIDFrom(c)
+	orgID := h.billingTenant(c)
+	key := cache.BillingSubOrg(orgID)
+	if orgID == "" {
+		key = cache.BillingSubUser(uid)
+	}
+	var cached dto.SubscriptionOK
+	if cache.GetJSON(c.Request.Context(), h.cache, key, &cached) {
+		cached.Meta = metaFrom(c)
+		middleware.WriteJSON(c, utils.StatusOK, cached)
+		return
+	}
+	sub, err := h.billing.GetSubscription(c.Request.Context(), uid, orgID)
 	if err != nil {
 		middleware.Abort(c, err)
 		return
 	}
-	middleware.WriteJSON(c, utils.StatusOK, dto.SubscriptionOK{
-		Meta:         metaFrom(c),
-		Subscription: subscriptionView(sub),
-	})
+	body := dto.SubscriptionOK{Meta: metaFrom(c), Subscription: subscriptionView(sub)}
+	cache.SetJSON(c.Request.Context(), h.cache, key, body, cache.TTLBilling)
+	middleware.WriteJSON(c, utils.StatusOK, body)
 }
 
 func (h *handlers) checkoutSession(c *gin.Context) {

@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/Danish-13-Khan/backend-cabinet/internal/billing"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/cache"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/device"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/http/middleware"
@@ -21,6 +22,7 @@ import (
 type handlers struct {
 	cfg     config.Config
 	pinger  store.Pinger
+	cache   cache.Cache
 	ident   *identity.Service
 	orgs    *org.Service
 	devices *device.Service

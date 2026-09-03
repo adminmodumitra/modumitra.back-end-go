@@ -45,6 +45,8 @@ func openRedis(cfg config.RedisConfig) (Store, error) {
 
 func (s *redisStore) Driver() string { return "redis" }
 
+func (s *redisStore) Client() *redis.Client { return s.client }
+
 func (s *redisStore) Ping(ctx context.Context) error {
 	return withPingSpan(ctx, "redis", func(ctx context.Context) error {
 		return s.client.Ping(ctx).Err()

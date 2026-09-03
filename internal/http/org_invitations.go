@@ -127,10 +127,14 @@ func (h *handlers) acceptInvitation(c *gin.Context) {
 	if !requireIdempotencyKey(c) {
 		return
 	}
-	o, m, err := h.orgs.AcceptInvitation(c.Request.Context(), middleware.UserIDFrom(c), c.Param("token"))
+	uid := middleware.UserIDFrom(c)
+	o, m, err := h.orgs.AcceptInvitation(c.Request.Context(), uid, c.Param("token"))
 	if err != nil {
 		middleware.Abort(c, err)
 		return
+	}
+	if o != nil {
+		h.invalidateOrgMembers(c, o.ID, uid)
 	}
 	middleware.WriteJSON(c, utils.StatusOK, dto.InviteAcceptOK{
 		Meta:         metaFrom(c),

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 
+	"github.com/Danish-13-Khan/backend-cabinet/internal/cache"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/models/dto"
 
 	"github.com/gin-gonic/gin"
@@ -31,6 +32,9 @@ func (h *handlers) billingWebhook(c *gin.Context) {
 	var meta struct {
 		ID   string `json:"id"`
 		Type string `json:"type"`
+		Data struct {
+			Object map[string]any `json:"object"`
+		} `json:"data"`
 	}
 	if json.Unmarshal(raw, &meta) == nil {
 		if meta.ID != "" {
@@ -44,6 +48,7 @@ func (h *handlers) billingWebhook(c *gin.Context) {
 		middleware.Abort(c, err)
 		return
 	}
+	h.invalidateWebhookBilling(c, meta.Data.Object)
 	rid := middleware.RequestIDFrom(c)
 	if rid == "" {
 		rid = "req_wh_billing"
@@ -52,4 +57,38 @@ func (h *handlers) billingWebhook(c *gin.Context) {
 		Meta:     utils.Meta{RequestID: rid, TraceID: middleware.TraceIDFrom(c)},
 		Received: true,
 	})
+}
+
+func (h *handlers) invalidateWebhookBilling(c *gin.Context, obj map[string]any) {
+	if h.cache == nil {
+		return
+	}
+	ctx := c.Request.Context()
+	orgID := ""
+	userID := ""
+	if obj != nil {
+		for _, k := range []string{"organization_id", "client_reference_id"} {
+			if v, ok := obj[k].(string); ok && v != "" {
+				orgID = v
+				break
+			}
+		}
+	}
+	if orgID != "" {
+		h.cache.Delete(ctx, cache.BillingSubOrg(orgID))
+		// Best-effort: drop org-scoped capability entries (*:org:{orgID}).
+		h.cache.DeletePrefix(ctx, "cabinet:me:capabilities:")
+	}
+	// Personal checkout payloads may only carry billing_account_id; drop user sub
+	// keys when we can read a user owner id from the object.
+	if obj != nil {
+		if v, ok := obj["owner_user_id"].(string); ok {
+			userID = v
+		}
+	}
+	if userID != "" {
+		h.cache.Delete(ctx, cache.BillingSubUser(userID))
+		h.cache.DeletePrefix(ctx, cache.CapabilitiesPrefix(userID))
+	}
+	h.cache.Delete(ctx, cache.BillingPlans())
 }

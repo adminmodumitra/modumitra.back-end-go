@@ -23,11 +23,14 @@ func (h *handlers) cancelSubscription(c *gin.Context) {
 		return
 	}
 	atEnd := body.AtPeriodEnd != nil && *body.AtPeriodEnd
-	sub, err := h.billing.Cancel(c.Request.Context(), middleware.UserIDFrom(c), h.billingTenant(c), atEnd)
+	uid := middleware.UserIDFrom(c)
+	orgID := h.billingTenant(c)
+	sub, err := h.billing.Cancel(c.Request.Context(), uid, orgID, atEnd)
 	if err != nil {
 		middleware.Abort(c, err)
 		return
 	}
+	h.invalidateBillingSub(c, uid, orgID)
 	middleware.WriteJSON(c, utils.StatusOK, dto.SubscriptionOK{
 		Meta:         metaFrom(c),
 		Subscription: subscriptionView(sub),
@@ -42,11 +45,14 @@ func (h *handlers) resumeSubscription(c *gin.Context) {
 	if !requireIdempotencyKey(c) {
 		return
 	}
-	sub, err := h.billing.Resume(c.Request.Context(), middleware.UserIDFrom(c), h.billingTenant(c))
+	uid := middleware.UserIDFrom(c)
+	orgID := h.billingTenant(c)
+	sub, err := h.billing.Resume(c.Request.Context(), uid, orgID)
 	if err != nil {
 		middleware.Abort(c, err)
 		return
 	}
+	h.invalidateBillingSub(c, uid, orgID)
 	middleware.WriteJSON(c, utils.StatusOK, dto.SubscriptionOK{
 		Meta:         metaFrom(c),
 		Subscription: subscriptionView(sub),
