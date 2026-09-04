@@ -272,3 +272,13 @@ func TestReadyzReportsActiveDriver(t *testing.T) {
 		t.Fatalf("checks=%v want store=ok (fake pinger)", body["checks"])
 	}
 }
+
+func TestSwaggerIndexPublic(t *testing.T) {
+	r := testRouter(t, fakePinger{})
+	req := httptest.NewRequest(http.MethodGet, "/swagger/index.html", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+}

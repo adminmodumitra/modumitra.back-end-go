@@ -11,6 +11,17 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
+// listDevices godoc
+// @Summary List devices
+// @Tags devices
+// @Security BearerAuth
+// @Produce json
+// @Param include_deactivated query bool false "Include deactivated"
+// @Param cursor query string false "Cursor"
+// @Param limit query int false "Limit"
+// @Success 200 {object} dto.DeviceListOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Router /v1/devices [get]
 func (h *handlers) listDevices(c *gin.Context) {
 	logEnter(c, "list_devices")
 	if !h.requireDevices(c) {
@@ -55,6 +66,17 @@ func (h *handlers) listDevices(c *gin.Context) {
 	middleware.WriteJSON(c, utils.StatusOK, body)
 }
 
+// activateDevice godoc
+// @Summary Activate a device
+// @Tags devices
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param Idempotency-Key header string true "Idempotency key"
+// @Param body body dto.ActivateDeviceBody true "Device"
+// @Success 201 {object} dto.ActivateOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Router /v1/devices/activate [post]
 func (h *handlers) activateDevice(c *gin.Context) {
 	logEnter(c, "activate_device")
 	if !h.requireDevices(c) {
@@ -79,51 +101,5 @@ func (h *handlers) activateDevice(c *gin.Context) {
 		Meta:                metaFrom(c),
 		Device:              deviceView(d),
 		EntitlementSnapshot: snapshotView(snap),
-	})
-}
-
-func (h *handlers) patchDevice(c *gin.Context) {
-	logEnter(c, "patch_device")
-	if !h.requireDevices(c) {
-		return
-	}
-	var body dto.PatchDeviceBody
-	if err := c.ShouldBindJSON(&body); err != nil {
-		middleware.Abort(c, utils.E(utils.CodeValidation))
-		return
-	}
-	name := ""
-	if body.Name != nil {
-		name = *body.Name
-	}
-	uid := middleware.UserIDFrom(c)
-	d, err := h.devices.Rename(c.Request.Context(), uid, c.Param("id"), name)
-	if err != nil {
-		middleware.Abort(c, err)
-		return
-	}
-	h.invalidateDevices(c, uid)
-	middleware.WriteJSON(c, utils.StatusOK, dto.DeviceOK{
-		Meta:   metaFrom(c),
-		Device: deviceView(d),
-	})
-}
-
-func (h *handlers) deleteDevice(c *gin.Context) {
-	logEnter(c, "delete_device")
-	if !h.requireDevices(c) {
-		return
-	}
-	uid := middleware.UserIDFrom(c)
-	d, err := h.devices.Deactivate(c.Request.Context(), uid, c.Param("id"))
-	if err != nil {
-		middleware.Abort(c, err)
-		return
-	}
-	h.invalidateDevices(c, uid)
-	middleware.WriteJSON(c, utils.StatusOK, dto.DeviceDeactivatedOK{
-		Meta:   metaFrom(c),
-		Status: "deactivated",
-		ID:     d.ID,
 	})
 }

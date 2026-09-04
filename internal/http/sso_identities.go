@@ -9,6 +9,14 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
+// listIdentities godoc
+// @Summary List linked identities
+// @Tags me
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} dto.IdentityListOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Router /v1/me/identities [get]
 func (h *handlers) listIdentities(c *gin.Context) {
 	logEnter(c, "list_identities")
 	if !h.requireSSO(c) {
@@ -30,6 +38,18 @@ func (h *handlers) listIdentities(c *gin.Context) {
 	})
 }
 
+// linkIdentity godoc
+// @Summary Link OAuth identity
+// @Tags me
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param Idempotency-Key header string true "Idempotency key"
+// @Param provider path string true "Provider id"
+// @Param body body dto.OAuthLinkBody true "Link"
+// @Success 200 {object} dto.IdentityOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Router /v1/me/identities/{provider}/link [post]
 func (h *handlers) linkIdentity(c *gin.Context) {
 	logEnter(c, "link_identity")
 	if !h.requireSSO(c) {
@@ -54,6 +74,15 @@ func (h *handlers) linkIdentity(c *gin.Context) {
 	})
 }
 
+// unlinkIdentity godoc
+// @Summary Unlink OAuth identity
+// @Tags me
+// @Security BearerAuth
+// @Produce json
+// @Param provider path string true "Provider id"
+// @Success 200 {object} dto.UnlinkOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Router /v1/me/identities/{provider} [delete]
 func (h *handlers) unlinkIdentity(c *gin.Context) {
 	logEnter(c, "unlink_identity")
 	if !h.requireSSO(c) {

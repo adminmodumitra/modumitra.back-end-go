@@ -8,6 +8,15 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
+// passwordReset godoc
+// @Summary Request password reset email
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body dto.EmailBody true "Email"
+// @Success 202 {object} dto.StatusOK
+// @Failure 422 {object} utils.ErrorResponse
+// @Router /v1/auth/password-reset [post]
 func (h *handlers) passwordReset(c *gin.Context) {
 	logEnter(c, "password_reset")
 	if !h.requireIdent(c) {
@@ -28,6 +37,16 @@ func (h *handlers) passwordReset(c *gin.Context) {
 	})
 }
 
+// passwordResetConfirm godoc
+// @Summary Confirm password reset
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param Idempotency-Key header string true "Idempotency key"
+// @Param body body dto.ResetConfirmBody true "Token and new password"
+// @Success 200 {object} dto.StatusOK
+// @Failure 422 {object} utils.ErrorResponse
+// @Router /v1/auth/password-reset/confirm [post]
 func (h *handlers) passwordResetConfirm(c *gin.Context) {
 	logEnter(c, "password_reset_confirm")
 	if !h.requireIdent(c) {
@@ -52,54 +71,5 @@ func (h *handlers) passwordResetConfirm(c *gin.Context) {
 	middleware.WriteJSON(c, utils.StatusOK, dto.StatusOK{
 		Meta:   metaFrom(c),
 		Status: "password_reset",
-	})
-}
-
-func (h *handlers) otpRequest(c *gin.Context) {
-	logEnter(c, "otp_request")
-	if !h.requireIdent(c) {
-		return
-	}
-	var body dto.EmailBody
-	if err := c.ShouldBindJSON(&body); err != nil {
-		middleware.Abort(c, utils.E(utils.CodeValidation))
-		return
-	}
-	if err := h.ident.RequestOTP(c.Request.Context(), body.Email); err != nil {
-		middleware.Abort(c, err)
-		return
-	}
-	middleware.WriteJSON(c, utils.StatusAccepted, dto.StatusOK{
-		Meta:   metaFrom(c),
-		Status: "accepted",
-	})
-}
-
-func (h *handlers) otpVerify(c *gin.Context) {
-	logEnter(c, "otp_verify")
-	if !h.requireIdent(c) {
-		return
-	}
-	var body dto.OTPVerifyBody
-	if err := c.ShouldBindJSON(&body); err != nil {
-		middleware.Abort(c, utils.E(utils.CodeValidation))
-		return
-	}
-	u, pair, err := h.ident.VerifyOTP(c.Request.Context(), body.Email, body.OTP, body.DeviceName)
-	if err != nil {
-		middleware.Abort(c, err)
-		return
-	}
-	c.Set(utils.CtxUserID, u.ID)
-	middleware.WriteJSON(c, utils.StatusOK, dto.LoginOK{
-		TokenOK: dto.TokenOK{
-			Meta:         metaFrom(c),
-			AccessToken:  pair.AccessToken,
-			RefreshToken: pair.RefreshToken,
-			ExpiresIn:    pair.ExpiresIn,
-			TokenType:    pair.TokenType,
-		},
-		User:         userView(u),
-		Organization: h.primaryOrgView(c, u.ID),
 	})
 }

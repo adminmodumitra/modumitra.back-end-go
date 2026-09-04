@@ -17,6 +17,16 @@ func (h *handlers) requireIdent(c *gin.Context) bool {
 	return true
 }
 
+// register godoc
+// @Summary Register a new user
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param Idempotency-Key header string true "Idempotency key"
+// @Param body body dto.RegisterBody true "Registration"
+// @Success 201 {object} dto.UserOK
+// @Failure 422 {object} utils.ErrorResponse
+// @Router /v1/auth/register [post]
 func (h *handlers) register(c *gin.Context) {
 	logEnter(c, "register")
 	if !h.requireIdent(c) {
@@ -52,6 +62,15 @@ func (h *handlers) register(c *gin.Context) {
 	})
 }
 
+// verifyEmail godoc
+// @Summary Verify email with token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body dto.TokenBody true "Verification token"
+// @Success 200 {object} dto.UserOK
+// @Failure 422 {object} utils.ErrorResponse
+// @Router /v1/auth/verify-email [post]
 func (h *handlers) verifyEmail(c *gin.Context) {
 	logEnter(c, "verify_email")
 	if !h.requireIdent(c) {
@@ -74,6 +93,15 @@ func (h *handlers) verifyEmail(c *gin.Context) {
 	})
 }
 
+// resendVerification godoc
+// @Summary Resend email verification
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body dto.EmailBody true "Email"
+// @Success 202 {object} dto.StatusOK
+// @Failure 422 {object} utils.ErrorResponse
+// @Router /v1/auth/resend-verification [post]
 func (h *handlers) resendVerification(c *gin.Context) {
 	logEnter(c, "resend_verification")
 	if !h.requireIdent(c) {

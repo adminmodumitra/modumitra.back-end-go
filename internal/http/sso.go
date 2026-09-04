@@ -21,6 +21,12 @@ func (h *handlers) requireSSO(c *gin.Context) bool {
 	return true
 }
 
+// oauthProviders godoc
+// @Summary List OAuth providers
+// @Tags sso
+// @Produce json
+// @Success 200 {object} dto.OAuthProvidersOK
+// @Router /v1/auth/oauth/providers [get]
 func (h *handlers) oauthProviders(c *gin.Context) {
 	logEnter(c, "oauth_providers")
 	if !h.requireSSO(c) {
@@ -37,6 +43,17 @@ func (h *handlers) oauthProviders(c *gin.Context) {
 	})
 }
 
+// oauthStart godoc
+// @Summary Start OAuth authorization
+// @Tags sso
+// @Accept json
+// @Produce json
+// @Param provider path string true "Provider id"
+// @Param body body dto.OAuthStartBody true "Start"
+// @Success 200 {object} dto.OAuthStartOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Failure 422 {object} utils.ErrorResponse
+// @Router /v1/auth/oauth/{provider}/start [post]
 func (h *handlers) oauthStart(c *gin.Context) {
 	logEnter(c, "oauth_start")
 	if !h.requireSSO(c) {
@@ -81,19 +98,6 @@ func (h *handlers) oauthStart(c *gin.Context) {
 		AuthorizationURL: res.AuthorizationURL,
 		State:            res.State,
 	})
-}
-
-func (h *handlers) oauthCallback(c *gin.Context) {
-	logEnter(c, "oauth_callback")
-	if !h.requireSSO(c) {
-		return
-	}
-	u, pair, err := h.sso.Callback(c.Request.Context(), c.Param("provider"), c.Query("code"), c.Query("state"), c.Query("error"))
-	if err != nil {
-		middleware.Abort(c, err)
-		return
-	}
-	h.writeOAuthLogin(c, u, pair, c.Param("provider"))
 }
 
 func (h *handlers) writeOAuthLogin(c *gin.Context, u *identity.User, pair *identity.TokenPair, provider string) {

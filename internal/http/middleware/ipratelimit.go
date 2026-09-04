@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -28,7 +29,7 @@ func IPRateLimit(rps rate.Limit, burst int) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		path := c.Request.URL.Path
-		if path == "/healthz" || path == "/readyz" {
+		if path == "/healthz" || path == "/readyz" || strings.HasPrefix(path, "/swagger") {
 			c.Next()
 			return
 		}

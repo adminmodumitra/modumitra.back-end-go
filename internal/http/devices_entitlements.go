@@ -12,6 +12,16 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
+// orgEntitlements godoc
+// @Summary Issue entitlement snapshot for org
+// @Tags devices
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Organization ID"
+// @Param device_id query string false "Device ID"
+// @Success 200 {object} dto.EntitlementsOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Router /v1/organizations/{id}/entitlements [get]
 func (h *handlers) orgEntitlements(c *gin.Context) {
 	logEnter(c, "org_entitlements")
 	if !h.requireDevices(c) {
@@ -28,6 +38,16 @@ func (h *handlers) orgEntitlements(c *gin.Context) {
 	})
 }
 
+// meCapabilities godoc
+// @Summary Current user capabilities
+// @Tags me
+// @Security BearerAuth
+// @Produce json
+// @Param X-Organization-Id header string false "Organization ID"
+// @Param organization_id query string false "Organization ID"
+// @Success 200 {object} dto.CapabilitiesOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Router /v1/me/capabilities [get]
 func (h *handlers) meCapabilities(c *gin.Context) {
 	logEnter(c, "me_capabilities")
 	if !h.requireDevices(c) {

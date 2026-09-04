@@ -9,6 +9,18 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
+// createInvitation godoc
+// @Summary Create invitation
+// @Tags invitations
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param Idempotency-Key header string true "Idempotency key"
+// @Param id path string true "Organization ID"
+// @Param body body dto.CreateInviteBody true "Invite"
+// @Success 201 {object} dto.InvitationOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Router /v1/organizations/{id}/invitations [post]
 func (h *handlers) createInvitation(c *gin.Context) {
 	logEnter(c, "create_invitation")
 	if !h.requireOrgs(c) {
@@ -33,6 +45,18 @@ func (h *handlers) createInvitation(c *gin.Context) {
 	})
 }
 
+// listInvitations godoc
+// @Summary List invitations
+// @Tags invitations
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Organization ID"
+// @Param status query string false "Status filter"
+// @Param cursor query string false "Cursor"
+// @Param limit query int false "Limit"
+// @Success 200 {object} dto.InvitationListOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Router /v1/organizations/{id}/invitations [get]
 func (h *handlers) listInvitations(c *gin.Context) {
 	logEnter(c, "list_invitations")
 	if !h.requireOrgs(c) {
@@ -60,6 +84,16 @@ func (h *handlers) listInvitations(c *gin.Context) {
 	})
 }
 
+// revokeInvitation godoc
+// @Summary Revoke invitation
+// @Tags invitations
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Organization ID"
+// @Param invitationId path string true "Invitation ID"
+// @Success 200 {object} dto.InvitationRevokedOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Router /v1/organizations/{id}/invitations/{invitationId} [delete]
 func (h *handlers) revokeInvitation(c *gin.Context) {
 	logEnter(c, "revoke_invitation")
 	if !h.requireOrgs(c) {
@@ -74,71 +108,5 @@ func (h *handlers) revokeInvitation(c *gin.Context) {
 		Meta:   metaFrom(c),
 		Status: "revoked",
 		ID:     id,
-	})
-}
-
-func (h *handlers) resendInvitation(c *gin.Context) {
-	logEnter(c, "resend_invitation")
-	if !h.requireOrgs(c) {
-		return
-	}
-	if !requireIdempotencyKey(c) {
-		return
-	}
-	inv, err := h.orgs.ResendInvitation(c.Request.Context(), middleware.UserIDFrom(c), c.Param("id"), c.Param("invitationId"))
-	if err != nil {
-		middleware.Abort(c, err)
-		return
-	}
-	middleware.WriteJSON(c, utils.StatusAccepted, dto.InvitationResentOK{
-		Meta:      metaFrom(c),
-		Status:    "resent",
-		ID:        inv.ID,
-		ExpiresAt: rfcTime(inv.ExpiresAt),
-	})
-}
-
-func (h *handlers) previewInvitation(c *gin.Context) {
-	logEnter(c, "preview_invitation")
-	if !h.requireOrgs(c) {
-		return
-	}
-	prev, err := h.orgs.PreviewInvitation(c.Request.Context(), c.Param("token"))
-	if err != nil {
-		middleware.Abort(c, err)
-		return
-	}
-	middleware.WriteJSON(c, utils.StatusOK, dto.InvitePreviewOK{
-		Meta:               metaFrom(c),
-		OrganizationName:   prev.OrganizationName,
-		Role:               prev.Role,
-		InviterDisplayName: prev.InviterDisplayName,
-		Email:              prev.Email,
-		ExpiresAt:          rfcTime(prev.ExpiresAt),
-		Status:             prev.Status,
-	})
-}
-
-func (h *handlers) acceptInvitation(c *gin.Context) {
-	logEnter(c, "accept_invitation")
-	if !h.requireOrgs(c) {
-		return
-	}
-	if !requireIdempotencyKey(c) {
-		return
-	}
-	uid := middleware.UserIDFrom(c)
-	o, m, err := h.orgs.AcceptInvitation(c.Request.Context(), uid, c.Param("token"))
-	if err != nil {
-		middleware.Abort(c, err)
-		return
-	}
-	if o != nil {
-		h.invalidateOrgMembers(c, o.ID, uid)
-	}
-	middleware.WriteJSON(c, utils.StatusOK, dto.InviteAcceptOK{
-		Meta:         metaFrom(c),
-		Membership:   membershipView(m, nil),
-		Organization: organizationView(o),
 	})
 }

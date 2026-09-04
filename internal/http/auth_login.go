@@ -1,7 +1,6 @@
 package httpapi
 
 import (
-	"github.com/Danish-13-Khan/backend-cabinet/internal/cache"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/models/dto"
 	"github.com/gin-gonic/gin"
 
@@ -10,6 +9,16 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
+// login godoc
+// @Summary Login with email/password
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body dto.LoginBody true "Credentials"
+// @Success 200 {object} dto.LoginOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Failure 422 {object} utils.ErrorResponse
+// @Router /v1/auth/login [post]
 func (h *handlers) login(c *gin.Context) {
 	logEnter(c, "login")
 	if !h.requireIdent(c) {
@@ -43,6 +52,15 @@ func (h *handlers) login(c *gin.Context) {
 	})
 }
 
+// refresh godoc
+// @Summary Refresh access token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body dto.RefreshBody true "Refresh token"
+// @Success 200 {object} dto.TokenOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Router /v1/auth/refresh [post]
 func (h *handlers) refresh(c *gin.Context) {
 	logEnter(c, "refresh")
 	if !h.requireIdent(c) {
@@ -67,6 +85,15 @@ func (h *handlers) refresh(c *gin.Context) {
 	})
 }
 
+// logout godoc
+// @Summary Logout current session
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body dto.RefreshBody true "Refresh token"
+// @Success 200 {object} dto.StatusOK
+// @Failure 422 {object} utils.ErrorResponse
+// @Router /v1/auth/logout [post]
 func (h *handlers) logout(c *gin.Context) {
 	logEnter(c, "logout")
 	if !h.requireIdent(c) {
@@ -84,24 +111,5 @@ func (h *handlers) logout(c *gin.Context) {
 	middleware.WriteJSON(c, utils.StatusOK, dto.StatusOK{
 		Meta:   metaFrom(c),
 		Status: "logged_out",
-	})
-}
-
-func (h *handlers) logoutAll(c *gin.Context) {
-	logEnter(c, "logout_all")
-	if !h.requireIdent(c) {
-		return
-	}
-	uid := middleware.UserIDFrom(c)
-	n, err := h.ident.LogoutAll(c.Request.Context(), uid)
-	if err != nil {
-		middleware.Abort(c, err)
-		return
-	}
-	h.cache.Delete(c.Request.Context(), cache.Me(uid))
-	middleware.WriteJSON(c, utils.StatusOK, dto.LogoutAllOK{
-		Meta:            metaFrom(c),
-		Status:          "logged_out_all",
-		RevokedSessions: n,
 	})
 }

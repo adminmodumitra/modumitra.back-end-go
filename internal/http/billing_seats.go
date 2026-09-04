@@ -9,6 +9,16 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
+// getSeats godoc
+// @Summary Get seat usage
+// @Tags billing
+// @Security BearerAuth
+// @Produce json
+// @Param id path string false "Organization ID (org-scoped route)"
+// @Success 200 {object} dto.SeatsOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Router /v1/billing/seats [get]
+// @Router /v1/organizations/{id}/seats [get]
 func (h *handlers) getSeats(c *gin.Context) {
 	logEnter(c, "get_seats")
 	if !h.requireBilling(c) {
@@ -35,6 +45,18 @@ func (h *handlers) getSeats(c *gin.Context) {
 	})
 }
 
+// previewDowngrade godoc
+// @Summary Preview plan downgrade
+// @Tags billing
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string false "Organization ID (org-scoped route)"
+// @Param body body dto.PreviewBody true "Preview"
+// @Success 200 {object} dto.PreviewDowngradeOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Router /v1/billing/seats/preview-downgrade [post]
+// @Router /v1/organizations/{id}/seats/preview-downgrade [post]
 func (h *handlers) previewDowngrade(c *gin.Context) {
 	logEnter(c, "preview_downgrade")
 	if !h.requireBilling(c) {

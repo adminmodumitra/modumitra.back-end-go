@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	krlimit "github.com/go-kratos/aegis/ratelimit"
 	"github.com/go-kratos/aegis/ratelimit/bbr"
@@ -11,7 +13,7 @@ import (
 
 // BBR is process-wide adaptive load-shedding (Kratos aegis BBR).
 // It is not an IP quota. Per-IP limits stay on IPRateLimit.
-// /healthz and /readyz are never shed so probes stay up.
+// /healthz, /readyz, and /swagger are never shed so probes and docs stay up.
 // When cfg.Enabled is false the limiter is a pass-through.
 func BBR(cfg config.BBR) gin.HandlerFunc {
 	if !cfg.Enabled {
@@ -24,7 +26,7 @@ func BBR(cfg config.BBR) gin.HandlerFunc {
 	)
 	return func(c *gin.Context) {
 		path := c.Request.URL.Path
-		if path == "/healthz" || path == "/readyz" {
+		if path == "/healthz" || path == "/readyz" || strings.HasPrefix(path, "/swagger") {
 			c.Next()
 			return
 		}

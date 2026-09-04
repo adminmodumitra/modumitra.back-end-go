@@ -10,6 +10,19 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
+// listMembers godoc
+// @Summary List organization members
+// @Tags organizations
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Organization ID"
+// @Param status query string false "Status filter"
+// @Param role query string false "Role filter"
+// @Param cursor query string false "Cursor"
+// @Param limit query int false "Limit"
+// @Success 200 {object} dto.MemberListOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Router /v1/organizations/{id}/members [get]
 func (h *handlers) listMembers(c *gin.Context) {
 	logEnter(c, "list_members")
 	if !h.requireOrgs(c) {
@@ -44,6 +57,18 @@ func (h *handlers) listMembers(c *gin.Context) {
 	middleware.WriteJSON(c, utils.StatusOK, body)
 }
 
+// patchMember godoc
+// @Summary Update member role/status
+// @Tags organizations
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "Organization ID"
+// @Param userId path string true "User ID"
+// @Param body body dto.PatchMemberBody true "Patch"
+// @Success 200 {object} dto.MemberOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Router /v1/organizations/{id}/members/{userId} [patch]
 func (h *handlers) patchMember(c *gin.Context) {
 	logEnter(c, "patch_member")
 	if !h.requireOrgs(c) {
@@ -64,45 +89,5 @@ func (h *handlers) patchMember(c *gin.Context) {
 	middleware.WriteJSON(c, utils.StatusOK, dto.MemberOK{
 		Meta:       metaFrom(c),
 		Membership: membershipView(m, h.memberUserView(c, m.UserID)),
-	})
-}
-
-func (h *handlers) suspendMember(c *gin.Context) {
-	logEnter(c, "suspend_member")
-	if !h.requireOrgs(c) {
-		return
-	}
-	if !requireIdempotencyKey(c) {
-		return
-	}
-	orgID, uid := c.Param("id"), c.Param("userId")
-	m, err := h.orgs.SuspendMember(c.Request.Context(), middleware.UserIDFrom(c), orgID, uid)
-	if err != nil {
-		middleware.Abort(c, err)
-		return
-	}
-	h.invalidateOrgMembers(c, orgID, uid)
-	middleware.WriteJSON(c, utils.StatusOK, dto.MemberOK{
-		Meta:       metaFrom(c),
-		Membership: membershipView(m, h.memberUserView(c, m.UserID)),
-	})
-}
-
-func (h *handlers) removeMember(c *gin.Context) {
-	logEnter(c, "remove_member")
-	if !h.requireOrgs(c) {
-		return
-	}
-	id, uid := c.Param("id"), c.Param("userId")
-	if err := h.orgs.RemoveMember(c.Request.Context(), middleware.UserIDFrom(c), id, uid); err != nil {
-		middleware.Abort(c, err)
-		return
-	}
-	h.invalidateOrgMembers(c, id, uid)
-	middleware.WriteJSON(c, utils.StatusOK, dto.MemberRemovedOK{
-		Meta:           metaFrom(c),
-		Status:         "removed",
-		UserID:         uid,
-		OrganizationID: id,
 	})
 }

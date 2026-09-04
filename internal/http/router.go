@@ -2,8 +2,11 @@ package httpapi
 
 import (
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"golang.org/x/time/rate"
 
+	_ "github.com/Danish-13-Khan/backend-cabinet/docs"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/billing"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/cache"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
@@ -43,6 +46,7 @@ func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, 
 	{
 		public.GET("/healthz", h.healthz)
 		public.GET("/readyz", h.readyz)
+		public.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 		public.GET("/v1/public/config", h.publicConfig)
 		public.POST("/v1/auth/register", h.register)
 		public.POST("/v1/auth/verify-email", h.verifyEmail)

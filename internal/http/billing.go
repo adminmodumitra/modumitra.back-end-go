@@ -27,6 +27,14 @@ func (h *handlers) requireBilling(c *gin.Context) bool {
 	return true
 }
 
+// listPlans godoc
+// @Summary List billing plans
+// @Tags billing
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} dto.PlanListOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Router /v1/billing/plans [get]
 func (h *handlers) listPlans(c *gin.Context) {
 	logEnter(c, "list_plans")
 	if !h.requireBilling(c) {
@@ -53,6 +61,17 @@ func (h *handlers) listPlans(c *gin.Context) {
 	middleware.WriteJSON(c, utils.StatusOK, body)
 }
 
+// getSubscription godoc
+// @Summary Get subscription
+// @Tags billing
+// @Security BearerAuth
+// @Produce json
+// @Param id path string false "Organization ID (org-scoped route)"
+// @Param X-Organization-Id header string false "Organization ID (personal route)"
+// @Success 200 {object} dto.SubscriptionOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Router /v1/billing/subscription [get]
+// @Router /v1/organizations/{id}/subscription [get]
 func (h *handlers) getSubscription(c *gin.Context) {
 	logEnter(c, "get_subscription")
 	if !h.requireBilling(c) {
@@ -78,56 +97,4 @@ func (h *handlers) getSubscription(c *gin.Context) {
 	body := dto.SubscriptionOK{Meta: metaFrom(c), Subscription: subscriptionView(sub)}
 	cache.SetJSON(c.Request.Context(), h.cache, key, body, cache.TTLBilling)
 	middleware.WriteJSON(c, utils.StatusOK, body)
-}
-
-func (h *handlers) checkoutSession(c *gin.Context) {
-	logEnter(c, "checkout_session")
-	if !h.requireBilling(c) {
-		return
-	}
-	if !requireIdempotencyKey(c) {
-		return
-	}
-	var body dto.CheckoutBody
-	if err := c.ShouldBindJSON(&body); err != nil {
-		middleware.Abort(c, utils.E(utils.CodeValidation))
-		return
-	}
-	sess, err := h.billing.Checkout(c.Request.Context(), middleware.UserIDFrom(c), h.billingTenant(c), body.PlanID, body.SuccessURL, body.CancelURL)
-	if err != nil {
-		middleware.Abort(c, err)
-		return
-	}
-	middleware.WriteJSON(c, utils.StatusOK, dto.CheckoutOK{
-		Meta:              metaFrom(c),
-		CheckoutSessionID: sess.ID,
-		URL:               sess.URL,
-		ExpiresAt:         rfcTime(sess.ExpiresAt),
-	})
-}
-
-func (h *handlers) portalSession(c *gin.Context) {
-	logEnter(c, "portal_session")
-	if !h.requireBilling(c) {
-		return
-	}
-	if !requireIdempotencyKey(c) {
-		return
-	}
-	var body dto.PortalBody
-	if err := c.ShouldBindJSON(&body); err != nil {
-		middleware.Abort(c, utils.E(utils.CodeValidation))
-		return
-	}
-	sess, err := h.billing.Portal(c.Request.Context(), middleware.UserIDFrom(c), h.billingTenant(c), body.ReturnURL)
-	if err != nil {
-		middleware.Abort(c, err)
-		return
-	}
-	middleware.WriteJSON(c, utils.StatusOK, dto.PortalOK{
-		Meta:            metaFrom(c),
-		PortalSessionID: sess.ID,
-		URL:             sess.URL,
-		ExpiresAt:       rfcTime(sess.ExpiresAt),
-	})
 }

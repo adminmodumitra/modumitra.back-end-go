@@ -9,6 +9,17 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
+// createOrg godoc
+// @Summary Create organization
+// @Tags organizations
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param Idempotency-Key header string true "Idempotency key"
+// @Param body body dto.CreateOrgBody true "Org"
+// @Success 201 {object} dto.OrgCreatedOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Router /v1/organizations [post]
 func (h *handlers) createOrg(c *gin.Context) {
 	logEnter(c, "create_org")
 	if !h.requireOrgs(c) {
@@ -39,6 +50,16 @@ func (h *handlers) createOrg(c *gin.Context) {
 	})
 }
 
+// listOrgs godoc
+// @Summary List my organizations
+// @Tags organizations
+// @Security BearerAuth
+// @Produce json
+// @Param cursor query string false "Cursor"
+// @Param limit query int false "Limit"
+// @Success 200 {object} dto.OrgListOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Router /v1/organizations [get]
 func (h *handlers) listOrgs(c *gin.Context) {
 	logEnter(c, "list_orgs")
 	if !h.requireOrgs(c) {
@@ -70,6 +91,16 @@ func (h *handlers) listOrgs(c *gin.Context) {
 	})
 }
 
+// getOrg godoc
+// @Summary Get organization
+// @Tags organizations
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Organization ID"
+// @Success 200 {object} dto.OrgOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Failure 404 {object} utils.ErrorResponse
+// @Router /v1/organizations/{id} [get]
 func (h *handlers) getOrg(c *gin.Context) {
 	logEnter(c, "get_org")
 	if !h.requireOrgs(c) {
@@ -83,68 +114,5 @@ func (h *handlers) getOrg(c *gin.Context) {
 	middleware.WriteJSON(c, utils.StatusOK, dto.OrgOK{
 		Meta:         metaFrom(c),
 		Organization: organizationView(o),
-	})
-}
-
-func (h *handlers) patchOrg(c *gin.Context) {
-	logEnter(c, "patch_org")
-	if !h.requireOrgs(c) {
-		return
-	}
-	var body dto.PatchOrgBody
-	if err := c.ShouldBindJSON(&body); err != nil {
-		middleware.Abort(c, utils.E(utils.CodeValidation))
-		return
-	}
-	o, err := h.orgs.UpdateName(c.Request.Context(), middleware.UserIDFrom(c), c.Param("id"), body.Name)
-	if err != nil {
-		middleware.Abort(c, err)
-		return
-	}
-	middleware.WriteJSON(c, utils.StatusOK, dto.OrgOK{
-		Meta:         metaFrom(c),
-		Organization: organizationView(o),
-	})
-}
-
-func (h *handlers) deleteOrg(c *gin.Context) {
-	logEnter(c, "delete_org")
-	if !h.requireOrgs(c) {
-		return
-	}
-	if !requireIdempotencyKey(c) {
-		return
-	}
-	id := c.Param("id")
-	if err := h.orgs.Delete(c.Request.Context(), middleware.UserIDFrom(c), id); err != nil {
-		middleware.Abort(c, err)
-		return
-	}
-	middleware.WriteJSON(c, utils.StatusOK, dto.OrgDeletedOK{
-		Meta:   metaFrom(c),
-		Status: "deleted",
-		ID:     id,
-	})
-}
-
-func (h *handlers) leaveOrg(c *gin.Context) {
-	logEnter(c, "leave_org")
-	if !h.requireOrgs(c) {
-		return
-	}
-	if !requireIdempotencyKey(c) {
-		return
-	}
-	id := c.Param("id")
-	uid := middleware.UserIDFrom(c)
-	if err := h.orgs.Leave(c.Request.Context(), uid, id); err != nil {
-		middleware.Abort(c, err)
-		return
-	}
-	h.invalidateOrgMembers(c, id, uid)
-	middleware.WriteJSON(c, utils.StatusOK, dto.LeaveOK{
-		Meta:           metaFrom(c),
-		Status:         "left",
-		OrganizationID: id,
 	})
 }

@@ -1,0 +1,2986 @@
+basePath: /
+definitions:
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.ActivateDeviceBody:
+    properties:
+      name:
+        type: string
+      platform:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.ActivateOK:
+    properties:
+      device:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.DeviceView'
+      entitlement_snapshot:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.EntitlementSnapshotView'
+      request_id:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.CancelBody:
+    properties:
+      at_period_end:
+        type: boolean
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.Capabilities:
+    properties:
+      cloud_projects:
+        type: boolean
+      engineering_handoff:
+        type: boolean
+      max_cloud_projects:
+        type: integer
+      max_devices:
+        type: integer
+      max_seats:
+        type: integer
+      organization_assets:
+        type: boolean
+      proposal_branding:
+        type: boolean
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.CapabilitiesOK:
+    properties:
+      capabilities:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.Capabilities'
+      issued_at:
+        type: string
+      membership_status:
+        type: string
+      organization_id:
+        type: string
+      plan:
+        type: string
+      request_id:
+        type: string
+      role:
+        type: string
+      subscription_status:
+        type: string
+      trace_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.ChangePasswordBody:
+    properties:
+      current_password:
+        type: string
+      new_password:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.CheckoutBody:
+    properties:
+      cancel_url:
+        type: string
+      plan_id:
+        type: string
+      success_url:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.CheckoutOK:
+    properties:
+      checkout_session_id:
+        type: string
+      expires_at:
+        type: string
+      request_id:
+        type: string
+      trace_id:
+        type: string
+      url:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.CreateInviteBody:
+    properties:
+      email:
+        type: string
+      role:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.CreateOrgBody:
+    properties:
+      name:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.DeviceCodeBody:
+    properties:
+      client_id:
+        type: string
+      provider:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.DeviceCodeOK:
+    properties:
+      device_code:
+        type: string
+      expires_in:
+        type: integer
+      interval:
+        type: integer
+      request_id:
+        type: string
+      trace_id:
+        type: string
+      user_code:
+        type: string
+      verification_uri:
+        type: string
+      verification_uri_complete:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.DeviceDeactivatedOK:
+    properties:
+      id:
+        type: string
+      request_id:
+        type: string
+      status:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.DeviceListOK:
+    properties:
+      active_count:
+        type: integer
+      device_limit:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.DeviceView'
+        type: array
+      next_cursor:
+        type: string
+      request_id:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.DeviceOK:
+    properties:
+      device:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.DeviceView'
+      request_id:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.DeviceTokenBody:
+    properties:
+      device_code:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.DeviceView:
+    properties:
+      created_at:
+        type: string
+      deactivated_at:
+        type: string
+      id:
+        type: string
+      last_seen_at:
+        type: string
+      name:
+        type: string
+      platform:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.EmailBody:
+    properties:
+      email:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.EntitlementSnapshotView:
+    properties:
+      capabilities:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.Capabilities'
+      device_id:
+        type: string
+      expires_at:
+        type: string
+      grace_until:
+        type: string
+      issued_at:
+        type: string
+      organization_id:
+        type: string
+      plan:
+        type: string
+      refresh_after:
+        type: string
+      schema_version:
+        type: integer
+      signature:
+        type: string
+      subscription_status:
+        type: string
+      user_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.EntitlementsOK:
+    properties:
+      entitlement_snapshot:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.EntitlementSnapshotView'
+      request_id:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.HealthOK:
+    properties:
+      request_id:
+        type: string
+      status:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.IdentityListOK:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.IdentityView'
+        type: array
+      next_cursor:
+        type: string
+      request_id:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.IdentityOK:
+    properties:
+      identity:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.IdentityView'
+      request_id:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.IdentityView:
+    properties:
+      email:
+        type: string
+      linked_at:
+        type: string
+      provider:
+        type: string
+      provider_user_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InvitationListOK:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InvitationView'
+        type: array
+      next_cursor:
+        type: string
+      request_id:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InvitationOK:
+    properties:
+      invitation:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InvitationView'
+      request_id:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InvitationResentOK:
+    properties:
+      expires_at:
+        type: string
+      id:
+        type: string
+      request_id:
+        type: string
+      status:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InvitationRevokedOK:
+    properties:
+      id:
+        type: string
+      request_id:
+        type: string
+      status:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InvitationView:
+    properties:
+      accepted_at:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+      invited_by_user_id:
+        type: string
+      organization_id:
+        type: string
+      role:
+        type: string
+      status:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InviteAcceptOK:
+    properties:
+      membership:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.MembershipView'
+      organization:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OrganizationView'
+      request_id:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InvitePreviewOK:
+    properties:
+      email:
+        type: string
+      expires_at:
+        type: string
+      inviter_display_name:
+        type: string
+      organization_name:
+        type: string
+      request_id:
+        type: string
+      role:
+        type: string
+      status:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InvoiceListOK:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InvoiceView'
+        type: array
+      next_cursor:
+        type: string
+      request_id:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InvoiceOK:
+    properties:
+      invoice:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InvoiceView'
+      request_id:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InvoiceView:
+    properties:
+      amount_due_minor:
+        type: integer
+      created_at:
+        type: string
+      currency:
+        type: string
+      hosted_invoice_url:
+        type: string
+      id:
+        type: string
+      invoice_pdf_url:
+        type: string
+      number:
+        type: string
+      organization_id:
+        type: string
+      paid_at:
+        type: string
+      period_end:
+        type: string
+      period_start:
+        type: string
+      status:
+        type: string
+      total_minor:
+        type: integer
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.LeaveOK:
+    properties:
+      organization_id:
+        type: string
+      request_id:
+        type: string
+      status:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.LoginBody:
+    properties:
+      device_name:
+        type: string
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.LoginOK:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      organization:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OrganizationView'
+      refresh_token:
+        type: string
+      request_id:
+        type: string
+      token_type:
+        type: string
+      trace_id:
+        type: string
+      user:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.UserView'
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.LogoutAllOK:
+    properties:
+      request_id:
+        type: string
+      revoked_sessions:
+        type: integer
+      status:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.MemberListOK:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.MembershipView'
+        type: array
+      next_cursor:
+        type: string
+      request_id:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.MemberOK:
+    properties:
+      membership:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.MembershipView'
+      request_id:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.MemberRemovedOK:
+    properties:
+      organization_id:
+        type: string
+      request_id:
+        type: string
+      status:
+        type: string
+      trace_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.MemberUserView:
+    properties:
+      display_name:
+        type: string
+      email:
+        type: string
+      email_verified:
+        type: boolean
+      id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.MembershipView:
+    properties:
+      created_at:
+        type: string
+      organization_id:
+        type: string
+      role:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+      user:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.MemberUserView'
+      user_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OAuthLinkBody:
+    properties:
+      authorization_code:
+        type: string
+      state:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OAuthLoginOK:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      linked_provider:
+        type: string
+      organization:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OrganizationView'
+      refresh_token:
+        type: string
+      request_id:
+        type: string
+      token_type:
+        type: string
+      trace_id:
+        type: string
+      user:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.UserView'
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OAuthProviderView:
+    properties:
+      device_code_supported:
+        type: boolean
+      id:
+        type: string
+      label:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OAuthProvidersOK:
+    properties:
+      providers:
+        items:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OAuthProviderView'
+        type: array
+      request_id:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OAuthStartBody:
+    properties:
+      intent:
+        type: string
+      redirect_uri:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OAuthStartOK:
+    properties:
+      authorization_url:
+        type: string
+      request_id:
+        type: string
+      state:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OTPVerifyBody:
+    properties:
+      device_name:
+        type: string
+      email:
+        type: string
+      otp:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OrgCreatedOK:
+    properties:
+      membership:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.MembershipView'
+      organization:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OrganizationView'
+      request_id:
+        type: string
+      trace_id:
+        type: string
+      trial_ends_at:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OrgDeletedOK:
+    properties:
+      id:
+        type: string
+      request_id:
+        type: string
+      status:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OrgListItem:
+    properties:
+      membership_status:
+        type: string
+      organization:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OrganizationView'
+      role:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OrgListOK:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OrgListItem'
+        type: array
+      next_cursor:
+        type: string
+      request_id:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OrgOK:
+    properties:
+      organization:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OrganizationView'
+      request_id:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OrganizationView:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      owner_user_id:
+        type: string
+      trial_ends_at:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PatchDeviceBody:
+    properties:
+      name:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PatchMemberBody:
+    properties:
+      role:
+        type: string
+      status:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PatchOrgBody:
+    properties:
+      name:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PlanCapabilitiesView:
+    properties:
+      cloud_projects:
+        type: boolean
+      engineering_handoff:
+        type: boolean
+      organization_assets:
+        type: boolean
+      proposal_branding:
+        type: boolean
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PlanListOK:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PlanView'
+        type: array
+      next_cursor:
+        type: string
+      request_id:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PlanView:
+    properties:
+      capabilities:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PlanCapabilitiesView'
+      currency:
+        type: string
+      id:
+        type: string
+      included_seats:
+        type: integer
+      interval:
+        type: string
+      max_devices_per_user:
+        type: integer
+      plan:
+        type: string
+      trial_days:
+        type: integer
+      unit_amount_minor:
+        type: integer
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PortalBody:
+    properties:
+      return_url:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PortalOK:
+    properties:
+      expires_at:
+        type: string
+      portal_session_id:
+        type: string
+      request_id:
+        type: string
+      trace_id:
+        type: string
+      url:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PreviewBody:
+    properties:
+      plan_id:
+        type: string
+      seats:
+        type: integer
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PreviewDowngradeOK:
+    properties:
+      blocked:
+        type: boolean
+      capability_loss:
+        items:
+          type: string
+        type: array
+      members_over_target:
+        items:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.SeatMemberView'
+        type: array
+      message:
+        type: string
+      plan:
+        type: string
+      plan_id:
+        type: string
+      purchased_seats:
+        type: integer
+      request_id:
+        type: string
+      seat_shortfall:
+        type: integer
+      target_seats:
+        type: integer
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PublicConfigOK:
+    properties:
+      min_app_version:
+        type: string
+      oauth_providers:
+        items:
+          type: string
+        type: array
+      privacy_version:
+        type: string
+      request_id:
+        type: string
+      terms_version:
+        type: string
+      trace_id:
+        type: string
+      trial_days:
+        type: integer
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.ReadyOK:
+    properties:
+      checks:
+        additionalProperties:
+          type: string
+        type: object
+      request_id:
+        type: string
+      status:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.RefreshBody:
+    properties:
+      refresh_token:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.RegisterBody:
+    properties:
+      display_name:
+        type: string
+      email:
+        type: string
+      password:
+        type: string
+      privacy_version:
+        type: string
+      terms_version:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.ResetConfirmBody:
+    properties:
+      new_password:
+        type: string
+      token:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.RoleCatalogOK:
+    properties:
+      request_id:
+        type: string
+      roles:
+        additionalProperties:
+          additionalProperties:
+            type: boolean
+          type: object
+        type: object
+      schema_version:
+        type: integer
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.SeatMemberView:
+    properties:
+      consumes_seat:
+        type: boolean
+      role:
+        type: string
+      status:
+        type: string
+      user_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.SeatsOK:
+    properties:
+      available_seats:
+        type: integer
+      members:
+        items:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.SeatMemberView'
+        type: array
+      pending_invitations:
+        type: integer
+      purchased_seats:
+        type: integer
+      request_id:
+        type: string
+      trace_id:
+        type: string
+      used_seats:
+        type: integer
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.StatusOK:
+    properties:
+      request_id:
+        type: string
+      status:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.SubscriptionOK:
+    properties:
+      request_id:
+        type: string
+      subscription:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.SubscriptionView'
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.SubscriptionView:
+    properties:
+      cancel_at_period_end:
+        type: boolean
+      canceled_at:
+        type: string
+      current_period_end:
+        type: string
+      current_period_start:
+        type: string
+      grace_until:
+        type: string
+      id:
+        type: string
+      organization_id:
+        type: string
+      plan:
+        type: string
+      plan_id:
+        type: string
+      provider:
+        type: string
+      provider_subscription_id:
+        type: string
+      seats:
+        type: integer
+      status:
+        type: string
+      trial_ends_at:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.TokenBody:
+    properties:
+      token:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.TokenOK:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      request_id:
+        type: string
+      token_type:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.TransferBody:
+    properties:
+      new_owner_user_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.TransferOK:
+    properties:
+      new_owner_user_id:
+        type: string
+      organization:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OrganizationView'
+      previous_owner_user_id:
+        type: string
+      request_id:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.UnlinkOK:
+    properties:
+      provider:
+        type: string
+      request_id:
+        type: string
+      status:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.UserOK:
+    properties:
+      request_id:
+        type: string
+      trace_id:
+        type: string
+      user:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.UserView'
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.UserView:
+    properties:
+      created_at:
+        type: string
+      display_name:
+        type: string
+      email:
+        type: string
+      email_verified:
+        type: boolean
+      id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.WebhookOK:
+    properties:
+      received:
+        type: boolean
+      request_id:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorBody:
+    properties:
+      code:
+        type: string
+      details:
+        additionalProperties: {}
+        type: object
+      message:
+        type: string
+      request_id:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse:
+    properties:
+      error:
+        $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorBody'
+    type: object
+info:
+  contact: {}
+  description: v1 HTTP API
+  title: Cabinet Studio Backend API
+  version: 1.0.0
+paths:
+  /healthz:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.HealthOK'
+      summary: Liveness probe
+      tags:
+      - health
+  /readyz:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.ReadyOK'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      summary: Readiness probe
+      tags:
+      - health
+  /v1/auth/device/code:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Device code request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.DeviceCodeBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.DeviceCodeOK'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      summary: Start device authorization
+      tags:
+      - sso
+  /v1/auth/device/token:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Device code
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.DeviceTokenBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.LoginOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      summary: Poll device authorization token
+      tags:
+      - sso
+  /v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.LoginBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.LoginOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      summary: Login with email/password
+      tags:
+      - auth
+  /v1/auth/logout:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.RefreshBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.StatusOK'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      summary: Logout current session
+      tags:
+      - auth
+  /v1/auth/logout-all:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.LogoutAllOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Logout all sessions
+      tags:
+      - auth
+  /v1/auth/oauth/{provider}/callback:
+    get:
+      parameters:
+      - description: Provider id
+        in: path
+        name: provider
+        required: true
+        type: string
+      - description: Authorization code
+        in: query
+        name: code
+        type: string
+      - description: OAuth state
+        in: query
+        name: state
+        type: string
+      - description: Provider error
+        in: query
+        name: error
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OAuthLoginOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      summary: OAuth provider callback
+      tags:
+      - sso
+  /v1/auth/oauth/{provider}/start:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Provider id
+        in: path
+        name: provider
+        required: true
+        type: string
+      - description: Start
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OAuthStartBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OAuthStartOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      summary: Start OAuth authorization
+      tags:
+      - sso
+  /v1/auth/oauth/providers:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OAuthProvidersOK'
+      summary: List OAuth providers
+      tags:
+      - sso
+  /v1/auth/otp/request:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Email
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.EmailBody'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.StatusOK'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      summary: Request login OTP
+      tags:
+      - auth
+  /v1/auth/otp/resend:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Email
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.EmailBody'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.StatusOK'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      summary: Request login OTP
+      tags:
+      - auth
+  /v1/auth/otp/verify:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: OTP
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OTPVerifyBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.LoginOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      summary: Verify login OTP
+      tags:
+      - auth
+  /v1/auth/password-reset:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Email
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.EmailBody'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.StatusOK'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      summary: Request password reset email
+      tags:
+      - auth
+  /v1/auth/password-reset/confirm:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: Token and new password
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.ResetConfirmBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.StatusOK'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      summary: Confirm password reset
+      tags:
+      - auth
+  /v1/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.RefreshBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.TokenOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      summary: Refresh access token
+      tags:
+      - auth
+  /v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: Registration
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.RegisterBody'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.UserOK'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - auth
+  /v1/auth/resend-verification:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Email
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.EmailBody'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.StatusOK'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      summary: Resend email verification
+      tags:
+      - auth
+  /v1/auth/verify-email:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Verification token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.TokenBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.UserOK'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      summary: Verify email with token
+      tags:
+      - auth
+  /v1/billing/checkout-session:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: Checkout
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.CheckoutBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.CheckoutOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create checkout session
+      tags:
+      - billing
+  /v1/billing/invoices:
+    get:
+      parameters:
+      - description: Status filter
+        in: query
+        name: status
+        type: string
+      - description: Cursor
+        in: query
+        name: cursor
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InvoiceListOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List invoices
+      tags:
+      - billing
+  /v1/billing/invoices/{invoiceId}:
+    get:
+      parameters:
+      - description: Invoice ID
+        in: path
+        name: invoiceId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InvoiceOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get invoice
+      tags:
+      - billing
+  /v1/billing/plans:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PlanListOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List billing plans
+      tags:
+      - billing
+  /v1/billing/portal-session:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: Portal
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PortalBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PortalOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create billing portal session
+      tags:
+      - billing
+  /v1/billing/seats:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.SeatsOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get seat usage
+      tags:
+      - billing
+  /v1/billing/seats/preview-downgrade:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Preview
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PreviewBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PreviewDowngradeOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Preview plan downgrade
+      tags:
+      - billing
+  /v1/billing/subscription:
+    get:
+      parameters:
+      - description: Organization ID (personal route)
+        in: header
+        name: X-Organization-Id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.SubscriptionOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get subscription
+      tags:
+      - billing
+  /v1/billing/subscription/cancel:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: Cancel options
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.CancelBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.SubscriptionOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cancel subscription
+      tags:
+      - billing
+  /v1/billing/subscription/resume:
+    post:
+      parameters:
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.SubscriptionOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Resume subscription
+      tags:
+      - billing
+  /v1/devices:
+    get:
+      parameters:
+      - description: Include deactivated
+        in: query
+        name: include_deactivated
+        type: boolean
+      - description: Cursor
+        in: query
+        name: cursor
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.DeviceListOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List devices
+      tags:
+      - devices
+  /v1/devices/{id}:
+    delete:
+      parameters:
+      - description: Device ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.DeviceDeactivatedOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Deactivate device
+      tags:
+      - devices
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Device ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Patch
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PatchDeviceBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.DeviceOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Rename device
+      tags:
+      - devices
+  /v1/devices/activate:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: Device
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.ActivateDeviceBody'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.ActivateOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Activate a device
+      tags:
+      - devices
+  /v1/invitations/{token}:
+    get:
+      parameters:
+      - description: Invitation token
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InvitePreviewOK'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      summary: Preview invitation by token
+      tags:
+      - invitations
+  /v1/invitations/{token}/accept:
+    post:
+      parameters:
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: Invitation token
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InviteAcceptOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Accept invitation
+      tags:
+      - invitations
+  /v1/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.UserOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Current user profile
+      tags:
+      - me
+  /v1/me/capabilities:
+    get:
+      parameters:
+      - description: Organization ID
+        in: header
+        name: X-Organization-Id
+        type: string
+      - description: Organization ID
+        in: query
+        name: organization_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.CapabilitiesOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Current user capabilities
+      tags:
+      - me
+  /v1/me/identities:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.IdentityListOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List linked identities
+      tags:
+      - me
+  /v1/me/identities/{provider}:
+    delete:
+      parameters:
+      - description: Provider id
+        in: path
+        name: provider
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.UnlinkOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Unlink OAuth identity
+      tags:
+      - me
+  /v1/me/identities/{provider}/link:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: Provider id
+        in: path
+        name: provider
+        required: true
+        type: string
+      - description: Link
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OAuthLinkBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.IdentityOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Link OAuth identity
+      tags:
+      - me
+  /v1/me/password:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: Passwords
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.ChangePasswordBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.StatusOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Change password
+      tags:
+      - me
+  /v1/organizations:
+    get:
+      parameters:
+      - description: Cursor
+        in: query
+        name: cursor
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OrgListOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List my organizations
+      tags:
+      - organizations
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: Org
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.CreateOrgBody'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OrgCreatedOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create organization
+      tags:
+      - organizations
+  /v1/organizations/{id}:
+    delete:
+      parameters:
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: Organization ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OrgDeletedOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete organization
+      tags:
+      - organizations
+    get:
+      parameters:
+      - description: Organization ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OrgOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get organization
+      tags:
+      - organizations
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Organization ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Patch
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PatchOrgBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.OrgOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update organization
+      tags:
+      - organizations
+  /v1/organizations/{id}/checkout-session:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: Organization ID (org-scoped route)
+        in: path
+        name: id
+        type: string
+      - description: Checkout
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.CheckoutBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.CheckoutOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create checkout session
+      tags:
+      - billing
+  /v1/organizations/{id}/entitlements:
+    get:
+      parameters:
+      - description: Organization ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Device ID
+        in: query
+        name: device_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.EntitlementsOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Issue entitlement snapshot for org
+      tags:
+      - devices
+  /v1/organizations/{id}/invitations:
+    get:
+      parameters:
+      - description: Organization ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Status filter
+        in: query
+        name: status
+        type: string
+      - description: Cursor
+        in: query
+        name: cursor
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InvitationListOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List invitations
+      tags:
+      - invitations
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: Organization ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Invite
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.CreateInviteBody'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InvitationOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create invitation
+      tags:
+      - invitations
+  /v1/organizations/{id}/invitations/{invitationId}:
+    delete:
+      parameters:
+      - description: Organization ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Invitation ID
+        in: path
+        name: invitationId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InvitationRevokedOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Revoke invitation
+      tags:
+      - invitations
+  /v1/organizations/{id}/invitations/{invitationId}/resend:
+    post:
+      parameters:
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: Organization ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Invitation ID
+        in: path
+        name: invitationId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InvitationResentOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Resend invitation
+      tags:
+      - invitations
+  /v1/organizations/{id}/invoices:
+    get:
+      parameters:
+      - description: Organization ID (org-scoped route)
+        in: path
+        name: id
+        type: string
+      - description: Status filter
+        in: query
+        name: status
+        type: string
+      - description: Cursor
+        in: query
+        name: cursor
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InvoiceListOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List invoices
+      tags:
+      - billing
+  /v1/organizations/{id}/invoices/{invoiceId}:
+    get:
+      parameters:
+      - description: Organization ID (org-scoped route)
+        in: path
+        name: id
+        type: string
+      - description: Invoice ID
+        in: path
+        name: invoiceId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.InvoiceOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get invoice
+      tags:
+      - billing
+  /v1/organizations/{id}/leave:
+    post:
+      parameters:
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: Organization ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.LeaveOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Leave organization
+      tags:
+      - organizations
+  /v1/organizations/{id}/members:
+    get:
+      parameters:
+      - description: Organization ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Status filter
+        in: query
+        name: status
+        type: string
+      - description: Role filter
+        in: query
+        name: role
+        type: string
+      - description: Cursor
+        in: query
+        name: cursor
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.MemberListOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List organization members
+      tags:
+      - organizations
+  /v1/organizations/{id}/members/{userId}:
+    delete:
+      parameters:
+      - description: Organization ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.MemberRemovedOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Remove organization member
+      tags:
+      - organizations
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Organization ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      - description: Patch
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PatchMemberBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.MemberOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update member role/status
+      tags:
+      - organizations
+  /v1/organizations/{id}/members/{userId}/suspend:
+    post:
+      parameters:
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: Organization ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.MemberOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Suspend organization member
+      tags:
+      - organizations
+  /v1/organizations/{id}/portal-session:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: Organization ID (org-scoped route)
+        in: path
+        name: id
+        type: string
+      - description: Portal
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PortalBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PortalOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create billing portal session
+      tags:
+      - billing
+  /v1/organizations/{id}/roles:
+    get:
+      parameters:
+      - description: Organization ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.RoleCatalogOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Role catalog for organization
+      tags:
+      - organizations
+  /v1/organizations/{id}/seats:
+    get:
+      parameters:
+      - description: Organization ID (org-scoped route)
+        in: path
+        name: id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.SeatsOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get seat usage
+      tags:
+      - billing
+  /v1/organizations/{id}/seats/preview-downgrade:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Organization ID (org-scoped route)
+        in: path
+        name: id
+        type: string
+      - description: Preview
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PreviewBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PreviewDowngradeOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Preview plan downgrade
+      tags:
+      - billing
+  /v1/organizations/{id}/subscription:
+    get:
+      parameters:
+      - description: Organization ID (org-scoped route)
+        in: path
+        name: id
+        type: string
+      - description: Organization ID (personal route)
+        in: header
+        name: X-Organization-Id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.SubscriptionOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get subscription
+      tags:
+      - billing
+  /v1/organizations/{id}/subscription/cancel:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: Organization ID (org-scoped route)
+        in: path
+        name: id
+        type: string
+      - description: Cancel options
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.CancelBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.SubscriptionOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cancel subscription
+      tags:
+      - billing
+  /v1/organizations/{id}/subscription/resume:
+    post:
+      parameters:
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: Organization ID (org-scoped route)
+        in: path
+        name: id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.SubscriptionOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Resume subscription
+      tags:
+      - billing
+  /v1/organizations/{id}/transfer-ownership:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: Organization ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New owner
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.TransferBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.TransferOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Transfer organization ownership
+      tags:
+      - organizations
+  /v1/public/config:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.PublicConfigOK'
+      summary: Public client config
+      tags:
+      - public
+  /v1/webhooks/billing:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Stripe signature
+        in: header
+        name: Stripe-Signature
+        type: string
+      - description: Billing HMAC signature
+        in: header
+        name: X-Billing-Signature
+        type: string
+      - description: Provider event payload
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_models_dto.WebhookOK'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Danish-13-Khan_backend-cabinet_internal_utils.ErrorResponse'
+      summary: Billing provider webhook
+      tags:
+      - webhooks
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by access JWT
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

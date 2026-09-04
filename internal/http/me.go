@@ -9,6 +9,14 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
+// me godoc
+// @Summary Current user profile
+// @Tags me
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} dto.UserOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Router /v1/me [get]
 func (h *handlers) me(c *gin.Context) {
 	logEnter(c, "me")
 	if !h.requireIdent(c) {
@@ -32,6 +40,18 @@ func (h *handlers) me(c *gin.Context) {
 	middleware.WriteJSON(c, utils.StatusOK, body)
 }
 
+// changePassword godoc
+// @Summary Change password
+// @Tags me
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param Idempotency-Key header string true "Idempotency key"
+// @Param body body dto.ChangePasswordBody true "Passwords"
+// @Success 200 {object} dto.StatusOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Failure 422 {object} utils.ErrorResponse
+// @Router /v1/me/password [post]
 func (h *handlers) changePassword(c *gin.Context) {
 	logEnter(c, "change_password")
 	if !h.requireIdent(c) {

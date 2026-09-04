@@ -30,6 +30,12 @@ type handlers struct {
 	sso     *sso.Service
 }
 
+// healthz godoc
+// @Summary Liveness probe
+// @Tags health
+// @Produce json
+// @Success 200 {object} dto.HealthOK
+// @Router /healthz [get]
 func (h *handlers) healthz(c *gin.Context) {
 	logEnter(c, "healthz")
 	middleware.WriteJSON(c, utils.StatusOK, dto.HealthOK{
@@ -38,6 +44,13 @@ func (h *handlers) healthz(c *gin.Context) {
 	})
 }
 
+// readyz godoc
+// @Summary Readiness probe
+// @Tags health
+// @Produce json
+// @Success 200 {object} dto.ReadyOK
+// @Failure 503 {object} utils.ErrorResponse
+// @Router /readyz [get]
 func (h *handlers) readyz(c *gin.Context) {
 	logEnter(c, "readyz")
 	if h.pinger == nil {
@@ -69,6 +82,12 @@ func (h *handlers) readyz(c *gin.Context) {
 	})
 }
 
+// publicConfig godoc
+// @Summary Public client config
+// @Tags public
+// @Produce json
+// @Success 200 {object} dto.PublicConfigOK
+// @Router /v1/public/config [get]
 func (h *handlers) publicConfig(c *gin.Context) {
 	logEnter(c, "public_config")
 	middleware.WriteJSON(c, utils.StatusOK, dto.PublicConfigOK{

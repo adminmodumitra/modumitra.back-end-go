@@ -9,6 +9,15 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
+// deviceCode godoc
+// @Summary Start device authorization
+// @Tags sso
+// @Accept json
+// @Produce json
+// @Param body body dto.DeviceCodeBody true "Device code request"
+// @Success 200 {object} dto.DeviceCodeOK
+// @Failure 422 {object} utils.ErrorResponse
+// @Router /v1/auth/device/code [post]
 func (h *handlers) deviceCode(c *gin.Context) {
 	logEnter(c, "device_code")
 	if !h.requireSSO(c) {
@@ -35,6 +44,16 @@ func (h *handlers) deviceCode(c *gin.Context) {
 	})
 }
 
+// deviceToken godoc
+// @Summary Poll device authorization token
+// @Tags sso
+// @Accept json
+// @Produce json
+// @Param body body dto.DeviceTokenBody true "Device code"
+// @Success 200 {object} dto.LoginOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Failure 422 {object} utils.ErrorResponse
+// @Router /v1/auth/device/token [post]
 func (h *handlers) deviceToken(c *gin.Context) {
 	logEnter(c, "device_token")
 	if !h.requireSSO(c) {

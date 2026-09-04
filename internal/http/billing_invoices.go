@@ -10,6 +10,19 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
 )
 
+// listInvoices godoc
+// @Summary List invoices
+// @Tags billing
+// @Security BearerAuth
+// @Produce json
+// @Param id path string false "Organization ID (org-scoped route)"
+// @Param status query string false "Status filter"
+// @Param cursor query string false "Cursor"
+// @Param limit query int false "Limit"
+// @Success 200 {object} dto.InvoiceListOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Router /v1/billing/invoices [get]
+// @Router /v1/organizations/{id}/invoices [get]
 func (h *handlers) listInvoices(c *gin.Context) {
 	logEnter(c, "list_invoices")
 	if !h.requireBilling(c) {
@@ -36,6 +49,17 @@ func (h *handlers) listInvoices(c *gin.Context) {
 	})
 }
 
+// getInvoice godoc
+// @Summary Get invoice
+// @Tags billing
+// @Security BearerAuth
+// @Produce json
+// @Param id path string false "Organization ID (org-scoped route)"
+// @Param invoiceId path string true "Invoice ID"
+// @Success 200 {object} dto.InvoiceOK
+// @Failure 401 {object} utils.ErrorResponse
+// @Router /v1/billing/invoices/{invoiceId} [get]
+// @Router /v1/organizations/{id}/invoices/{invoiceId} [get]
 func (h *handlers) getInvoice(c *gin.Context) {
 	logEnter(c, "get_invoice")
 	if !h.requireBilling(c) {
