@@ -18,6 +18,14 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/store"
 )
 
+// @title Cabinet Studio Backend API
+// @version 1.0.0
+// @description v1 HTTP API
+// @BasePath /
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by access JWT
 func main() {
 	cfg := config.Load()
 	if err := cfg.Log.Validate(); err != nil {
