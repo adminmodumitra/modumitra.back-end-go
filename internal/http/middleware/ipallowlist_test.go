@@ -41,6 +41,30 @@ func TestIPAllowlist(t *testing.T) {
 		}
 	})
 
+	t.Run("render uses cloudflare client ip", func(t *testing.T) {
+		r := allowlistRouter(t, []string{"106.219.151.223"})
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/swagger/index.html", nil)
+		req.RemoteAddr = "10.21.157.68:443"
+		req.Header.Set("CF-Connecting-IP", "106.219.151.223")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("status=%d", w.Code)
+		}
+	})
+
+	t.Run("public peer cannot spoof cloudflare header", func(t *testing.T) {
+		r := allowlistRouter(t, []string{"10.0.0.8"})
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/v1/auth/login", nil)
+		req.RemoteAddr = "203.0.113.9:1234"
+		req.Header.Set("CF-Connecting-IP", "10.0.0.8")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("status=%d", w.Code)
+		}
+	})
+
 	t.Run("probes stay open", func(t *testing.T) {
 		r := allowlistRouter(t, []string{"10.0.0.8"})
 		if code := hit(r, "/healthz", "203.0.113.9:1234"); code != http.StatusOK {
