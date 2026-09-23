@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
 	"strings"
 	"time"
@@ -8,6 +9,12 @@ import (
 
 func applyEnv(cfg *Config) {
 	cfg.HTTPAddr = getenv("HTTP_ADDR", cfg.HTTPAddr)
+	if v := strings.TrimSpace(os.Getenv("ALLOWED_IPS")); v != "" {
+		var ips []string
+		if err := json.Unmarshal([]byte(v), &ips); err == nil && ips != nil {
+			cfg.AllowedIPs = ips
+		}
+	}
 	cfg.OTLPEndpoint = getenv("OTEL_EXPORTER_OTLP_ENDPOINT", cfg.OTLPEndpoint)
 	cfg.ServiceName = getenv("OTEL_SERVICE_NAME", cfg.ServiceName)
 	cfg.TermsVersion = getenv("TERMS_VERSION", cfg.TermsVersion)

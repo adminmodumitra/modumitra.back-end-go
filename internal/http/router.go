@@ -40,6 +40,7 @@ func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, 
 	r.Use(middleware.RequestID())
 	r.Use(middleware.Recover())
 	r.Use(middleware.OTEL(cfg.ServiceName)...)
+	r.Use(middleware.IPAllowlist(cfg.AllowedIPs))
 
 	public := r.Group("/")
 	public.Use(middleware.BBR(cfg.BBR)) // ONLY limiter on free/non-auth APIs
