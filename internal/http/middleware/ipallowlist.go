@@ -23,12 +23,38 @@ func IPAllowlist(allowed []string) gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		if !ipAllowed(c.ClientIP(), ips, nets) {
+		if !ipAllowed(clientIP(c), ips, nets) {
 			Abort(c, utils.E(utils.CodeUnauthenticated))
 			return
 		}
 		c.Next()
 	}
+}
+
+// clientIP is the caller address the allowlist compares.
+// Render's edge is Cloudflare, so the socket address is a private proxy hop.
+// Cloudflare overwrites CF-Connecting-IP with the real client. That header is
+// read only when the direct peer is a private or loopback address, so a
+// client connecting straight to the process cannot spoof it.
+func clientIP(c *gin.Context) string {
+	peer := net.ParseIP(c.RemoteIP())
+	if peer != nil && (peer.IsPrivate() || peer.IsLoopback() || peer.IsLinkLocalUnicast()) {
+		for _, header := range []string{"CF-Connecting-IP", "True-Client-IP"} {
+			if ip := headerIP(c, header); ip != "" {
+				return ip
+			}
+		}
+	}
+	return c.ClientIP()
+}
+
+func headerIP(c *gin.Context, name string) string {
+	raw := strings.TrimSpace(c.GetHeader(name))
+	ip := net.ParseIP(raw)
+	if ip == nil {
+		return ""
+	}
+	return ip.String()
 }
 
 func parseAllowlist(allowed []string) ([]net.IP, []*net.IPNet) {
