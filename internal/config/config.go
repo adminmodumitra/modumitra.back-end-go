@@ -7,6 +7,7 @@ import (
 
 type Config struct {
 	HTTPAddr              string
+	AllowedIPs            []string
 	DatabaseURL           string
 	OTLPEndpoint          string
 	ServiceName           string

@@ -16,6 +16,7 @@ func clearDatastoreEnv(t *testing.T) {
 	t.Helper()
 	keys := []string{
 		"CABINET_CONFIG",
+		"ALLOWED_IPS",
 		"APP_ENV",
 		"CABINET_ENV",
 		"JWT_SECRET",
@@ -142,6 +143,26 @@ func TestEnvOverrides(t *testing.T) {
 	}
 	if cfg.Datastore.NormalizedDriver() != "redis" {
 		t.Fatalf("NormalizedDriver=%q", cfg.Datastore.NormalizedDriver())
+	}
+}
+
+func TestAllowedIPs(t *testing.T) {
+	clearDatastoreEnv(t)
+	dir := t.TempDir()
+	path := filepath.Join(dir, "cabinet.json")
+	body := `{"http":{"addr":":8080","allowed_ips":["10.0.0.8","192.168.0.0/16"]}}`
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("CABINET_CONFIG", path)
+	cfg := Load()
+	if len(cfg.AllowedIPs) != 2 || cfg.AllowedIPs[0] != "10.0.0.8" {
+		t.Fatalf("AllowedIPs=%v", cfg.AllowedIPs)
+	}
+	t.Setenv("ALLOWED_IPS", `["203.0.113.4","198.51.100.0/24"]`)
+	cfg = Load()
+	if len(cfg.AllowedIPs) != 2 || cfg.AllowedIPs[0] != "203.0.113.4" || cfg.AllowedIPs[1] != "198.51.100.0/24" {
+		t.Fatalf("env AllowedIPs=%v", cfg.AllowedIPs)
 	}
 }
 
