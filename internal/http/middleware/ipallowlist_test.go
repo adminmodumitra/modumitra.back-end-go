@@ -36,15 +36,12 @@ func TestIPAllowlist(t *testing.T) {
 		if code := hit(r, "/v1/auth/login", "203.0.113.9:1234"); code != http.StatusUnauthorized {
 			t.Fatalf("status=%d", code)
 		}
-		if code := hit(r, "/swagger/index.html", "203.0.113.9:1234"); code != http.StatusUnauthorized {
-			t.Fatalf("swagger status=%d", code)
-		}
 	})
 
 	t.Run("render uses cloudflare client ip", func(t *testing.T) {
 		r := allowlistRouter(t, []string{"106.219.151.223"})
 		w := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/swagger/index.html", nil)
+		req := httptest.NewRequest(http.MethodGet, "/v1/auth/login", nil)
 		req.RemoteAddr = "10.21.157.68:443"
 		req.Header.Set("CF-Connecting-IP", "106.219.151.223")
 		r.ServeHTTP(w, req)
@@ -65,13 +62,16 @@ func TestIPAllowlist(t *testing.T) {
 		}
 	})
 
-	t.Run("probes stay open", func(t *testing.T) {
+	t.Run("probes and swagger stay open", func(t *testing.T) {
 		r := allowlistRouter(t, []string{"10.0.0.8"})
 		if code := hit(r, "/healthz", "203.0.113.9:1234"); code != http.StatusOK {
 			t.Fatalf("healthz status=%d", code)
 		}
 		if code := hit(r, "/readyz", "203.0.113.9:1234"); code != http.StatusOK {
 			t.Fatalf("readyz status=%d", code)
+		}
+		if code := hit(r, "/swagger/index.html", "203.0.113.9:1234"); code != http.StatusOK {
+			t.Fatalf("swagger status=%d", code)
 		}
 	})
 }

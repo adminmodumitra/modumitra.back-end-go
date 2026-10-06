@@ -10,8 +10,9 @@ import (
 )
 
 // IPAllowlist rejects callers whose IP is not in allowed.
-// An empty list allows every IP (check off). /healthz and /readyz stay open
-// so probes keep working when the list is set. Every other route returns 401.
+// An empty list allows every IP (check off). /healthz, /readyz, and /swagger
+// stay open so probes and docs keep working when the list is set. Every other
+// route returns 401.
 func IPAllowlist(allowed []string) gin.HandlerFunc {
 	ips, nets := parseAllowlist(allowed)
 	if len(ips) == 0 && len(nets) == 0 {
@@ -19,7 +20,7 @@ func IPAllowlist(allowed []string) gin.HandlerFunc {
 	}
 	return func(c *gin.Context) {
 		path := c.Request.URL.Path
-		if path == "/healthz" || path == "/readyz" {
+		if path == "/healthz" || path == "/readyz" || strings.HasPrefix(path, "/swagger") {
 			c.Next()
 			return
 		}

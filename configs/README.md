@@ -30,7 +30,7 @@ Flip local → live by editing the JSON (or env):
 
 Point DSN / URI / Addr at localhost or a remote host — same binary. Overrides (no code change):
 
-- `http.allowed_ips` — JSON array of client IPs or CIDRs allowed to call the API. Empty allows every IP. A non-empty list returns 401 for any other IP. `/healthz` and `/readyz` stay open. `ALLOWED_IPS` is the same JSON array and overrides the file, for example `["10.0.0.8","192.168.1.0/24"]`.
+- `http.allowed_ips` — JSON array of client IPs or CIDRs allowed to call the API. Empty allows every IP. A non-empty list returns 401 for any other IP. `/healthz`, `/readyz`, and `/swagger` stay open. `ALLOWED_IPS` is the same JSON array and overrides the file, for example `["10.0.0.8","192.168.1.0/24"]`.
 - `APP_ENV` / `CABINET_ENV` — selects which cabinet JSON to load when `CABINET_CONFIG` is unset
 - `CABINET_CONFIG` — explicit path to the nested JSON (wins over `APP_ENV`)
 - `DATASTORE_DRIVER` — overrides `Driver`
