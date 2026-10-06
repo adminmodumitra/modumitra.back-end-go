@@ -282,3 +282,21 @@ func TestSwaggerIndexPublic(t *testing.T) {
 		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
 	}
 }
+
+func TestSwaggerIndexPublicDespiteAllowlist(t *testing.T) {
+	cfg := config.Load()
+	cfg.ServiceName = "cabinet-studio-api-test"
+	cfg.AllowedIPs = []string{"10.0.0.8"}
+	svc, _, mem := identity.NewMemoryService(testSettings(cfg))
+	orgs, _, orgMem := org.NewMemoryService(mem.Users(), cfg.TrialDays)
+	devs, _ := device.NewMemoryService(orglookup.Adapter{Service: orgs}, cfg.EntitlementSigningKey)
+	bills, _, _ := billing.NewMemoryService(orgMem.Orgs(), orgMem.Members(), orgMem.Invites(), mem.Users(), billing.Settings{Provider: billing.ProviderFake, WebhookSecret: cfg.BillingWebhookSecret})
+	r := NewRouter(cfg, fakePinger{}, svc, orgs, devs, bills, memorySSO(svc, cfg))
+	req := httptest.NewRequest(http.MethodGet, "/swagger/index.html", nil)
+	req.RemoteAddr = "203.0.113.9:1234"
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+}
