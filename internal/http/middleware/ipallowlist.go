@@ -11,8 +11,9 @@ import (
 
 // IPAllowlist rejects callers whose IP is not in allowed.
 // An empty list allows every IP (check off). /healthz, /readyz, and /swagger
-// stay open so probes and docs keep working when the list is set. Every other
-// route returns 401.
+// stay open so probes and docs keep working when the list is set, and
+// POST /v1/auth/login stays open so the public website can sign users in from
+// any IP. Every other route returns 401.
 func IPAllowlist(allowed []string) gin.HandlerFunc {
 	ips, nets := parseAllowlist(allowed)
 	if len(ips) == 0 && len(nets) == 0 {
@@ -20,7 +21,7 @@ func IPAllowlist(allowed []string) gin.HandlerFunc {
 	}
 	return func(c *gin.Context) {
 		path := c.Request.URL.Path
-		if path == "/healthz" || path == "/readyz" || strings.HasPrefix(path, "/swagger") {
+		if path == "/healthz" || path == "/readyz" || strings.HasPrefix(path, "/swagger") || path == "/v1/auth/login" {
 			c.Next()
 			return
 		}

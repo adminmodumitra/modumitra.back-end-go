@@ -20,7 +20,7 @@ func TestIPAllowlist(t *testing.T) {
 
 	t.Run("exact and cidr allowed", func(t *testing.T) {
 		r := allowlistRouter(t, []string{"10.0.0.8", "192.168.1.0/24", "2001:db8::/32"})
-		if code := hit(r, "/v1/auth/login", "10.0.0.8:443"); code != http.StatusOK {
+		if code := hit(r, "/v1/public/config", "10.0.0.8:443"); code != http.StatusOK {
 			t.Fatalf("exact status=%d", code)
 		}
 		if code := hit(r, "/v1/webhooks/billing", "192.168.1.40:9"); code != http.StatusOK {
@@ -33,7 +33,7 @@ func TestIPAllowlist(t *testing.T) {
 
 	t.Run("mismatch is 401", func(t *testing.T) {
 		r := allowlistRouter(t, []string{"10.0.0.8"})
-		if code := hit(r, "/v1/auth/login", "203.0.113.9:1234"); code != http.StatusUnauthorized {
+		if code := hit(r, "/v1/me", "203.0.113.9:1234"); code != http.StatusUnauthorized {
 			t.Fatalf("status=%d", code)
 		}
 	})
@@ -41,7 +41,7 @@ func TestIPAllowlist(t *testing.T) {
 	t.Run("render uses cloudflare client ip", func(t *testing.T) {
 		r := allowlistRouter(t, []string{"106.219.151.223"})
 		w := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/v1/auth/login", nil)
+		req := httptest.NewRequest(http.MethodGet, "/v1/me", nil)
 		req.RemoteAddr = "10.21.157.68:443"
 		req.Header.Set("CF-Connecting-IP", "106.219.151.223")
 		r.ServeHTTP(w, req)
@@ -53,7 +53,7 @@ func TestIPAllowlist(t *testing.T) {
 	t.Run("public peer cannot spoof cloudflare header", func(t *testing.T) {
 		r := allowlistRouter(t, []string{"10.0.0.8"})
 		w := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/v1/auth/login", nil)
+		req := httptest.NewRequest(http.MethodGet, "/v1/me", nil)
 		req.RemoteAddr = "203.0.113.9:1234"
 		req.Header.Set("CF-Connecting-IP", "10.0.0.8")
 		r.ServeHTTP(w, req)
@@ -72,6 +72,19 @@ func TestIPAllowlist(t *testing.T) {
 		}
 		if code := hit(r, "/swagger/index.html", "203.0.113.9:1234"); code != http.StatusOK {
 			t.Fatalf("swagger status=%d", code)
+		}
+	})
+
+	t.Run("login is open to every ip, other auth routes are not", func(t *testing.T) {
+		r := allowlistRouter(t, []string{"10.0.0.8"})
+		if code := hit(r, "/v1/auth/login", "203.0.113.9:1234"); code != http.StatusOK {
+			t.Fatalf("login status=%d", code)
+		}
+		if code := hit(r, "/v1/auth/register", "203.0.113.9:1234"); code != http.StatusUnauthorized {
+			t.Fatalf("register status=%d", code)
+		}
+		if code := hit(r, "/v1/auth/login/extra", "203.0.113.9:1234"); code != http.StatusUnauthorized {
+			t.Fatalf("login prefix status=%d", code)
 		}
 	})
 }

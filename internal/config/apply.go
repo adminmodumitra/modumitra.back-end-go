@@ -9,6 +9,9 @@ func applyFile(cfg *Config, f File) {
 	if f.HTTP.AllowedIPs != nil {
 		cfg.AllowedIPs = append([]string{}, f.HTTP.AllowedIPs...)
 	}
+	if f.HTTP.CORSOrigins != nil {
+		cfg.CORSOrigins = append([]string{}, f.HTTP.CORSOrigins...)
+	}
 	applyFileLog(cfg, f.Log)
 	if f.Datastore.Driver != "" || f.Datastore.SQL.DSN != "" {
 		cfg.Datastore = f.Datastore

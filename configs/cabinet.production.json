@@ -1,6 +1,7 @@
 {
   "http": {
-    "addr": ":8080"
+    "addr": ":8080",
+    "cors_origins": ["https://modumitrasoftware.com", "https://www.modumitrasoftware.com"]
   },
   "log": {
     "level": "info",

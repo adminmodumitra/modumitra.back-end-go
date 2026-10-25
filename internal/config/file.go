@@ -20,8 +20,9 @@ type File struct {
 }
 
 type FileHTTP struct {
-	Addr       string   `json:"addr"`
-	AllowedIPs []string `json:"allowed_ips"`
+	Addr        string   `json:"addr"`
+	AllowedIPs  []string `json:"allowed_ips"`
+	CORSOrigins []string `json:"cors_origins"`
 }
 
 type FileJWT struct {

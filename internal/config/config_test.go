@@ -17,6 +17,7 @@ func clearDatastoreEnv(t *testing.T) {
 	keys := []string{
 		"CABINET_CONFIG",
 		"ALLOWED_IPS",
+		"CORS_ORIGINS",
 		"APP_ENV",
 		"CABINET_ENV",
 		"JWT_SECRET",

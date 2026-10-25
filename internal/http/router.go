@@ -40,6 +40,8 @@ func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, 
 	r.Use(middleware.RequestID())
 	r.Use(middleware.Recover())
 	r.Use(middleware.OTEL(cfg.ServiceName)...)
+	// Before the allowlist: browsers send preflights without credentials.
+	r.Use(middleware.CORS(cfg.CORSOrigins))
 	r.Use(middleware.IPAllowlist(cfg.AllowedIPs))
 
 	public := r.Group("/")

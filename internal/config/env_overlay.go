@@ -15,6 +15,12 @@ func applyEnv(cfg *Config) {
 			cfg.AllowedIPs = ips
 		}
 	}
+	if v := strings.TrimSpace(os.Getenv("CORS_ORIGINS")); v != "" {
+		var origins []string
+		if err := json.Unmarshal([]byte(v), &origins); err == nil && origins != nil {
+			cfg.CORSOrigins = origins
+		}
+	}
 	cfg.OTLPEndpoint = getenv("OTEL_EXPORTER_OTLP_ENDPOINT", cfg.OTLPEndpoint)
 	cfg.ServiceName = getenv("OTEL_SERVICE_NAME", cfg.ServiceName)
 	cfg.TermsVersion = getenv("TERMS_VERSION", cfg.TermsVersion)

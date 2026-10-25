@@ -30,7 +30,8 @@ Flip local → live by editing the JSON (or env):
 
 Point DSN / URI / Addr at localhost or a remote host — same binary. Overrides (no code change):
 
-- `http.allowed_ips` — JSON array of client IPs or CIDRs allowed to call the API. Empty allows every IP. A non-empty list returns 401 for any other IP. `/healthz`, `/readyz`, and `/swagger` stay open. `ALLOWED_IPS` is the same JSON array and overrides the file, for example `["10.0.0.8","192.168.1.0/24"]`.
+- `http.allowed_ips` — JSON array of client IPs or CIDRs allowed to call the API. Empty allows every IP. A non-empty list returns 401 for any other IP. `/healthz`, `/readyz`, `/swagger`, and `POST /v1/auth/login` (website sign-in) stay open. `ALLOWED_IPS` is the same JSON array and overrides the file, for example `["10.0.0.8","192.168.1.0/24"]`.
+- `http.cors_origins` — JSON array of browser origins allowed to call the API (exact match, no trailing slash; `"*"` allows any). Empty sends no CORS headers. Preflights from a listed origin get 204 before the IP allowlist runs. Production lists `https://modumitrasoftware.com` and `https://www.modumitrasoftware.com`; dev/local list the Vite ports. `CORS_ORIGINS` is the same JSON array and overrides the file, for example `["https://modumitrasoftware.com"]`.
 - `APP_ENV` / `CABINET_ENV` — selects which cabinet JSON to load when `CABINET_CONFIG` is unset
 - `CABINET_CONFIG` — explicit path to the nested JSON (wins over `APP_ENV`)
 - `DATASTORE_DRIVER` — overrides `Driver`
