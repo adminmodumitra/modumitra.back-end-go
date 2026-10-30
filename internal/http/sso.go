@@ -109,13 +109,7 @@ func (h *handlers) writeOAuthLogin(c *gin.Context, u *identity.User, pair *ident
 	}
 	middleware.WriteJSON(c, utils.StatusOK, dto.OAuthLoginOK{
 		LoginOK: dto.LoginOK{
-			TokenOK: dto.TokenOK{
-				Meta:         metaFrom(c),
-				AccessToken:  pair.AccessToken,
-				RefreshToken: pair.RefreshToken,
-				ExpiresIn:    pair.ExpiresIn,
-				TokenType:    pair.TokenType,
-			},
+			TokenOK:      h.tokenView(c, pair),
 			User:         userView(u),
 			Organization: h.primaryOrgView(c, u.ID),
 		},

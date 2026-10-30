@@ -29,6 +29,7 @@ func (h *handlers) logoutAll(c *gin.Context) {
 		return
 	}
 	h.cache.Delete(c.Request.Context(), cache.Me(uid))
+	h.clearSessionCookies(c)
 	middleware.WriteJSON(c, utils.StatusOK, dto.LogoutAllOK{
 		Meta:            metaFrom(c),
 		Status:          "logged_out_all",

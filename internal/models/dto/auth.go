@@ -70,6 +70,9 @@ type TokenOK struct {
 	RefreshToken string `json:"refresh_token"`
 	ExpiresIn    int    `json:"expires_in"`
 	TokenType    string `json:"token_type"`
+	// CSRFToken is set only for browser cookie sessions; send it back as
+	// X-CSRF-Token on every write. refresh_token is then empty (it is a cookie).
+	CSRFToken string `json:"csrf_token,omitempty"`
 }
 
 type LoginOK struct {

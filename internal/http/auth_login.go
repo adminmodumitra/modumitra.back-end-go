@@ -40,13 +40,7 @@ func (h *handlers) login(c *gin.Context) {
 	}
 	c.Set(utils.CtxUserID, u.ID)
 	middleware.WriteJSON(c, utils.StatusOK, dto.LoginOK{
-		TokenOK: dto.TokenOK{
-			Meta:         metaFrom(c),
-			AccessToken:  pair.AccessToken,
-			RefreshToken: pair.RefreshToken,
-			ExpiresIn:    pair.ExpiresIn,
-			TokenType:    pair.TokenType,
-		},
+		TokenOK:      h.tokenView(c, pair),
 		User:         userView(u),
 		Organization: h.primaryOrgView(c, u.ID),
 	})
@@ -67,22 +61,18 @@ func (h *handlers) refresh(c *gin.Context) {
 		return
 	}
 	var body dto.RefreshBody
-	if err := c.ShouldBindJSON(&body); err != nil {
-		middleware.Abort(c, utils.E(utils.CodeValidation))
-		return
-	}
-	pair, err := h.ident.Refresh(c.Request.Context(), body.RefreshToken)
+	_ = c.ShouldBindJSON(&body) // an empty body is fine with a refresh cookie
+	raw, err := h.refreshTokenFrom(c, body.RefreshToken)
 	if err != nil {
 		middleware.Abort(c, err)
 		return
 	}
-	middleware.WriteJSON(c, utils.StatusOK, dto.TokenOK{
-		Meta:         metaFrom(c),
-		AccessToken:  pair.AccessToken,
-		RefreshToken: pair.RefreshToken,
-		ExpiresIn:    pair.ExpiresIn,
-		TokenType:    pair.TokenType,
-	})
+	pair, err := h.ident.Refresh(c.Request.Context(), raw)
+	if err != nil {
+		middleware.Abort(c, err)
+		return
+	}
+	middleware.WriteJSON(c, utils.StatusOK, h.tokenView(c, pair))
 }
 
 // logout godoc
@@ -100,14 +90,17 @@ func (h *handlers) logout(c *gin.Context) {
 		return
 	}
 	var body dto.RefreshBody
-	if err := c.ShouldBindJSON(&body); err != nil {
-		middleware.Abort(c, utils.E(utils.CodeValidation))
-		return
-	}
-	if err := h.ident.Logout(c.Request.Context(), body.RefreshToken); err != nil {
+	_ = c.ShouldBindJSON(&body)
+	raw, err := h.refreshTokenFrom(c, body.RefreshToken)
+	if err != nil {
 		middleware.Abort(c, err)
 		return
 	}
+	if err := h.ident.Logout(c.Request.Context(), raw); err != nil {
+		middleware.Abort(c, err)
+		return
+	}
+	h.clearSessionCookies(c)
 	middleware.WriteJSON(c, utils.StatusOK, dto.StatusOK{
 		Meta:   metaFrom(c),
 		Status: "logged_out",

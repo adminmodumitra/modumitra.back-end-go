@@ -14,8 +14,9 @@ type AccessVerifier interface {
 	ValidateAccess(ctx context.Context, token string) (userID, sessionID string, err error)
 }
 
-// JWTAuth always requires a valid Bearer JWT whose session is not revoked or expired.
-// Mount only on auth-required groups; public routes never see it.
+// JWTAuth always requires a valid access JWT whose session is not revoked or
+// expired: the Bearer header, or else the ms_access cookie (then SessionGuard
+// must follow). Mount only on auth-required groups; public routes never see it.
 func JWTAuth(v AccessVerifier) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header(utils.HeaderWWWAuth, "Bearer")
@@ -23,13 +24,7 @@ func JWTAuth(v AccessVerifier) gin.HandlerFunc {
 			Abort(c, utils.E(utils.CodeUnauthenticated))
 			return
 		}
-		hdr := c.GetHeader(utils.HeaderAuthorization)
-		const prefix = "Bearer "
-		if hdr == "" || !strings.HasPrefix(hdr, prefix) {
-			Abort(c, utils.E(utils.CodeUnauthenticated))
-			return
-		}
-		raw := strings.TrimSpace(strings.TrimPrefix(hdr, prefix))
+		raw, viaCookie := accessTokenFrom(c)
 		if raw == "" {
 			Abort(c, utils.E(utils.CodeUnauthenticated))
 			return
@@ -41,8 +36,25 @@ func JWTAuth(v AccessVerifier) gin.HandlerFunc {
 		}
 		c.Set(utils.CtxUserID, uid)
 		c.Set(utils.CtxSessionID, sid)
+		c.Set(ctxViaCookie, viaCookie)
 		c.Next()
 	}
+}
+
+// accessTokenFrom prefers the Authorization header, so the desktop app and
+// API clients never depend on cookies.
+func accessTokenFrom(c *gin.Context) (string, bool) {
+	const prefix = "Bearer "
+	if hdr := c.GetHeader(utils.HeaderAuthorization); hdr != "" {
+		if !strings.HasPrefix(hdr, prefix) {
+			return "", false
+		}
+		return strings.TrimSpace(strings.TrimPrefix(hdr, prefix)), false
+	}
+	if v, err := c.Cookie(AccessCookie); err == nil {
+		return strings.TrimSpace(v), true
+	}
+	return "", false
 }
 
 func UserIDFrom(c *gin.Context) string {

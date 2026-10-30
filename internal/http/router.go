@@ -43,7 +43,7 @@ func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, 
 	r.Use(middleware.Recover())
 	r.Use(middleware.OTEL(cfg.ServiceName)...)
 	// Before the allowlist: browsers send preflights without credentials.
-	r.Use(middleware.CORS(cfg.CORSOrigins))
+	r.Use(middleware.CORS(cfg.CORSOrigins, cfg.Session.Origins...))
 	r.Use(middleware.IPAllowlist(cfg.AllowedIPs))
 
 	public := r.Group("/")
@@ -85,6 +85,8 @@ func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, 
 	authed.Use(middleware.BodyLimit(cfg.BodyLimitBytes))
 	authed.Use(middleware.IPRateLimit(rate.Limit(30), 60))
 	authed.Use(middleware.JWTAuth(verifier)) // no skip list; this group is auth-only
+	// Cookie-authenticated writes need a session Origin and the CSRF token.
+	authed.Use(middleware.SessionGuard(cfg.Session.Enabled(), cfg.Session.Origins, middleware.CSRFKey(cfg.JWTSecret)))
 	authed.Use(middleware.UserRateLimit(rate.Limit(10), 40))
 	authed.Use(middleware.Tenant(orgs))
 	authed.Use(middleware.RBAC())

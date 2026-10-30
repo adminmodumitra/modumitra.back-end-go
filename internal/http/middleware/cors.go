@@ -9,19 +9,24 @@ import (
 
 const (
 	corsAllowMethods  = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-	corsAllowHeaders  = "Accept, Authorization, Content-Type, Idempotency-Key, X-Request-Id"
+	corsAllowHeaders  = "Accept, Authorization, Content-Type, Idempotency-Key, X-Request-Id, X-CSRF-Token"
 	corsExposeHeaders = "X-Request-Id, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset"
 	corsMaxAge        = "600"
 )
 
 // CORS lets browser apps on the listed origins call the API.
 // An empty list adds no headers (check off). Origins match exactly, without a
-// trailing slash; "*" allows any origin. Auth is a bearer token, not a cookie,
-// so credentials are never allowed. A preflight from an allowed origin returns
-// 204 here, before the IP allowlist and the route groups, which do not
+// trailing slash; "*" allows any origin. Auth is a bearer token or a cookie,
+// so credentials are allowed only for the credentialed (cookie session)
+// origins, which are always allowed too. A preflight from an allowed origin
+// returns 204 here, before the IP allowlist and the route groups, which do not
 // register OPTIONS.
-func CORS(origins []string) gin.HandlerFunc {
+func CORS(origins []string, credentialed ...string) gin.HandlerFunc {
 	allowed, anyOrigin := parseOrigins(origins)
+	withCreds, _ := parseOrigins(credentialed)
+	for o := range withCreds {
+		allowed[o] = struct{}{}
+	}
 	if len(allowed) == 0 && !anyOrigin {
 		return func(c *gin.Context) { c.Next() }
 	}
@@ -32,12 +37,16 @@ func CORS(origins []string) gin.HandlerFunc {
 			return
 		}
 		c.Writer.Header().Add("Vary", "Origin")
-		if _, ok := allowed[strings.TrimRight(origin, "/")]; !ok && !anyOrigin {
+		key := strings.TrimRight(origin, "/")
+		if _, ok := allowed[key]; !ok && !anyOrigin {
 			c.Next()
 			return
 		}
 		h := c.Writer.Header()
 		h.Set("Access-Control-Allow-Origin", origin)
+		if _, ok := withCreds[key]; ok {
+			h.Set("Access-Control-Allow-Credentials", "true")
+		}
 		h.Set("Access-Control-Expose-Headers", corsExposeHeaders)
 		if c.Request.Method == http.MethodOptions && c.GetHeader("Access-Control-Request-Method") != "" {
 			h.Set("Access-Control-Allow-Methods", corsAllowMethods)

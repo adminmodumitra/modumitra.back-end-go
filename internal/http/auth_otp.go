@@ -65,13 +65,7 @@ func (h *handlers) otpVerify(c *gin.Context) {
 	}
 	c.Set(utils.CtxUserID, u.ID)
 	middleware.WriteJSON(c, utils.StatusOK, dto.LoginOK{
-		TokenOK: dto.TokenOK{
-			Meta:         metaFrom(c),
-			AccessToken:  pair.AccessToken,
-			RefreshToken: pair.RefreshToken,
-			ExpiresIn:    pair.ExpiresIn,
-			TokenType:    pair.TokenType,
-		},
+		TokenOK:      h.tokenView(c, pair),
 		User:         userView(u),
 		Organization: h.primaryOrgView(c, u.ID),
 	})
