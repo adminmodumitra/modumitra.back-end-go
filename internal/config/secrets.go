@@ -32,13 +32,20 @@ func (c Config) ValidateSecrets() error {
 	if !c.RequiresStrongSecrets() {
 		return nil
 	}
-	for _, s := range []struct{ name, value string }{
+	checks := []struct{ name, value string }{
 		{"JWT_SECRET", c.JWTSecret},
 		{"ENTITLEMENT_SIGNING_KEY", c.EntitlementSigningKey},
-	} {
+	}
+	if c.Session.Enabled() {
+		checks = append(checks, struct{ name, value string }{"SESSION_GATE_KEY", c.Session.GateKey})
+	}
+	for _, s := range checks {
 		if reason := weakSecret(s.value); reason != "" {
 			return fmt.Errorf("%s %s; set a random value of at least %d characters (openssl rand -base64 48)", s.name, reason, minSecretLen)
 		}
+	}
+	if c.Session.Enabled() && strings.TrimSpace(c.Session.GateKey) == strings.TrimSpace(c.JWTSecret) {
+		return fmt.Errorf("SESSION_GATE_KEY must differ from JWT_SECRET: the edge gate holds it")
 	}
 	return nil
 }

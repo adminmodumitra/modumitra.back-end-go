@@ -23,7 +23,7 @@ const (
 func sessionRouter(t *testing.T) http.Handler {
 	t.Helper()
 	cfg := config.Load()
-	cfg.Session = config.Session{CookieDomain: ".modumitrasoftware.com", Origins: []string{appOrigin}}
+	cfg.Session = config.Session{CookieDomain: ".modumitrasoftware.com", Origins: []string{appOrigin}, GateKey: "gate-test-key"}
 	svc, _, mem := identity.NewMemoryService(testSettings(cfg))
 	orgs, _, orgMem := org.NewMemoryService(mem.Users(), cfg.TrialDays)
 	devs, _ := device.NewMemoryService(orglookup.Adapter{Service: orgs}, cfg.EntitlementSigningKey)
@@ -76,6 +76,9 @@ func TestCookieSessionLogin(t *testing.T) {
 	refresh := cookieFrom(t, w, "ms_refresh")
 	if refresh.Domain != "" || refresh.Path != "/v1/auth" || refresh.SameSite != http.SameSiteStrictMode {
 		t.Fatalf("refresh cookie=%+v", refresh)
+	}
+	if gate := cookieFrom(t, w, "ms_gate"); gate.Domain != "modumitrasoftware.com" || !gate.HttpOnly || !strings.HasPrefix(gate.Value, "v1.") {
+		t.Fatalf("gate cookie=%+v", gate)
 	}
 	jar := "ms_access=" + access.Value
 

@@ -49,6 +49,7 @@ func (h *handlers) setSessionCookies(c *gin.Context, pair *identity.TokenPair) {
 		Domain: h.cfg.Session.CookieDomain, Path: "/", MaxAge: pair.ExpiresIn,
 		HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode,
 	})
+	h.setGateCookie(c, pair.ExpiresIn)
 	if pair.RefreshToken != "" {
 		http.SetCookie(c.Writer, &http.Cookie{
 			Name: middleware.RefreshCookie, Value: pair.RefreshToken,
@@ -68,6 +69,7 @@ func (h *handlers) clearSessionCookies(c *gin.Context) {
 		Name: middleware.AccessCookie, Domain: h.cfg.Session.CookieDomain, Path: "/",
 		MaxAge: -1, HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode,
 	})
+	h.clearGateCookie(c)
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name: middleware.RefreshCookie, Path: refreshCookiePath,
 		MaxAge: -1, HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode,

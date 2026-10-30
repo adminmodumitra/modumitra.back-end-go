@@ -17,6 +17,9 @@ type Session struct {
 	// Origins accepted on cookie-authenticated writes. Never list www.
 	// Env SESSION_ORIGINS, a JSON array like CORS_ORIGINS.
 	Origins []string
+	// GateKey signs the ms_gate cookie the app. edge gate checks. Its own key,
+	// so the edge never holds JWT_SECRET. Env SESSION_GATE_KEY.
+	GateKey string
 }
 
 func (s Session) Enabled() bool {
@@ -25,6 +28,7 @@ func (s Session) Enabled() bool {
 
 func applySessionEnv(s *Session) {
 	s.CookieDomain = getenv("SESSION_COOKIE_DOMAIN", s.CookieDomain)
+	s.GateKey = getenv("SESSION_GATE_KEY", s.GateKey)
 	if v := strings.TrimSpace(os.Getenv("SESSION_ORIGINS")); v != "" {
 		var origins []string
 		if err := json.Unmarshal([]byte(v), &origins); err == nil && origins != nil {

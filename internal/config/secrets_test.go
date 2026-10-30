@@ -85,3 +85,23 @@ func TestIsLocalDSN(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateSecretsGateKey(t *testing.T) {
+	t.Setenv("APP_ENV", "production")
+	cfg := defaultConfig()
+	cfg.JWTSecret = strongSecret
+	cfg.EntitlementSigningKey = strongSecret + "-entitlement"
+	cfg.Session = Session{CookieDomain: ".modumitrasoftware.com", Origins: []string{"https://app.modumitrasoftware.com"}}
+
+	if err := cfg.ValidateSecrets(); err == nil || !strings.Contains(err.Error(), "SESSION_GATE_KEY is empty") {
+		t.Fatalf("missing gate key: %v", err)
+	}
+	cfg.Session.GateKey = strongSecret
+	if err := cfg.ValidateSecrets(); err == nil || !strings.Contains(err.Error(), "must differ") {
+		t.Fatalf("gate key = jwt secret: %v", err)
+	}
+	cfg.Session.GateKey = strongSecret + "-gate"
+	if err := cfg.ValidateSecrets(); err != nil {
+		t.Fatalf("good gate key: %v", err)
+	}
+}
