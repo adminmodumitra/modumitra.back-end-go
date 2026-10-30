@@ -36,6 +36,10 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	if err := cfg.ValidateSecrets(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	w, err := obs.OpenSinks(cfg.Log.Sinks)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)

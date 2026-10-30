@@ -1,6 +1,8 @@
 package httpapi
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -45,23 +47,26 @@ func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, 
 	r.Use(middleware.IPAllowlist(cfg.AllowedIPs))
 
 	public := r.Group("/")
-	public.Use(middleware.BBR(cfg.BBR)) // ONLY limiter on free/non-auth APIs
+	public.Use(middleware.BBR(cfg.BBR))
+	public.Use(middleware.IPRateLimit(rate.Limit(5), 20)) // health and swagger are exempt
+	// Password, OTP and email guesses share one tighter budget per IP: 10 per minute.
+	credential := middleware.IPRateLimit(rate.Every(6*time.Second), 10)
 	{
 		public.GET("/healthz", h.healthz)
 		public.GET("/readyz", h.readyz)
 		public.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 		public.GET("/v1/public/config", h.publicConfig)
-		public.POST("/v1/auth/register", h.register)
-		public.POST("/v1/auth/verify-email", h.verifyEmail)
-		public.POST("/v1/auth/resend-verification", h.resendVerification)
-		public.POST("/v1/auth/login", h.login)
+		public.POST("/v1/auth/register", credential, h.register)
+		public.POST("/v1/auth/verify-email", credential, h.verifyEmail)
+		public.POST("/v1/auth/resend-verification", credential, h.resendVerification)
+		public.POST("/v1/auth/login", credential, h.login)
 		public.POST("/v1/auth/refresh", h.refresh)
 		public.POST("/v1/auth/logout", h.logout)
-		public.POST("/v1/auth/password-reset", h.passwordReset)
-		public.POST("/v1/auth/password-reset/confirm", h.passwordResetConfirm)
-		public.POST("/v1/auth/otp/request", h.otpRequest)
-		public.POST("/v1/auth/otp/verify", h.otpVerify)
-		public.POST("/v1/auth/otp/resend", h.otpRequest)
+		public.POST("/v1/auth/password-reset", credential, h.passwordReset)
+		public.POST("/v1/auth/password-reset/confirm", credential, h.passwordResetConfirm)
+		public.POST("/v1/auth/otp/request", credential, h.otpRequest)
+		public.POST("/v1/auth/otp/verify", credential, h.otpVerify)
+		public.POST("/v1/auth/otp/resend", credential, h.otpRequest)
 		public.GET("/v1/invitations/:token", h.previewInvitation)
 		public.GET("/v1/auth/oauth/providers", h.oauthProviders)
 		public.POST("/v1/auth/oauth/:provider/start", h.oauthStart)
@@ -79,8 +84,8 @@ func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, 
 	authed.Use(middleware.Timeout(cfg.RequestTimeout))
 	authed.Use(middleware.BodyLimit(cfg.BodyLimitBytes))
 	authed.Use(middleware.IPRateLimit(rate.Limit(30), 60))
-	authed.Use(middleware.UserRateLimit())
 	authed.Use(middleware.JWTAuth(verifier)) // no skip list; this group is auth-only
+	authed.Use(middleware.UserRateLimit(rate.Limit(10), 40))
 	authed.Use(middleware.Tenant(orgs))
 	authed.Use(middleware.RBAC())
 	authed.Use(middleware.Idempotency())
