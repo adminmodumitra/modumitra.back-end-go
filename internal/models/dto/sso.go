@@ -17,6 +17,10 @@ type DeviceCodeBody struct {
 	Provider string `json:"provider"`
 }
 
+type DeviceApproveBody struct {
+	UserCode string `json:"user_code"`
+}
+
 type DeviceTokenBody struct {
 	DeviceCode string `json:"device_code"`
 }

@@ -19,12 +19,16 @@ func (s *Service) CreateDeviceCode(ctx context.Context, clientID, provider strin
 	if clientID != s.cfg.DeviceClientID {
 		return nil, utils.E(utils.CodeInvalidClient)
 	}
-	p, err := s.provider(provider)
-	if err != nil {
-		return nil, err
-	}
-	if !p.DeviceCodeSupported() {
-		return nil, utils.E(utils.CodeUnsupportedProvider)
+	// No provider: first-party sign-in. The user approves the code while
+	// signed in to ModuMitra on the web (POST /v1/auth/device/approve).
+	if provider != "" {
+		p, err := s.provider(provider)
+		if err != nil {
+			return nil, err
+		}
+		if !p.DeviceCodeSupported() {
+			return nil, utils.E(utils.CodeUnsupportedProvider)
+		}
 	}
 	now := s.clock.Now()
 	id := s.ids.Device()

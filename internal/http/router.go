@@ -93,6 +93,7 @@ func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, 
 	authed.Use(middleware.Idempotency())
 	{
 		authed.POST("/v1/auth/logout-all", h.logoutAll)
+		authed.POST("/v1/auth/device/approve", h.deviceApprove)
 		authed.GET("/v1/me", h.me)
 		authed.GET("/v1/me/capabilities", h.meCapabilities)
 		authed.POST("/v1/me/password", h.changePassword)
