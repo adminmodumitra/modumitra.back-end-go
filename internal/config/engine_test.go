@@ -50,8 +50,9 @@ func TestEngineManufacturingQuotaEnv(t *testing.T) {
 func TestEngineSecretChecked(t *testing.T) {
 	t.Setenv("APP_ENV", "local")
 	cases := map[string]string{
-		"":                                       "ENGINE_SHARED_SECRET is empty",
-		"short":                                  "ENGINE_SHARED_SECRET is too short",
+		"": "ENGINE_SHARED_SECRET is empty",
+		// Not a word the message uses, so the "echoes the secret" check below is meaningful.
+		"k3y-9x":                                 "ENGINE_SHARED_SECRET is too short",
 		"engine-local-dev-only-change-me-000000": "ENGINE_SHARED_SECRET is a dev placeholder",
 	}
 	for secret, want := range cases {
