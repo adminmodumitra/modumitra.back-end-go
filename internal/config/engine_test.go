@@ -77,3 +77,18 @@ func TestEngineSecretChecked(t *testing.T) {
 		t.Fatalf("bad url: %v", err)
 	}
 }
+
+func TestEngineDocumentEnv(t *testing.T) {
+	e := defaultEngine()
+	if e.DocUserPerMinute != 10 || e.DocOrgPerMinute != 60 || e.DocOrgPerDay != 2000 || e.DocTimeout != 30*time.Second {
+		t.Fatalf("defaults %+v", e)
+	}
+	t.Setenv("ENGINE_DOC_QUOTA_USER_PER_MIN", "4")
+	t.Setenv("ENGINE_DOC_QUOTA_ORG_PER_MIN", "0") // ignored: keeps the default
+	t.Setenv("ENGINE_DOC_QUOTA_ORG_PER_DAY", "50")
+	t.Setenv("ENGINE_DOC_TIMEOUT", "45s")
+	applyEngineEnv(&e)
+	if e.DocUserPerMinute != 4 || e.DocOrgPerMinute != 60 || e.DocOrgPerDay != 50 || e.DocTimeout != 45*time.Second {
+		t.Fatalf("env %+v", e)
+	}
+}

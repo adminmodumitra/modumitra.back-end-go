@@ -7,6 +7,15 @@ const (
 	OpProductionPackage = "production-package"
 )
 
+// Phase 5a document ops: built on the server, watermarked with the org id the
+// proxy sends (X-Org-Id). The production packet PDF is not here yet: the
+// engine cannot rasterise its technical sheets in Node (PHASE5_CONTRACT.md).
+const (
+	OpProposalPDF        = "proposal-pdf"
+	OpRevisionSummaryPDF = "revision-summary-pdf"
+	OpQuoteExport        = "quote-export"
+)
+
 // Spec is how the proxy treats one op.
 type Spec struct {
 	Op string
@@ -19,6 +28,9 @@ type Spec struct {
 	// Manufacturing ops draw from their own quota bucket (ENGINE_MFG_QUOTA_*),
 	// so computed-ahead exports never starve live quotes.
 	Manufacturing bool
+	// Document ops (5a) draw from the document bucket (ENGINE_DOC_QUOTA_*), take
+	// a larger body (proposal stills) and get the longer ENGINE_DOC_TIMEOUT.
+	Document bool
 }
 
 var specs = map[string]Spec{
@@ -27,6 +39,11 @@ var specs = map[string]Spec{
 	OpCutlist:           {Op: OpCutlist, Field: "project", Manufacturing: true},
 	OpCNC:               {Op: OpCNC, Field: "project", Manufacturing: true},
 	OpProductionPackage: {Op: OpProductionPackage, Field: "project", NeedsBook: true, Manufacturing: true},
+	// The proposal and the quote export price with the org book; the revision
+	// summary prices from the project's own preferences, as the app does.
+	OpProposalPDF:        {Op: OpProposalPDF, Field: "document", NeedsBook: true, Document: true},
+	OpRevisionSummaryPDF: {Op: OpRevisionSummaryPDF, Field: "project", Document: true},
+	OpQuoteExport:        {Op: OpQuoteExport, Field: "project", NeedsBook: true, Document: true},
 }
 
 // SpecFor returns the spec of a known op; anything else is refused before a

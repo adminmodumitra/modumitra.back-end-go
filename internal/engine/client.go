@@ -29,6 +29,21 @@ const MaxRequestBytes = 4 << 20
 // on the reference jobs, production packages ~0.6 MB.
 const MaxResponseBytes = 16 << 20
 
+// Phase 5a document routes: the proposal body carries the view stills (data
+// URLs), and PDFs come back base64 in JSON.
+const (
+	MaxDocumentRequestBytes  = 32 << 20
+	MaxDocumentResponseBytes = 64 << 20
+)
+
+// MaxResponseFor is the response cap for an op.
+func MaxResponseFor(op string) int64 {
+	if s, ok := SpecFor(op); ok && s.Document {
+		return MaxDocumentResponseBytes
+	}
+	return MaxResponseBytes
+}
+
 // Headers sent with every engine call.
 const (
 	HeaderKey       = "X-Engine-Key"
@@ -49,6 +64,8 @@ type Client struct {
 	base   string
 	secret string
 	http   *http.Client
+	// docs is the same pool with the longer document timeout (5a).
+	docs *http.Client
 }
 
 // New returns nil when the engine is not configured (ENGINE_URL empty).
@@ -65,7 +82,18 @@ func New(cfg config.Engine) *Client {
 		ResponseHeaderTimeout: cfg.Timeout,
 		ForceAttemptHTTP2:     true,
 	}
-	return &Client{base: cfg.URL, secret: cfg.SharedSecret, http: &http.Client{Transport: tr, Timeout: cfg.Timeout}}
+	docTimeout := cfg.DocTimeout
+	if docTimeout < cfg.Timeout {
+		docTimeout = cfg.Timeout
+	}
+	// One transport (one pool); the document client relies on its own timeout,
+	// so the transport's header timeout must allow the longer of the two.
+	tr.ResponseHeaderTimeout = docTimeout
+	return &Client{
+		base: cfg.URL, secret: cfg.SharedSecret,
+		http: &http.Client{Transport: tr, Timeout: cfg.Timeout},
+		docs: &http.Client{Transport: tr, Timeout: docTimeout},
+	}
 }
 
 // Do POSTs body to {ENGINE_URL}/v1/ops/<op>. The caller closes resp.Body.
@@ -83,6 +111,9 @@ func (c *Client) Do(ctx context.Context, op string, body []byte, who Caller) (*h
 	req.Header.Set(HeaderOrgID, who.OrgID)
 	req.Header.Set(HeaderUserID, who.UserID)
 	req.Header.Set(HeaderRequestID, who.RequestID)
+	if s, ok := SpecFor(op); ok && s.Document {
+		return c.docs.Do(req)
+	}
 	return c.http.Do(req)
 }
 

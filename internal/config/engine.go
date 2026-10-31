@@ -30,12 +30,23 @@ type Engine struct {
 	MfgUserPerMinute int
 	MfgOrgPerMinute  int
 	MfgOrgPerDay     int
+	// Phase 5a: documents built on the server (proposal and revision summary
+	// PDFs, quote export). User-initiated and CPU-heavy, so a small bucket of
+	// their own. Env ENGINE_DOC_QUOTA_USER_PER_MIN, ENGINE_DOC_QUOTA_ORG_PER_MIN,
+	// ENGINE_DOC_QUOTA_ORG_PER_DAY.
+	DocUserPerMinute int
+	DocOrgPerMinute  int
+	DocOrgPerDay     int
+	// DocTimeout bounds one document call (PDFs take seconds, not ms).
+	// Env ENGINE_DOC_TIMEOUT (Go duration, default 30s).
+	DocTimeout time.Duration
 }
 
 func defaultEngine() Engine {
 	return Engine{
 		Timeout: 8 * time.Second, UserPerMinute: 60, OrgPerMinute: 300, OrgPerDay: 5000,
 		MfgUserPerMinute: 120, MfgOrgPerMinute: 600, MfgOrgPerDay: 20000,
+		DocUserPerMinute: 10, DocOrgPerMinute: 60, DocOrgPerDay: 2000, DocTimeout: 30 * time.Second,
 	}
 }
 
@@ -51,6 +62,12 @@ func applyEngineEnv(e *Engine) {
 	e.MfgUserPerMinute = positive(getenvInt("ENGINE_MFG_QUOTA_USER_PER_MIN", e.MfgUserPerMinute), e.MfgUserPerMinute)
 	e.MfgOrgPerMinute = positive(getenvInt("ENGINE_MFG_QUOTA_ORG_PER_MIN", e.MfgOrgPerMinute), e.MfgOrgPerMinute)
 	e.MfgOrgPerDay = positive(getenvInt("ENGINE_MFG_QUOTA_ORG_PER_DAY", e.MfgOrgPerDay), e.MfgOrgPerDay)
+	e.DocUserPerMinute = positive(getenvInt("ENGINE_DOC_QUOTA_USER_PER_MIN", e.DocUserPerMinute), e.DocUserPerMinute)
+	e.DocOrgPerMinute = positive(getenvInt("ENGINE_DOC_QUOTA_ORG_PER_MIN", e.DocOrgPerMinute), e.DocOrgPerMinute)
+	e.DocOrgPerDay = positive(getenvInt("ENGINE_DOC_QUOTA_ORG_PER_DAY", e.DocOrgPerDay), e.DocOrgPerDay)
+	if d := getenvDuration("ENGINE_DOC_TIMEOUT", e.DocTimeout); d > 0 {
+		e.DocTimeout = d
+	}
 }
 
 func positive(v, fallback int) int {

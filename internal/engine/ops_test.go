@@ -48,3 +48,21 @@ func TestBuildBodyForManufacturing(t *testing.T) {
 		}
 	}
 }
+
+func TestSpecForDocumentOps(t *testing.T) {
+	for op, want := range map[string]Spec{
+		OpProposalPDF:        {Op: OpProposalPDF, Field: "document", NeedsBook: true, Document: true},
+		OpRevisionSummaryPDF: {Op: OpRevisionSummaryPDF, Field: "project", Document: true},
+		OpQuoteExport:        {Op: OpQuoteExport, Field: "project", NeedsBook: true, Document: true},
+	} {
+		if got, ok := SpecFor(op); !ok || got != want {
+			t.Errorf("%s: got %+v ok=%v", op, got, ok)
+		}
+	}
+	if _, ok := SpecFor("production-packet-pdf"); ok {
+		t.Fatal("the packet PDF is not served yet (Node cannot rasterise its sheets)")
+	}
+	if MaxResponseFor(OpProposalPDF) != MaxDocumentResponseBytes || MaxResponseFor(OpCNC) != MaxResponseBytes {
+		t.Fatal("response caps")
+	}
+}

@@ -24,12 +24,13 @@ type engineErrorBody struct {
 	} `json:"error"`
 }
 
-// relayEngine copies a 2xx engine answer through unchanged (streamed, capped).
+// relayEngine copies a 2xx engine answer through unchanged (streamed, capped
+// at limit: engine.MaxResponseFor the op).
 // 400/422 mean the design itself is invalid and are relayed in our error
 // shape. Anything else (401 wrong key, 5xx, ...) is the engine's fault: 502,
 // or 504 when the engine itself timed out. Engine internals never reach the
 // client.
-func relayEngine(c *gin.Context, resp *http.Response) {
+func relayEngine(c *gin.Context, resp *http.Response, limit int64) {
 	switch {
 	case resp.StatusCode >= 200 && resp.StatusCode < 300:
 		middleware.InjectHeaders(c)
@@ -40,13 +41,13 @@ func relayEngine(c *gin.Context, resp *http.Response) {
 			if acceptsGzip(c) {
 				// Phase 4: CNC answers are MBs of JSON; pass the engine's gzip through.
 				c.Header("Content-Encoding", "gzip")
-			} else if body = gunzipped(resp.Body); body == nil {
+			} else if body = gunzipped(resp.Body, limit); body == nil {
 				middleware.Abort(c, utils.E(utils.CodeEngineError))
 				return
 			}
 		}
 		c.Status(utils.StatusOK)
-		_, _ = io.Copy(c.Writer, io.LimitReader(body, engine.MaxResponseBytes))
+		_, _ = io.Copy(c.Writer, io.LimitReader(body, limit))
 		middleware.Success(c, middleware.OpFrom(c), utils.StatusOK)
 	case resp.StatusCode == http.StatusBadRequest || resp.StatusCode == http.StatusUnprocessableEntity:
 		relayInvalid(c, resp)
@@ -63,7 +64,7 @@ func relayInvalid(c *gin.Context, resp *http.Response) {
 	var eb engineErrorBody
 	body := io.Reader(resp.Body)
 	if engineGzipped(resp) {
-		body = gunzipped(resp.Body)
+		body = gunzipped(resp.Body, engine.MaxResponseBytes)
 	}
 	if body != nil {
 		_ = json.NewDecoder(io.LimitReader(body, 64<<10)).Decode(&eb)
@@ -95,10 +96,10 @@ func acceptsGzip(c *gin.Context) bool {
 
 // gunzipped unpacks a gzip body, capped like an uncompressed one; nil when the
 // stream is not gzip.
-func gunzipped(r io.Reader) io.Reader {
+func gunzipped(r io.Reader, limit int64) io.Reader {
 	zr, err := gzip.NewReader(r)
 	if err != nil {
 		return nil
 	}
-	return io.LimitReader(zr, engine.MaxResponseBytes)
+	return io.LimitReader(zr, limit)
 }

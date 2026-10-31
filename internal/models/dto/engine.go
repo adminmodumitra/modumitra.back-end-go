@@ -35,9 +35,34 @@ type EngineProductionPackageBody struct {
 	Scope   string          `json:"scope,omitempty" example:"room-1"`
 }
 
+// EngineProposalPDFBody is POST /v1/engine/proposal-pdf (Phase 5a). frames
+// are the proposal's view stills ({cameraId, viewName, dataUrl}); the server
+// picks the price book.
+type EngineProposalPDFBody struct {
+	Document      json.RawMessage `json:"document" swaggertype:"object"`
+	Frames        json.RawMessage `json:"frames,omitempty" swaggertype:"array,object"`
+	Now           string          `json:"now" example:"2026-10-31T10:00:00Z"`
+	StaleOverride *bool           `json:"staleOverride,omitempty"`
+}
+
+// EngineRevisionSummaryBody is POST /v1/engine/revision-summary-pdf.
+type EngineRevisionSummaryBody struct {
+	Project json.RawMessage `json:"project" swaggertype:"object"`
+}
+
+// EngineQuoteExportBody is POST /v1/engine/quote-export. The server picks the
+// price book.
+type EngineQuoteExportBody struct {
+	Project    json.RawMessage `json:"project" swaggertype:"object"`
+	Room       json.RawMessage `json:"room" swaggertype:"object"`
+	ExportedAt string          `json:"exportedAt,omitempty" example:"2026-10-31T10:00:00Z"`
+}
+
 // EngineResultOK is the engine answer, copied through unchanged: a
 // LiveInteriorQuote (quote), InteriorEstimateSummary (estimate), or a
-// manufacturing result (cut list rows + CSV, machine files, package files).
+// manufacturing result (cut list rows + CSV, machine files, package files),
+// or a document (5a): {fileName?, mimeType, bytes, base64} for a PDF, the
+// export bundle's text files for the quote export.
 type EngineResultOK struct {
 	Result json.RawMessage `json:"result" swaggertype:"object"`
 }

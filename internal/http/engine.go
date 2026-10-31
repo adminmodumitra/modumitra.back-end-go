@@ -84,8 +84,11 @@ func (h *handlers) proxyEngine(c *gin.Context, op string) {
 		quotaKey = "usr:" + uid // personal account: its own org budget
 	}
 	quota := h.quota
-	if spec.Manufacturing {
+	switch {
+	case spec.Manufacturing:
 		quota = h.mfgQuota
+	case spec.Document:
+		quota = h.docQuota
 	}
 	if ok, wait := quota.Allow(uid, quotaKey); !ok {
 		middleware.RejectQuota(c, wait)
@@ -123,5 +126,5 @@ func (h *handlers) proxyEngine(c *gin.Context, op string) {
 	}
 	defer resp.Body.Close()
 	lg.Int("engine_status", resp.StatusCode).Msg("engine call")
-	relayEngine(c, resp)
+	relayEngine(c, resp, engine.MaxResponseFor(op))
 }
