@@ -781,6 +781,23 @@ CREATE UNIQUE INDEX uniq_data_exports_user_in_progress
 
 COMMENT ON TABLE data_exports IS 'Asynchronous personal-data export jobs (POST /v1/me/export). Archive bytes live in object storage; this table stores job state. Not org-owned projects.';
 
+-- -----------------------------------------------------------------------------
+-- 21. org_price_books
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS org_price_books (
+    org_id       TEXT        PRIMARY KEY,
+    book         JSONB       NOT NULL,
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by   TEXT        NOT NULL,
+    CONSTRAINT chk_org_price_books_book_object CHECK (jsonb_typeof(book) = 'object'),
+    CONSTRAINT fk_org_price_books_org_id
+        FOREIGN KEY (org_id) REFERENCES organizations (public_id)
+        ON DELETE CASCADE
+);
+
+COMMENT ON TABLE org_price_books IS 'One price book (rates JSON object) per organization. The api. engine proxy injects it into /v1/ops/quote and /v1/ops/estimate; no row = engine defaults. Written by owner/admin via PUT /v1/org/price-book.';
+COMMENT ON COLUMN org_price_books.updated_by IS 'usr_… of the last writer. No FK: the row outlives a removed user.';
+
 -- =============================================================================
 -- Seed plans (insert-once; public_id values are stable)
 -- GET /v1/billing/plans returns sellable=true AND active=true (studio + team).

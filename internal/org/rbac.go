@@ -17,6 +17,10 @@ const (
 	ActionInvitesResend  = "invites.resend"
 	ActionBillingRead    = "billing.read"
 	ActionBillingWrite   = "billing.write"
+	// Price book (org rates the engine prices with). Sales roles see quotes,
+	// not raw rates.
+	ActionPriceBookRead  = "pricebook.read"
+	ActionPriceBookWrite = "pricebook.write"
 )
 
 // RolePermits reports whether an active membership role may perform action.
@@ -27,8 +31,10 @@ func RolePermits(role, action string) bool {
 	case ActionOrgWrite, ActionMembersWrite, ActionMembersSuspend, ActionMembersRemove,
 		ActionInvitesCreate, ActionInvitesList, ActionInvitesRevoke, ActionInvitesResend:
 		return role == RoleOwner || role == RoleAdmin
-	case ActionBillingRead:
+	case ActionBillingRead, ActionPriceBookRead:
 		return role == RoleOwner || role == RoleAdmin || role == RoleBillingAdmin
+	case ActionPriceBookWrite:
+		return role == RoleOwner || role == RoleAdmin
 	case ActionBillingWrite:
 		return role == RoleOwner || role == RoleBillingAdmin
 	case ActionOrgDelete, ActionOrgTransfer:

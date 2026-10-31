@@ -9,7 +9,7 @@ import (
 
 const (
 	corsAllowMethods  = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-	corsAllowHeaders  = "Accept, Authorization, Content-Type, Idempotency-Key, X-Request-Id, X-CSRF-Token"
+	corsAllowHeaders  = "Accept, Authorization, Content-Type, Idempotency-Key, X-Request-Id, X-CSRF-Token, X-Organization-Id"
 	corsExposeHeaders = "X-Request-Id, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset"
 	corsMaxAge        = "600"
 )

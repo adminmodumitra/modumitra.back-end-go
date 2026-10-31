@@ -39,6 +39,7 @@ func applyEnv(cfg *Config) {
 	applyOAuthEnv(cfg)
 	cfg.Mail.Driver = getenv("MAIL_DRIVER", cfg.Mail.Driver)
 	applySessionEnv(&cfg.Session)
+	applyEngineEnv(&cfg.Engine)
 }
 
 func applyBillingEnv(cfg *Config) {

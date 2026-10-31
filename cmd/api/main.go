@@ -15,6 +15,7 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
 	httpapi "github.com/Danish-13-Khan/backend-cabinet/internal/http"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/obs"
+	pricebookpg "github.com/Danish-13-Khan/backend-cabinet/internal/pricebook/postgres"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/store"
 )
 
@@ -100,7 +101,9 @@ func main() {
 	}
 
 	svc := wire(ctx, cfg, gdb)
-	engine := httpapi.NewRouter(cfg, st, svc.ident, svc.orgs, svc.devices, svc.bills, svc.sso)
+	engine := httpapi.NewRouter(cfg, st, svc.ident, svc.orgs, svc.devices, svc.bills, svc.sso,
+		httpapi.WithPriceBooks(pricebookpg.NewRepo(gdb)))
+	log.Info().Bool("engine_enabled", cfg.Engine.Enabled()).Dur("engine_timeout", cfg.Engine.Timeout).Msg("pricing engine proxy")
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
 		Handler:           engine,

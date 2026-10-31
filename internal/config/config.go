@@ -40,6 +40,7 @@ type Config struct {
 	OAuthDeviceVerifyURI  string
 	Mail                  Mail
 	Session               Session
+	Engine                Engine
 }
 
 // DurationAsString unmarshals JSON durations like "10s".

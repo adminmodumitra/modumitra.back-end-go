@@ -59,6 +59,11 @@ const (
 	CodeExpiredToken              Code = "expired_token"
 	CodeAccessDenied              Code = "access_denied"
 	CodeInvalidGrant              Code = "invalid_grant"
+	CodePayloadTooLarge           Code = "payload_too_large"
+	CodeQuotaExceeded             Code = "quota_exceeded"
+	CodeEngineUnavailable         Code = "engine_unavailable"
+	CodeEngineError               Code = "engine_error"
+	CodeEngineTimeout             Code = "engine_timeout"
 )
 
 type def struct {
@@ -123,4 +128,9 @@ var catalog = map[Code]def{
 	CodeExpiredToken:              {StatusForbidden, "Device code has expired"},
 	CodeAccessDenied:              {StatusForbidden, "The user denied the device authorization request"},
 	CodeInvalidGrant:              {StatusBadRequest, "Device code is unknown or already consumed"},
+	CodePayloadTooLarge:           {StatusPayloadTooLarge, "Request body is too large"},
+	CodeQuotaExceeded:             {StatusTooManyRequests, "Pricing quota reached; try again later"},
+	CodeEngineUnavailable:         {StatusServiceUnavailable, "Pricing engine is not configured"},
+	CodeEngineError:               {StatusBadGateway, "Pricing engine is unavailable"},
+	CodeEngineTimeout:             {StatusGatewayTimeout, "Pricing engine timed out"},
 }

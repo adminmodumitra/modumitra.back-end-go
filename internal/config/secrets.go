@@ -28,7 +28,11 @@ func (c Config) RequiresStrongSecrets() bool {
 
 // ValidateSecrets refuses empty, short or dev-placeholder signing secrets when
 // RequiresStrongSecrets. Local dev keeps working with the shipped defaults.
+// The engine key is checked whenever ENGINE_URL is set (Engine.Validate).
 func (c Config) ValidateSecrets() error {
+	if err := c.Engine.Validate(); err != nil {
+		return err
+	}
 	if !c.RequiresStrongSecrets() {
 		return nil
 	}
