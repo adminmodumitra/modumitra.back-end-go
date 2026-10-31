@@ -89,6 +89,8 @@ func (h *handlers) proxyEngine(c *gin.Context, op string) {
 		quota = h.mfgQuota
 	case spec.Document:
 		quota = h.docQuota
+	case spec.View:
+		quota = h.viewQuota
 	}
 	if ok, wait := quota.Allow(uid, quotaKey); !ok {
 		middleware.RejectQuota(c, wait)

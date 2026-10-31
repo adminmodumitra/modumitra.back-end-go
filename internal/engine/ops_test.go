@@ -59,10 +59,33 @@ func TestSpecForDocumentOps(t *testing.T) {
 			t.Errorf("%s: got %+v ok=%v", op, got, ok)
 		}
 	}
-	if _, ok := SpecFor("production-packet-pdf"); ok {
-		t.Fatal("the packet PDF is not served yet (Node cannot rasterise its sheets)")
+	if got, ok := SpecFor(OpProductionPacketPDF); !ok || got != (Spec{Op: OpProductionPacketPDF, Field: "project", Document: true}) {
+		t.Fatalf("packet PDF (5b): %+v ok=%v", got, ok)
 	}
 	if MaxResponseFor(OpProposalPDF) != MaxDocumentResponseBytes || MaxResponseFor(OpCNC) != MaxResponseBytes {
 		t.Fatal("response caps")
+	}
+}
+
+func TestSpecForViewOps(t *testing.T) {
+	report, ok := SpecFor(ViewPrefix + "createProjectReport")
+	if !ok || !report.View || !report.NeedsBook || report.Field != "args" || report.Manufacturing || report.Document {
+		t.Fatalf("report: %+v ok=%v", report, ok)
+	}
+	gate, ok := SpecFor(ViewPrefix + "buildProductionReadinessGate")
+	if !ok || !gate.View || gate.NeedsBook {
+		t.Fatalf("gate: %+v ok=%v", gate, ok)
+	}
+	for _, op := range []string{ViewPrefix + "buildLiveInteriorQuote", ViewPrefix, "createProjectReport", ViewPrefix + "../quote"} {
+		if _, ok := SpecFor(op); ok {
+			t.Errorf("%q accepted", op)
+		}
+	}
+	out, err := BuildBodyFor([]byte(`{"args":[{"cabinets":[]}],"priceBook":{"rate":1}}`), gate, nil)
+	if err != nil || string(out) != `{"args":[{"cabinets":[]}]}` {
+		t.Fatalf("%s %v", out, err)
+	}
+	if _, err := BuildBodyFor([]byte(`{"args":null}`), gate, nil); err == nil {
+		t.Fatal("null args accepted")
 	}
 }

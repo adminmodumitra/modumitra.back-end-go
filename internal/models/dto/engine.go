@@ -58,6 +58,23 @@ type EngineQuoteExportBody struct {
 	ExportedAt string          `json:"exportedAt,omitempty" example:"2026-10-31T10:00:00Z"`
 }
 
+// EngineViewBody is POST /v1/engine/view/{op} (Phase 5b): the display op's
+// arguments as the app passes them, minus any price book (the server's).
+type EngineViewBody struct {
+	Args json.RawMessage `json:"args" swaggertype:"array,object"`
+}
+
+// EngineProductionPacketBody is POST /v1/engine/production-packet-pdf (5b).
+type EngineProductionPacketBody struct {
+	Project         json.RawMessage `json:"project" swaggertype:"object"`
+	Room            json.RawMessage `json:"room" swaggertype:"object"`
+	ProjectName     string          `json:"projectName" example:"Studio kitchen"`
+	SceneImage      *string         `json:"sceneImage,omitempty"`
+	Countertops     json.RawMessage `json:"countertops,omitempty" swaggertype:"array,object"`
+	Runs            json.RawMessage `json:"runs,omitempty" swaggertype:"array,object"`
+	InteriorPlanSvg *string         `json:"interiorPlanSvg,omitempty"`
+}
+
 // EngineResultOK is the engine answer, copied through unchanged: a
 // LiveInteriorQuote (quote), InteriorEstimateSummary (estimate), or a
 // manufacturing result (cut list rows + CSV, machine files, package files),

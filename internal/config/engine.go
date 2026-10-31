@@ -37,6 +37,12 @@ type Engine struct {
 	DocUserPerMinute int
 	DocOrgPerMinute  int
 	DocOrgPerDay     int
+	// Phase 5b: display results computed ahead on the server (report, cut list,
+	// review gates; several per committed edit). Env ENGINE_VIEW_QUOTA_USER_PER_MIN,
+	// ENGINE_VIEW_QUOTA_ORG_PER_MIN, ENGINE_VIEW_QUOTA_ORG_PER_DAY.
+	ViewUserPerMinute int
+	ViewOrgPerMinute  int
+	ViewOrgPerDay     int
 	// DocTimeout bounds one document call (PDFs take seconds, not ms).
 	// Env ENGINE_DOC_TIMEOUT (Go duration, default 30s).
 	DocTimeout time.Duration
@@ -47,6 +53,7 @@ func defaultEngine() Engine {
 		Timeout: 8 * time.Second, UserPerMinute: 60, OrgPerMinute: 300, OrgPerDay: 5000,
 		MfgUserPerMinute: 120, MfgOrgPerMinute: 600, MfgOrgPerDay: 20000,
 		DocUserPerMinute: 10, DocOrgPerMinute: 60, DocOrgPerDay: 2000, DocTimeout: 30 * time.Second,
+		ViewUserPerMinute: 300, ViewOrgPerMinute: 1500, ViewOrgPerDay: 60000,
 	}
 }
 
@@ -65,6 +72,9 @@ func applyEngineEnv(e *Engine) {
 	e.DocUserPerMinute = positive(getenvInt("ENGINE_DOC_QUOTA_USER_PER_MIN", e.DocUserPerMinute), e.DocUserPerMinute)
 	e.DocOrgPerMinute = positive(getenvInt("ENGINE_DOC_QUOTA_ORG_PER_MIN", e.DocOrgPerMinute), e.DocOrgPerMinute)
 	e.DocOrgPerDay = positive(getenvInt("ENGINE_DOC_QUOTA_ORG_PER_DAY", e.DocOrgPerDay), e.DocOrgPerDay)
+	e.ViewUserPerMinute = positive(getenvInt("ENGINE_VIEW_QUOTA_USER_PER_MIN", e.ViewUserPerMinute), e.ViewUserPerMinute)
+	e.ViewOrgPerMinute = positive(getenvInt("ENGINE_VIEW_QUOTA_ORG_PER_MIN", e.ViewOrgPerMinute), e.ViewOrgPerMinute)
+	e.ViewOrgPerDay = positive(getenvInt("ENGINE_VIEW_QUOTA_ORG_PER_DAY", e.ViewOrgPerDay), e.ViewOrgPerDay)
 	if d := getenvDuration("ENGINE_DOC_TIMEOUT", e.DocTimeout); d > 0 {
 		e.DocTimeout = d
 	}

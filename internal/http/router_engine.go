@@ -43,6 +43,8 @@ func mountEngine(r *gin.Engine, h *handlers, bbr gin.HandlerFunc, auth ...gin.Ha
 	g.POST("/v1/engine/cutlist", h.engineCutlist)
 	g.POST("/v1/engine/cnc", h.engineCNC)
 	g.POST("/v1/engine/production-package", h.engineProductionPackage)
+	// Phase 5b: display results (report, cut list, review gates), one route per op.
+	g.POST("/v1/engine/view/:op", h.engineView)
 
 	// Phase 5a: documents built on the server. Same auth and guards; a 32 MB
 	// body (proposal stills), ENGINE_DOC_TIMEOUT, and this connection's read
@@ -60,4 +62,5 @@ func mountEngine(r *gin.Engine, h *handlers, bbr gin.HandlerFunc, auth ...gin.Ha
 	d.POST("/v1/engine/proposal-pdf", h.engineProposalPDF)
 	d.POST("/v1/engine/revision-summary-pdf", h.engineRevisionSummaryPDF)
 	d.POST("/v1/engine/quote-export", h.engineQuoteExport)
+	d.POST("/v1/engine/production-packet-pdf", h.engineProductionPacketPDF)
 }

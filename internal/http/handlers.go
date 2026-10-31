@@ -37,6 +37,7 @@ type handlers struct {
 	quota      *middleware.EngineQuota // quote + estimate
 	mfgQuota   *middleware.EngineQuota // cut list, CNC, production package (Phase 4)
 	docQuota   *middleware.EngineQuota // proposal / revision summary PDFs, quote export (Phase 5a)
+	viewQuota  *middleware.EngineQuota // display results computed ahead (Phase 5b)
 	priceBooks pricebook.Repo
 }
 

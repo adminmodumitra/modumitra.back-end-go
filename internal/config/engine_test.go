@@ -92,3 +92,17 @@ func TestEngineDocumentEnv(t *testing.T) {
 		t.Fatalf("env %+v", e)
 	}
 }
+
+func TestEngineViewQuotaEnv(t *testing.T) {
+	t.Setenv("ENGINE_VIEW_QUOTA_USER_PER_MIN", "50")
+	t.Setenv("ENGINE_VIEW_QUOTA_ORG_PER_MIN", "0") // ignored: keeps the default
+	t.Setenv("ENGINE_VIEW_QUOTA_ORG_PER_DAY", "700")
+	e := defaultEngine()
+	if e.ViewUserPerMinute != 300 || e.ViewOrgPerMinute != 1500 || e.ViewOrgPerDay != 60000 {
+		t.Fatalf("defaults %+v", e)
+	}
+	applyEngineEnv(&e)
+	if e.ViewUserPerMinute != 50 || e.ViewOrgPerMinute != 1500 || e.ViewOrgPerDay != 700 {
+		t.Fatalf("view quotas %+v", e)
+	}
+}
