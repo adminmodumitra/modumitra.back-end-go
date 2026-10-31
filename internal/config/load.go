@@ -41,6 +41,7 @@ func defaultConfig() Config {
 		OAuthRedirectURI:     "cabinetstudio://oauth/callback",
 		OAuthDeviceVerifyURI: "https://app.cabinetstudio.example/device",
 		Mail:                 Mail{Driver: "log"},
+		Engine:               defaultEngine(),
 	}
 }
 

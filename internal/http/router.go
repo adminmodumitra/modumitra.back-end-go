@@ -13,14 +13,16 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/cache"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/device"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/engine"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/http/middleware"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/pricebook"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/sso"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/store"
 )
 
-func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, orgs *org.Service, devices *device.Service, bills *billing.Service, ssoSvc *sso.Service) *gin.Engine {
+func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, orgs *org.Service, devices *device.Service, bills *billing.Service, ssoSvc *sso.Service, opts ...Option) *gin.Engine {
 	r := gin.New()
 	_ = r.SetTrustedProxies(nil)
 	var c cache.Cache = cache.Noop{}
@@ -28,6 +30,11 @@ func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, 
 		c = cache.FromSet(set)
 	}
 	h := &handlers{cfg: cfg, pinger: pinger, cache: cache.New(c), ident: ident, orgs: orgs, devices: devices, billing: bills, sso: ssoSvc}
+	h.engine = engine.New(cfg.Engine)
+	h.quota = middleware.NewEngineQuota(cfg.Engine.UserPerMinute, cfg.Engine.OrgPerMinute, cfg.Engine.OrgPerDay)
+	for _, opt := range opts {
+		opt(h)
+	}
 	if ident != nil && bills != nil {
 		ident.SetPersonalProvisioner(billing.Provisioner{Service: bills})
 	}
@@ -80,14 +87,16 @@ func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, 
 	if ident != nil {
 		verifier = ident
 	}
+	// Shared with the engine group so both draw from the same buckets.
+	authIP := middleware.IPRateLimit(rate.Limit(30), 60)
+	authJWT := middleware.JWTAuth(verifier) // no skip list; these groups are auth-only
+	// Cookie-authenticated writes need a session Origin and the CSRF token.
+	authGuard := middleware.SessionGuard(cfg.Session.Enabled(), cfg.Session.Origins, middleware.CSRFKey(cfg.JWTSecret))
+	authUser := middleware.UserRateLimit(rate.Limit(10), 40)
 	authed.Use(middleware.BBR(cfg.BBR))
 	authed.Use(middleware.Timeout(cfg.RequestTimeout))
 	authed.Use(middleware.BodyLimit(cfg.BodyLimitBytes))
-	authed.Use(middleware.IPRateLimit(rate.Limit(30), 60))
-	authed.Use(middleware.JWTAuth(verifier)) // no skip list; this group is auth-only
-	// Cookie-authenticated writes need a session Origin and the CSRF token.
-	authed.Use(middleware.SessionGuard(cfg.Session.Enabled(), cfg.Session.Origins, middleware.CSRFKey(cfg.JWTSecret)))
-	authed.Use(middleware.UserRateLimit(rate.Limit(10), 40))
+	authed.Use(authIP, authJWT, authGuard, authUser)
 	authed.Use(middleware.Tenant(orgs))
 	authed.Use(middleware.RBAC())
 	authed.Use(middleware.Idempotency())
@@ -141,7 +150,11 @@ func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, 
 		authed.GET("/v1/organizations/:id/invoices/:invoiceId", h.getInvoice)
 		authed.GET("/v1/organizations/:id/seats", h.getSeats)
 		authed.POST("/v1/organizations/:id/seats/preview-downgrade", h.previewDowngrade)
+		authed.GET("/v1/org/price-book", h.getPriceBook)
+		authed.PUT("/v1/org/price-book", middleware.BodyLimit(pricebook.MaxBookBytes), h.putPriceBook)
 	}
+
+	mountEngine(r, h, middleware.BBR(cfg.BBR), authIP, authJWT, authGuard, authUser)
 
 	// Webhook HMAC, not JWT. Process-wide RequestID/Recover/OTEL already applied.
 	webhooks := r.Group("/")

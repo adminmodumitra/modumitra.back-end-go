@@ -13,6 +13,7 @@ import (
 //	cabinet:me:capabilities:{userID}:org:{orgID}     — org-scoped (header/query)
 //	cabinet:org:{orgID}:members[:{status}:{role}:{cursor}:{limit}]
 //	cabinet:org:{orgID}:roles
+//	cabinet:org:{orgID}:price-book                   — raw book JSON or null
 //	cabinet:billing:plans
 //	cabinet:billing:sub:user:{userID}
 //	cabinet:billing:sub:org:{orgID}
@@ -22,11 +23,12 @@ import (
 // List keys embed filter/cursor so pages do not collide; writers DeletePrefix.
 
 const (
-	TTLMe      = 60 * time.Second
-	TTLCaps    = 60 * time.Second
-	TTLOrg     = 60 * time.Second
-	TTLBilling = 180 * time.Second
-	TTLDevices = 60 * time.Second
+	TTLMe        = 60 * time.Second
+	TTLCaps      = 60 * time.Second
+	TTLOrg       = 60 * time.Second
+	TTLBilling   = 180 * time.Second
+	TTLDevices   = 60 * time.Second
+	TTLPriceBook = 60 * time.Second
 )
 
 func Me(userID string) string { return "cabinet:me:" + userID }
@@ -55,6 +57,8 @@ func OrgMembers(orgID, status, role, cursor string, limit int) string {
 func OrgMembersPrefix(orgID string) string { return "cabinet:org:" + orgID + ":members" }
 
 func OrgRoles(orgID string) string { return "cabinet:org:" + orgID + ":roles" }
+
+func OrgPriceBook(orgID string) string { return "cabinet:org:" + orgID + ":price-book" }
 
 func BillingPlans() string { return "cabinet:billing:plans" }
 

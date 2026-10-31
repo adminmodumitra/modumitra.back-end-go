@@ -11,9 +11,11 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/cache"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/device"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/engine"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/http/middleware"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/identity"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/org"
+	"github.com/Danish-13-Khan/backend-cabinet/internal/pricebook"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/sso"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/store"
 	"github.com/Danish-13-Khan/backend-cabinet/internal/utils"
@@ -28,6 +30,12 @@ type handlers struct {
 	devices *device.Service
 	billing *billing.Service
 	sso     *sso.Service
+	// Engine protection Phase 3: nil engine = ENGINE_URL unset (503);
+	// nil priceBooks = no store wired (price-book routes 503, quotes priced
+	// with engine defaults).
+	engine     *engine.Client
+	quota      *middleware.EngineQuota
+	priceBooks pricebook.Repo
 }
 
 // healthz godoc
