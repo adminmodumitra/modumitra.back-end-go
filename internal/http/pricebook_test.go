@@ -53,12 +53,22 @@ func TestPriceBookRoles(t *testing.T) {
 	if w := doJSON(t, hr.h, http.MethodPut, "/v1/org/price-book", book, scoped(admin)); w.Code != http.StatusOK {
 		t.Fatalf("admin put=%d %s", w.Code, w.Body.String())
 	}
-	outsider, _ := registerVerifyLogin(t, hr.h, hr.mail, "eve@example.com", "reg-pb-eve")
-	if w := doJSON(t, hr.h, http.MethodPut, "/v1/org/price-book", book, scoped(outsider)); w.Code != http.StatusNotFound {
-		t.Fatalf("outsider put=%d %s", w.Code, w.Body.String())
-	}
 	if w := doJSON(t, hr.h, http.MethodPut, "/v1/org/price-book", book, nil); w.Code != http.StatusUnauthorized {
 		t.Fatalf("signed out put=%d", w.Code)
+	}
+}
+
+// Separate router: one more sign-up above would pass the credential limiter's
+// burst of 10 per IP (3 calls per user) and get 429.
+func TestPriceBookOutsider(t *testing.T) {
+	hr := engineRouter(t, nil)
+	owner, _ := registerVerifyLogin(t, hr.h, hr.mail, "ada@example.com", "reg-pb-4")
+	orgID := createOrgAs(t, hr.h, owner, "org-pb-4")
+	outsider, _ := registerVerifyLogin(t, hr.h, hr.mail, "eve@example.com", "reg-pb-eve")
+	book := map[string]any{"book": map[string]any{"rate": 1}}
+	headers := map[string]string{"Authorization": "Bearer " + outsider, "X-Organization-Id": orgID}
+	if w := doJSON(t, hr.h, http.MethodPut, "/v1/org/price-book", book, headers); w.Code != http.StatusNotFound {
+		t.Fatalf("outsider put=%d %s", w.Code, w.Body.String())
 	}
 }
 
