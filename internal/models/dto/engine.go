@@ -19,8 +19,25 @@ type EngineEstimateBody struct {
 	Document json.RawMessage `json:"document" swaggertype:"object"`
 }
 
+// EngineManufacturingBody is POST /v1/engine/cutlist and /v1/engine/cnc
+// (Phase 4). project is the app's CabinetProject JSON; scope is a room id or
+// "whole-project", omitted for the app's unscoped export.
+type EngineManufacturingBody struct {
+	Project json.RawMessage `json:"project" swaggertype:"object"`
+	Scope   string          `json:"scope,omitempty" example:"room-1"`
+}
+
+// EngineProductionPackageBody is POST /v1/engine/production-package. room is
+// the RoomConfig the app reports with; the server picks the price book.
+type EngineProductionPackageBody struct {
+	Project json.RawMessage `json:"project" swaggertype:"object"`
+	Room    json.RawMessage `json:"room" swaggertype:"object"`
+	Scope   string          `json:"scope,omitempty" example:"room-1"`
+}
+
 // EngineResultOK is the engine answer, copied through unchanged: a
-// LiveInteriorQuote (quote) or InteriorEstimateSummary (estimate).
+// LiveInteriorQuote (quote), InteriorEstimateSummary (estimate), or a
+// manufacturing result (cut list rows + CSV, machine files, package files).
 type EngineResultOK struct {
 	Result json.RawMessage `json:"result" swaggertype:"object"`
 }

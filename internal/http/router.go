@@ -32,6 +32,7 @@ func NewRouter(cfg config.Config, pinger store.Pinger, ident *identity.Service, 
 	h := &handlers{cfg: cfg, pinger: pinger, cache: cache.New(c), ident: ident, orgs: orgs, devices: devices, billing: bills, sso: ssoSvc}
 	h.engine = engine.New(cfg.Engine)
 	h.quota = middleware.NewEngineQuota(cfg.Engine.UserPerMinute, cfg.Engine.OrgPerMinute, cfg.Engine.OrgPerDay)
+	h.mfgQuota = middleware.NewEngineQuota(cfg.Engine.MfgUserPerMinute, cfg.Engine.MfgOrgPerMinute, cfg.Engine.MfgOrgPerDay)
 	for _, opt := range opts {
 		opt(h)
 	}

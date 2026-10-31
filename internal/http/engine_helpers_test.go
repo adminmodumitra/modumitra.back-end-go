@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -28,6 +29,7 @@ type fakeEngine struct {
 	headers http.Header
 	body    map[string]json.RawMessage
 	calls   int
+	gzip    bool // answer with Content-Encoding: gzip (Phase 4 passthrough)
 }
 
 func (f *fakeEngine) handler(w http.ResponseWriter, r *http.Request) {
@@ -44,6 +46,14 @@ func (f *fakeEngine) handler(w http.ResponseWriter, r *http.Request) {
 		status = http.StatusOK
 	}
 	w.Header().Set("Content-Type", "application/json")
+	if f.gzip {
+		w.Header().Set("Content-Encoding", "gzip")
+		w.WriteHeader(status)
+		zw := gzip.NewWriter(w)
+		_, _ = io.WriteString(zw, reply)
+		_ = zw.Close()
+		return
+	}
 	w.WriteHeader(status)
 	_, _ = io.WriteString(w, reply)
 }

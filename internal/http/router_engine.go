@@ -25,7 +25,8 @@ const engineGrace = 2 * time.Second
 
 // mountEngine registers /v1/engine/* in its own signed-in group: the same auth,
 // CSRF/Origin guard and rate-limit buckets as the authed group (passed in),
-// but a 4 MB body limit for design documents and the engine timeout.
+// but a 4 MB body limit for design documents and the engine timeout. Phase 4
+// adds the manufacturing routes (their own quota bucket, same limits).
 func mountEngine(r *gin.Engine, h *handlers, bbr gin.HandlerFunc, auth ...gin.HandlerFunc) {
 	g := r.Group("/")
 	g.Use(bbr)
@@ -34,4 +35,7 @@ func mountEngine(r *gin.Engine, h *handlers, bbr gin.HandlerFunc, auth ...gin.Ha
 	g.Use(auth...)
 	g.POST("/v1/engine/quote", h.engineQuote)
 	g.POST("/v1/engine/estimate", h.engineEstimate)
+	g.POST("/v1/engine/cutlist", h.engineCutlist)
+	g.POST("/v1/engine/cnc", h.engineCNC)
+	g.POST("/v1/engine/production-package", h.engineProductionPackage)
 }

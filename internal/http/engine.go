@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"encoding/json"
 	"io"
 	"time"
 
@@ -58,10 +59,12 @@ func (h *handlers) engineEstimate(c *gin.Context) {
 	h.proxyEngine(c, engine.OpEstimate)
 }
 
-// proxyEngine: read body → resolve org → quota → price book → engine call →
-// copy the answer back. Logs request id, status and latency, never bodies.
+// proxyEngine: read body → resolve org → quota → price book (ops that price)
+// → engine call → copy the answer back. Logs request id, status and latency,
+// never bodies.
 func (h *handlers) proxyEngine(c *gin.Context, op string) {
-	if h.engine == nil {
+	spec, known := engine.SpecFor(op)
+	if h.engine == nil || !known {
 		middleware.Abort(c, utils.E(utils.CodeEngineUnavailable))
 		return
 	}
@@ -80,17 +83,24 @@ func (h *handlers) proxyEngine(c *gin.Context, op string) {
 	if quotaKey == "" {
 		quotaKey = "usr:" + uid // personal account: its own org budget
 	}
-	if ok, wait := h.quota.Allow(uid, quotaKey); !ok {
+	quota := h.quota
+	if spec.Manufacturing {
+		quota = h.mfgQuota
+	}
+	if ok, wait := quota.Allow(uid, quotaKey); !ok {
 		middleware.RejectQuota(c, wait)
 		return
 	}
 	ctx := c.Request.Context()
-	book, err := h.orgPriceBook(ctx, orgID)
-	if err != nil {
-		middleware.Abort(c, err) // never price with defaults when the book failed to load
-		return
+	var book json.RawMessage
+	if spec.NeedsBook {
+		book, err = h.orgPriceBook(ctx, orgID)
+		if err != nil {
+			middleware.Abort(c, err) // never price with defaults when the book failed to load
+			return
+		}
 	}
-	body, err := engine.BuildBody(raw, book)
+	body, err := engine.BuildBodyFor(raw, spec, book)
 	if err != nil {
 		middleware.Abort(c, err)
 		return

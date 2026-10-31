@@ -14,6 +14,13 @@ const priceBookKey = "priceBook"
 // BuildBody checks the client body is a JSON object with a "document" and
 // returns it with "priceBook" set to book (nil = JSON null = engine defaults).
 func BuildBody(raw []byte, book json.RawMessage) ([]byte, error) {
+	return BuildBodyFor(raw, Spec{Field: "document", NeedsBook: true}, book)
+}
+
+// BuildBodyFor checks the client body is a JSON object with spec.Field set.
+// Ops that price get "priceBook" set to book (nil = JSON null); the others get
+// any client "priceBook" removed, so a browser value never reaches the engine.
+func BuildBodyFor(raw []byte, spec Spec, book json.RawMessage) ([]byte, error) {
 	trimmed := bytes.TrimSpace(raw)
 	if len(trimmed) == 0 || trimmed[0] != '{' {
 		return nil, invalid("body", "must be a JSON object")
@@ -22,9 +29,13 @@ func BuildBody(raw []byte, book json.RawMessage) ([]byte, error) {
 	if err := json.Unmarshal(trimmed, &fields); err != nil {
 		return nil, invalid("body", "must be a JSON object")
 	}
-	doc, ok := fields["document"]
-	if !ok || len(bytes.TrimSpace(doc)) == 0 || bytes.Equal(bytes.TrimSpace(doc), []byte("null")) {
-		return nil, invalid("document", "required")
+	value, ok := fields[spec.Field]
+	if !ok || len(bytes.TrimSpace(value)) == 0 || bytes.Equal(bytes.TrimSpace(value), []byte("null")) {
+		return nil, invalid(spec.Field, "required")
+	}
+	if !spec.NeedsBook {
+		delete(fields, priceBookKey)
+		return json.Marshal(fields)
 	}
 	if len(book) == 0 {
 		book = json.RawMessage("null")

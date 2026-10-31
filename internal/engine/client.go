@@ -1,4 +1,5 @@
-// Package engine calls the private pricing engine over the private network.
+// Package engine calls the private engine (pricing, Phase 3; manufacturing,
+// Phase 4) over the private network.
 // api. is the only caller; the engine has no public route except /healthz.
 package engine
 
@@ -13,7 +14,8 @@ import (
 	"github.com/Danish-13-Khan/backend-cabinet/internal/config"
 )
 
-// Ops the proxy forwards. Anything else is refused before a network call.
+// Pricing ops the proxy forwards (manufacturing ops: ops.go). Anything else is
+// refused before a network call.
 const (
 	OpQuote    = "quote"
 	OpEstimate = "estimate"
@@ -22,7 +24,9 @@ const (
 // MaxRequestBytes caps a client body (the design document) on /v1/engine/*.
 const MaxRequestBytes = 4 << 20
 
-// MaxResponseBytes caps what is copied back from the engine.
+// MaxResponseBytes caps what is copied back from the engine (as received: a
+// gzip answer is capped compressed). Phase 4 CNC answers reach ~2 MB of JSON
+// on the reference jobs, production packages ~0.6 MB.
 const MaxResponseBytes = 16 << 20
 
 // Headers sent with every engine call.
@@ -72,6 +76,9 @@ func (c *Client) Do(ctx context.Context, op string, body []byte, who Caller) (*h
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+	// Asked explicitly, so Go hands back the gzip bytes untouched: the proxy
+	// passes them through to clients that accept gzip (relayEngine).
+	req.Header.Set("Accept-Encoding", "gzip")
 	req.Header.Set(HeaderKey, c.secret)
 	req.Header.Set(HeaderOrgID, who.OrgID)
 	req.Header.Set(HeaderUserID, who.UserID)

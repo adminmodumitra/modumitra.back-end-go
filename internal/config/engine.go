@@ -23,10 +23,20 @@ type Engine struct {
 	UserPerMinute int
 	OrgPerMinute  int
 	OrgPerDay     int
+	// Phase 4: a separate bucket for cut list, CNC and production-package
+	// calls (the app computes them ahead after edits, up to three per edit).
+	// Env ENGINE_MFG_QUOTA_USER_PER_MIN, ENGINE_MFG_QUOTA_ORG_PER_MIN,
+	// ENGINE_MFG_QUOTA_ORG_PER_DAY.
+	MfgUserPerMinute int
+	MfgOrgPerMinute  int
+	MfgOrgPerDay     int
 }
 
 func defaultEngine() Engine {
-	return Engine{Timeout: 8 * time.Second, UserPerMinute: 60, OrgPerMinute: 300, OrgPerDay: 5000}
+	return Engine{
+		Timeout: 8 * time.Second, UserPerMinute: 60, OrgPerMinute: 300, OrgPerDay: 5000,
+		MfgUserPerMinute: 120, MfgOrgPerMinute: 600, MfgOrgPerDay: 20000,
+	}
 }
 
 func (e Engine) Enabled() bool { return strings.TrimSpace(e.URL) != "" }
@@ -38,6 +48,9 @@ func applyEngineEnv(e *Engine) {
 	e.UserPerMinute = positive(getenvInt("ENGINE_QUOTA_USER_PER_MIN", e.UserPerMinute), e.UserPerMinute)
 	e.OrgPerMinute = positive(getenvInt("ENGINE_QUOTA_ORG_PER_MIN", e.OrgPerMinute), e.OrgPerMinute)
 	e.OrgPerDay = positive(getenvInt("ENGINE_QUOTA_ORG_PER_DAY", e.OrgPerDay), e.OrgPerDay)
+	e.MfgUserPerMinute = positive(getenvInt("ENGINE_MFG_QUOTA_USER_PER_MIN", e.MfgUserPerMinute), e.MfgUserPerMinute)
+	e.MfgOrgPerMinute = positive(getenvInt("ENGINE_MFG_QUOTA_ORG_PER_MIN", e.MfgOrgPerMinute), e.MfgOrgPerMinute)
+	e.MfgOrgPerDay = positive(getenvInt("ENGINE_MFG_QUOTA_ORG_PER_DAY", e.MfgOrgPerDay), e.MfgOrgPerDay)
 }
 
 func positive(v, fallback int) int {

@@ -33,6 +33,20 @@ func TestEngineDefaults(t *testing.T) {
 	}
 }
 
+func TestEngineManufacturingQuotaEnv(t *testing.T) {
+	t.Setenv("ENGINE_MFG_QUOTA_USER_PER_MIN", "10")
+	t.Setenv("ENGINE_MFG_QUOTA_ORG_PER_MIN", "-1") // ignored: keeps the default
+	t.Setenv("ENGINE_MFG_QUOTA_ORG_PER_DAY", "900")
+	e := defaultEngine()
+	if e.MfgUserPerMinute != 120 || e.MfgOrgPerMinute != 600 || e.MfgOrgPerDay != 20000 {
+		t.Fatalf("defaults %+v", e)
+	}
+	applyEngineEnv(&e)
+	if e.MfgUserPerMinute != 10 || e.MfgOrgPerMinute != 600 || e.MfgOrgPerDay != 900 {
+		t.Fatalf("manufacturing quotas %+v", e)
+	}
+}
+
 func TestEngineSecretChecked(t *testing.T) {
 	t.Setenv("APP_ENV", "local")
 	cases := map[string]string{

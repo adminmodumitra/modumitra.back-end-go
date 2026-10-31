@@ -34,7 +34,8 @@ type handlers struct {
 	// nil priceBooks = no store wired (price-book routes 503, quotes priced
 	// with engine defaults).
 	engine     *engine.Client
-	quota      *middleware.EngineQuota
+	quota      *middleware.EngineQuota // quote + estimate
+	mfgQuota   *middleware.EngineQuota // cut list, CNC, production package (Phase 4)
 	priceBooks pricebook.Repo
 }
 
